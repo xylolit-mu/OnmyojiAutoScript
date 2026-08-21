@@ -11,6 +11,7 @@ import numpy as np
 
 from module.atom.click import RuleClick
 from module.atom.image import RuleImage
+from module.exception import GameStuckError
 from module.logger import logger
 from tasks.Chess.runtime.board_positions import SET_JADE_AREAS, SET_POSITIONS
 from tasks.Chess.runtime.press_and_drag import Press_and_Drag
@@ -139,23 +140,25 @@ class ChessHandOperationsMixin:
         logger.warning(
             'Chess shikigami specifics opened unexpectedly, close it'
         )
-        closed = False
-        for attempt in range(1, 8):
-            self.click(
-                self.C_CLICK_CLOSE_SPECIFICS_AREA,
-                interval=self.FAST_OPERATION_INTERVAL,
-            )
-            time.sleep(self.SCREENSHOT_INTERVAL)
-            self.screenshot()
-            if not self.appear(self.I_SHIKIGAMI_SPECIFICS):
+        for attempt in range(1, self.ACTION_ICON_MAX_ATTEMPTS + 1):
+            self.device.click_record_remove(self.C_CLICK_CLOSE_SPECIFICS_AREA)
+            self.click(self.C_CLICK_CLOSE_SPECIFICS_AREA)
+            if self._wait_chess_action_state(
+                lambda: not self.appear(self.I_SHIKIGAMI_SPECIFICS)
+            ):
                 logger.debug(
-                    f'Chess shikigami specifics closed, attempts={attempt}'
+                    'Chess shikigami specifics closed: '
+                    f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}'
                 )
-                closed = True
-                break
-        if not closed:
-            logger.warning('Chess shikigami specifics still visible')
-        return closed
+                return True
+            logger.warning(
+                'Chess shikigami specifics still visible after close click: '
+                f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}, '
+                f'timeout={self.ACTION_ICON_WAIT_TIMEOUT:.0f}s'
+            )
+        raise GameStuckError(
+            'Chess: failed to close shikigami specifics after 3 attempts'
+        )
 
     def sell_one_lineup_hand_card(self) -> dict | None:
         """紧急清理后仍然手满时，出售最右侧的已识别阵容式神。"""
@@ -284,123 +287,12 @@ class ChessHandOperationsMixin:
             f'arakawa_goldfish={units["arakawa_goldfish"]}'
         )
 
-    def _predict_arakawa_goldfish_spawn(
-        self,
-        deploying_set_index: int,
-    ) -> int | None:
-        """按 12→11→10→9 固定顺序推断金鱼生成位置。"""
-        occupied = {
-            set_index
-            for set_index in self.ARAKAWA_GOLDFISH_SPAWN_POSITIONS
-            if self._board_set_has_shikigami(set_index)
-        }
-        occupied.add(int(deploying_set_index))
-        return next((
-            set_index
-            for set_index in self.ARAKAWA_GOLDFISH_SPAWN_POSITIONS
-            if set_index not in occupied
-        ), None)
-
-    def _identify_arakawa_goldfish_position(
-        self,
-        predicted_position: int | None,
-    ) -> int | None:
-        """严格按 12→11→10→9 逐格打开详情确认金鱼。"""
-        candidates = list(self.ARAKAWA_GOLDFISH_SPAWN_POSITIONS)
-
-        for set_index in candidates:
-            predicted = set_index == predicted_position
-            occupied = self._board_set_has_shikigami(set_index)
-            logger.debug(
-                'Chess Arakawa goldfish inspect candidate: '
-                f'set={set_index}, predicted={predicted}, '
-                f'occupied={occupied}'
-            )
-            # 金鱼只会因前一候选位已有式神而依次前移。候选位按
-            # 12→11→10→9 排列，一旦遇到空位，后续位置不可能有金鱼。
-            if set_index != 12 and not occupied:
-                logger.info(
-                    'Stop Chess Arakawa goldfish inspection at first empty '
-                    f'candidate: set={set_index}'
-                )
-                break
-            if set_index == 12 and not occupied:
-                logger.info(
-                    'Chess Arakawa goldfish set 12 occupancy is not ready; '
-                    'open specifics directly because spawn animation may '
-                    'hide the jade marker'
-                )
-
-            x, y = self._set_position(set_index)
-            inspect_rule = RuleClick(
-                roi_front=(x - 8, y - 8, 16, 16),
-                roi_back=(x - 8, y - 8, 16, 16),
-                name=f'chess_inspect_goldfish_set_{set_index}',
-            )
-
-            # 每个候选位只点击一次。等待详情图案稳定后立即判断，
-            # 不是金鱼（或未打开详情）便继续检查下一个位置，避免在
-            # 12号位连续点击多次。
-            self.click(
-                inspect_rule,
-                interval=self.FAST_OPERATION_INTERVAL,
-            )
-            time.sleep(self.SCREENSHOT_INTERVAL)
-            self.screenshot()
-            detail_opened = self.appear(self.I_SHIKIGAMI_SPECIFICS)
-            logger.info(
-                'Chess Arakawa goldfish open specifics: '
-                f'set={set_index}, wait='
-                f'{self.SCREENSHOT_INTERVAL:.2f}s, '
-                f'opened={detail_opened}'
-            )
-
-            if detail_opened:
-                is_goldfish = self.appear(self.I_CHECK_GOLDFISH)
-                logger.info(
-                    'Chess goldfish name image identification: '
-                    f'set={set_index}, '
-                    f'is_goldfish={is_goldfish}'
-                )
-                self.close_shikigami_specifics_if_open()
-                self.screenshot()
-                if is_goldfish:
-                    return set_index
-            else:
-                logger.info(
-                    'Chess Arakawa goldfish name image check skipped: '
-                    f'set={set_index}, details_opened=False'
-                )
-
-        if predicted_position is not None:
-            logger.debug(
-                'Chess Arakawa goldfish was not confirmed by exact specifics '
-                f'OCR; predicted_set={predicted_position}'
-            )
-        return None
-
-    def relocate_arakawa_goldfish(
-        self,
-        predicted_position: int | None,
-    ) -> bool:
-        """识别荒川金鱼并拖到阵容配置的目标格。"""
+    def _move_failed_action_goldfish(self, source_position: int) -> bool:
+        """将失败目标中已确认的金鱼拖到阵容配置位置，不再二次确认。"""
         target_position = self._arakawa_goldfish_target_position()
         if target_position is None:
             return False
-        source_position = self._identify_arakawa_goldfish_position(
-            predicted_position
-        )
-        if source_position is None:
-            self._arakawa_goldfish_last_failed_round = getattr(
-                self,
-                '_current_round_no',
-                None,
-            )
-            logger.warning('Chess Arakawa goldfish position was not found')
-            return False
-        # 发现后立即登记。若后续拖动或复核失败，本局仍记得它原本所在格。
-        self._record_arakawa_goldfish_position(source_position)
-        self._arakawa_goldfish_last_failed_round = None
+        source_position = int(source_position)
         protected_before = set(
             getattr(self, '_player_deployed_positions', set())
         )
@@ -408,12 +300,12 @@ class ChessHandOperationsMixin:
             protected_positions = set(protected_before)
             protected_positions.add(target_position)
             self._player_deployed_positions = protected_positions
+            self._record_arakawa_goldfish_position(target_position)
             logger.info(
-                f'Chess Arakawa goldfish is already at set {target_position}'
+                'Chess failed-action target is goldfish and already at '
+                f'assigned set {target_position}'
             )
             return True
-        if not self._ensure_shop_closed():
-            return False
         Press_and_Drag(
             self.device,
             p1=self._set_position(source_position),
@@ -426,77 +318,68 @@ class ChessHandOperationsMixin:
                 f'_TO_{target_position}'
             ),
         )
-        time.sleep(self.ACTION_SETTLE_INTERVAL)
-        self.screenshot()
-        confirmed_position = self._identify_arakawa_goldfish_position(
-            target_position
-        )
-        if confirmed_position is None:
-            logger.warning(
-                'Chess Arakawa goldfish move could not be confirmed; '
-                f'keep remembered position at set {source_position}'
-            )
-            protected_before.add(source_position)
-            self._player_deployed_positions = protected_before
-            return False
-
-        self._record_arakawa_goldfish_position(confirmed_position)
+        time.sleep(self.FAST_OPERATION_INTERVAL)
+        self._record_arakawa_goldfish_position(target_position)
         protected_positions = set(protected_before)
-        # 金鱼最终所在格必须进入下阵保护。若目标格原本就是脚本上阵的
-        # 式神，拖动会发生交换，该式神落到源格后也应继续受保护。
         protected_positions.discard(source_position)
-        protected_positions.add(confirmed_position)
-        if (
-            confirmed_position == target_position
-            and target_position in protected_before
-        ):
+        protected_positions.add(target_position)
+        # 若目标格原来是脚本上阵式神，拖动会交换双方位置；源格仍需保护。
+        if target_position in protected_before:
             protected_positions.add(source_position)
         self._player_deployed_positions = protected_positions
-        if confirmed_position != target_position:
-            logger.warning(
-                'Chess Arakawa goldfish did not reach target: '
-                f'expected={target_position}, actual={confirmed_position}'
-            )
-            return False
         logger.info(
-            f'Move Chess Arakawa goldfish: '
+            'Move Chess Arakawa goldfish after board action failure: '
             f'{source_position} -> {target_position}'
         )
         return True
 
-    def retry_arakawa_goldfish_after_soul_equipment(self) -> bool:
-        """上一回目漏检金鱼时，在下一回目装配御魂后补检一次。"""
-        if self._arakawa_goldfish_target_position() is None:
+    def _handle_goldfish_after_board_action_failure(
+        self,
+        set_index: int,
+        action: str,
+    ) -> bool:
+        """仅在下阵失败后点击该格详情，被动识别并移动金鱼。"""
+        if not self._lineup_arakawa_names():
             return False
-        if getattr(self, '_arakawa_goldfish_current_position', None) is not None:
-            return True
-
-        deployed_arakawa = (
-            set(getattr(self, '_board_lineup_names', set()))
-            & self._lineup_arakawa_names()
+        target_position = self._arakawa_goldfish_target_position()
+        if target_position is None or not self._is_preparation_mode():
+            return False
+        self.close_shikigami_specifics_if_open()
+        x, y = self._set_position(set_index)
+        inspect_rule = RuleClick(
+            roi_front=(x - 8, y - 8, 16, 16),
+            roi_back=(x - 8, y - 8, 16, 16),
+            name=f'chess_inspect_failed_{action}_set_{set_index}',
         )
-        if len(deployed_arakawa) <= 2:
-            return False
-
-        failed_round = getattr(
-            self,
-            '_arakawa_goldfish_last_failed_round',
-            None,
-        )
-        current_round = getattr(self, '_current_round_no', None)
-        if (
-            failed_round is None
-            or current_round is None
-            or int(current_round) <= int(failed_round)
-        ):
-            return False
-
         logger.info(
-            'Retry Chess Arakawa goldfish after soul equipment: '
-            f'failed_round={failed_round}, current_round={current_round}, '
-            f'arakawa_count={len(deployed_arakawa)}'
+            'Inspect failed Chess board action target for Arakawa goldfish: '
+            f'action={action}, set={set_index}'
         )
-        return self.relocate_arakawa_goldfish(None)
+        for attempt in range(1, self.ACTION_ICON_MAX_ATTEMPTS + 1):
+            self.device.click_record_remove(inspect_rule)
+            self.click(inspect_rule)
+            if not self._wait_chess_action_state(
+                lambda: self.appear(self.I_SHIKIGAMI_SPECIFICS)
+            ):
+                logger.warning(
+                    'Chess failed-action target specifics did not open: '
+                    f'action={action}, set={set_index}, '
+                    f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}'
+                )
+                continue
+            is_goldfish = self._wait_chess_action_state(
+                lambda: self.appear(self.I_CHECK_GOLDFISH)
+            )
+            logger.info(
+                'Chess failed-action target goldfish identification: '
+                f'action={action}, set={set_index}, '
+                f'is_goldfish={is_goldfish}'
+            )
+            self.close_shikigami_specifics_if_open()
+            if not is_goldfish:
+                return False
+            return self._move_failed_action_goldfish(set_index)
+        return False
 
     def _find_hakuzosu_protect_hand_card(self) -> dict | None:
         """定位手牌中的守护之印。"""
@@ -1209,28 +1092,38 @@ class ChessHandOperationsMixin:
                 f'Random Chess {card["kind"]} option: '
                 f'{selected.name}, available={[rule.name for rule in options]}'
             )
-            self.click(selected)
-            used += 1
-            time.sleep(self.ACTION_SETTLE_INTERVAL)
-            close_deadline = time.monotonic() + self.DISCOVER_SOUL_UI_TIMEOUT
-            while time.monotonic() < close_deadline:
-                self.screenshot()
-                if not any(
-                    self.appear(rule)
-                    for rule in (
-                        self.I_SELECT_SOUL_1,
-                        self.I_SELECT_SOUL_2,
-                        self.I_SELECT_SOUL_3,
+            select_rules = (
+                self.I_SELECT_SOUL_1,
+                self.I_SELECT_SOUL_2,
+                self.I_SELECT_SOUL_3,
+            )
+            for attempt in range(1, self.ACTION_ICON_MAX_ATTEMPTS + 1):
+                self.device.click_record_remove(selected)
+                self.click(selected)
+                if self._wait_chess_action_state(
+                    lambda: not any(
+                        self.appear(rule) for rule in select_rules
                     )
                 ):
+                    used += 1
+                    logger.debug(
+                        'Chess discover-soul option confirmed: '
+                        f'{selected.name}, '
+                        f'attempt={attempt}/'
+                        f'{self.ACTION_ICON_MAX_ATTEMPTS}'
+                    )
                     break
-                time.sleep(self.SCREENSHOT_INTERVAL)
-            else:
                 logger.warning(
-                    'Chess discover-soul selection remained open; '
-                    'stop this pass'
+                    'Chess discover-soul selection remained open after click: '
+                    f'{selected.name}, '
+                    f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}, '
+                    f'timeout={self.ACTION_ICON_WAIT_TIMEOUT:.0f}s'
                 )
-                break
+            else:
+                raise GameStuckError(
+                    'Chess: discover-soul option selection failed after '
+                    '3 attempts'
+                )
         else:
             logger.warning(
                 'Stop using Chess discover-soul cards at safety limit '
@@ -1501,23 +1394,6 @@ class ChessHandOperationsMixin:
                 )
                 break
 
-            arakawa_names = self._lineup_arakawa_names()
-            should_locate_goldfish = (
-                self._arakawa_goldfish_target_position() is not None
-                and getattr(
-                    self,
-                    '_arakawa_goldfish_current_position',
-                    None,
-                ) is None
-                and candidate['name'] in arakawa_names
-                and bool(deployed_names & arakawa_names)
-            )
-            predicted_goldfish_position = (
-                self._predict_arakawa_goldfish_spawn(set_index)
-                if should_locate_goldfish
-                else None
-            )
-
             if not self.deploy_shikigami_hand_card(
                 candidate['name'],
                 candidate['position'],
@@ -1557,10 +1433,6 @@ class ChessHandOperationsMixin:
                 'Mark Chess player-deployed position: '
                 f'set={set_index}, name={candidate["name"]}'
             )
-            if should_locate_goldfish:
-                self.relocate_arakawa_goldfish(
-                    predicted_goldfish_position
-                )
             if candidate['name'] == self.HAKUZOSU_NAME:
                 self.equip_hakuzosu_protect_after_deploy(deployed_names)
         else:
@@ -2140,6 +2012,12 @@ class ChessHandOperationsMixin:
         """满员上卡时只下阵一个系统卡位，成功则返回对应站位。"""
         if not self._is_preparation_mode():
             return None
+        if self._is_boss_challenge_round():
+            logger.debug(
+                'Skip Chess system-card recall in boss round: fixed jade '
+                f'areas are unavailable, round={self._current_round_no}'
+            )
+            return None
         if not self._ensure_shop_closed():
             logger.warning(
                 'Cannot free Chess lineup slot: shop could not be closed'
@@ -2169,15 +2047,18 @@ class ChessHandOperationsMixin:
                 continue
 
             source = self._set_position(set_index)
-            for attempt, drag_source in enumerate(
-                (source, (source[0], source[1] - 14)),
-                start=1,
-            ):
+            goldfish_kept_at_target = False
+            for attempt in range(1, self.ACTION_ICON_MAX_ATTEMPTS + 1):
+                drag_source = (
+                    source
+                    if attempt == 1
+                    else (source[0], source[1] - 14)
+                )
                 Press_and_Drag(
                     self.device,
                     p1=drag_source,
                     p2=hand_target,
-                    hold_duration=0.6 if attempt == 2 else 0.5,
+                    hold_duration=0.6 if attempt > 1 else 0.5,
                     point_random=(-2, -2, 2, 2),
                     swipe_duration=0.5,
                     name=(
@@ -2185,9 +2066,9 @@ class ChessHandOperationsMixin:
                         f'_ATTEMPT_{attempt}'
                     ),
                 )
-                time.sleep(self.ACTION_SETTLE_INTERVAL)
-                self.screenshot()
-                if not self._board_set_has_shikigami(set_index):
+                if self._wait_chess_action_state(
+                    lambda: not self._board_set_has_shikigami(set_index)
+                ):
                     tracked_names = set(
                         getattr(self, '_board_lineup_names', set())
                     )
@@ -2209,10 +2090,56 @@ class ChessHandOperationsMixin:
                         f'set={set_index}, attempt={attempt}'
                     )
                     return set_index
+                if self._handle_goldfish_after_board_action_failure(
+                    set_index,
+                    action='recall_for_deploy',
+                ):
+                    self.screenshot()
+                    source_still_occupied = self._board_set_has_shikigami(
+                        set_index
+                    )
+                    if not source_still_occupied:
+                        logger.info(
+                            'Chess failed recall source cleared after moving '
+                            f'goldfish: set={set_index}'
+                        )
+                        return set_index
+                    if set_index == self._arakawa_goldfish_target_position():
+                        goldfish_kept_at_target = True
+                        logger.info(
+                            'Keep Chess goldfish at assigned position during '
+                            f'system recall: set={set_index}'
+                        )
+                        break
+                    logger.info(
+                        'Chess failed recall source remains occupied after '
+                        'goldfish swap; continue original recall: '
+                        f'set={set_index}'
+                    )
+                    continue
+                logger.warning(
+                    'Chess system card recall did not clear jade marker: '
+                    f'set={set_index}, '
+                    f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}, '
+                    f'timeout={self.ACTION_ICON_WAIT_TIMEOUT:.0f}s'
+                )
+            else:
+                raise GameStuckError(
+                    'Chess: failed to recall occupied system card at '
+                    f'set {set_index} after 3 attempts'
+                )
+            if goldfish_kept_at_target:
+                continue
         return None
 
     def recall_all_board_cards(self) -> bool:
         """按系统自动上阵顺序，快速回收棋盘右侧四个候选位置。"""
+        if self._is_boss_challenge_round():
+            logger.debug(
+                'Defer Chess board recall in boss round: fixed jade areas '
+                f'are unavailable, round={self._current_round_no}'
+            )
+            return False
         if not self._ensure_shop_closed():
             logger.warning(
                 'Abort Chess board recall: shop could not be closed'
@@ -2267,8 +2194,8 @@ class ChessHandOperationsMixin:
         # 11 号位在关闭判定后立即拖动，手势已下发但没有成功下阵。
         time.sleep(self.ACTION_SETTLE_INTERVAL)
 
-        # 除 11 号位的针对性确认外，其余候选格连续拖完后再统一截图，
-        # 避免每个空位都产生一次截图等待。
+        # 每个已占用候选格均以勾玉图标消失确认；单次最多等待3秒，
+        # 超时后上移到模型主体重拖，连续三次失败则直接报错。
         for set_index in recall_positions:
             if not self._board_set_has_shikigami(set_index):
                 logger.debug(
@@ -2277,51 +2204,75 @@ class ChessHandOperationsMixin:
                 )
                 continue
             source = self._set_position(set_index)
-            Press_and_Drag(
-                self.device,
-                p1=source,
-                p2=hand_target,
-                hold_duration=0.5,
-                point_random=(-3, -3, 3, 3),
-                swipe_duration=0.45,
-                name=f'CHESS_RECALL_SET_{set_index}',
-            )
-            time.sleep(self.FAST_OPERATION_INTERVAL)
-
-            # 11 号位是系统自动上阵的第一顺位，也是商店关闭后的第一条
-            # 棋盘手势。单独确认它是否生效；失败时稍微上移到模型主体重拖。
-            if set_index == 11 and count is not None:
-                self.screenshot()
-                set_11_count = self._read_shikigami_count()
-                if (
-                    set_11_count is not None
-                    and set_11_count['current'] >= count['current']
+            goldfish_handled = False
+            for attempt in range(1, self.ACTION_ICON_MAX_ATTEMPTS + 1):
+                drag_source = (
+                    source
+                    if attempt == 1
+                    else (source[0], source[1] - 14)
+                )
+                Press_and_Drag(
+                    self.device,
+                    p1=drag_source,
+                    p2=hand_target,
+                    hold_duration=0.6 if attempt > 1 else 0.5,
+                    point_random=(-3, -3, 3, 3),
+                    swipe_duration=0.5 if attempt > 1 else 0.45,
+                    name=(
+                        f'CHESS_RECALL_SET_{set_index}'
+                        f'_ATTEMPT_{attempt}'
+                    ),
+                )
+                if self._wait_chess_action_state(
+                    lambda: not self._board_set_has_shikigami(set_index)
                 ):
-                    retry_source = (source[0], source[1] - 14)
-                    logger.warning(
-                        'Chess set 11 recall did not reduce lineup count; '
-                        f'retry from {retry_source}'
-                    )
-                    time.sleep(self.SCREENSHOT_INTERVAL)
-                    Press_and_Drag(
-                        self.device,
-                        p1=retry_source,
-                        p2=hand_target,
-                        hold_duration=0.6,
-                        point_random=(-2, -2, 2, 2),
-                        swipe_duration=0.5,
-                        name='CHESS_RECALL_SET_11_RETRY',
-                    )
-                    time.sleep(self.FAST_OPERATION_INTERVAL)
-                    self.screenshot()
-                    set_11_count = self._read_shikigami_count()
                     logger.debug(
-                        'Chess set 11 recall retry result: '
-                        f'{None if set_11_count is None else set_11_count["current"]}'
-                        f'/{None if set_11_count is None else set_11_count["total"]}'
+                        'Chess board recall confirmed by jade marker: '
+                        f'set={set_index}, '
+                        f'attempt={attempt}/'
+                        f'{self.ACTION_ICON_MAX_ATTEMPTS}'
                     )
-                if set_11_count is not None:
-                    count = set_11_count
+                    count = self._read_shikigami_count()
+                    break
+                if self._handle_goldfish_after_board_action_failure(
+                    set_index,
+                    action='recall_all',
+                ):
+                    self.screenshot()
+                    source_still_occupied = self._board_set_has_shikigami(
+                        set_index
+                    )
+                    if (
+                        not source_still_occupied
+                        or set_index
+                        == self._arakawa_goldfish_target_position()
+                    ):
+                        goldfish_handled = True
+                        logger.info(
+                            'Continue Chess board recall after handling '
+                            f'goldfish: set={set_index}, '
+                            f'source_occupied={source_still_occupied}'
+                        )
+                        break
+                    logger.info(
+                        'Chess board recall source remains occupied after '
+                        'goldfish swap; retry original recall: '
+                        f'set={set_index}'
+                    )
+                    continue
+                logger.warning(
+                    'Chess board recall jade marker still visible: '
+                    f'set={set_index}, '
+                    f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}, '
+                    f'timeout={self.ACTION_ICON_WAIT_TIMEOUT:.0f}s'
+                )
+            else:
+                raise GameStuckError(
+                    'Chess: board recall failed at '
+                    f'set {set_index} after 3 attempts'
+                )
+            if goldfish_handled:
+                count = self._read_shikigami_count()
 
         self.screenshot()
         count = self._read_shikigami_count()
@@ -2345,13 +2296,19 @@ class ChessHandOperationsMixin:
             ).items()
             if set_index not in recall_positions
         }
+        special_positions = {
+            int(unit['position'])
+            for unit in getattr(self, '_board_special_units', {}).values()
+            if unit.get('position') is not None
+        }
         self._player_deployed_positions = (
-            player_positions - set(recall_positions)
+            (player_positions - set(recall_positions))
+            | special_positions
         )
         if count is not None and count['current'] == 0:
             self._board_lineup_names = set()
-            self._player_deployed_positions = set()
             self._board_actual_positions = {}
+            self._player_deployed_positions = special_positions
         if count is None:
             logger.debug('Chess board recall completed; count is unavailable')
         else:

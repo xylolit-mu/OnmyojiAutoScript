@@ -2,7 +2,7 @@
 
 from pydantic import Field
 
-from tasks.Component.config_base import ConfigBase
+from tasks.Component.config_base import ConfigBase, Time
 from tasks.Component.config_scheduler import Scheduler
 from tasks.Chess.strategy.lineup import LineupBond
 
@@ -12,7 +12,7 @@ class ChessConfig(ConfigBase):
 
     lineup_bond: LineupBond = Field(
         title='选择阵容羁绊',
-        default=LineupBond.QIJIAOSHAN,
+        default=LineupBond.ARAKAWA,
         description='选择百鬼棋局使用的阵容羁绊与对应运营策略',
     )
 
@@ -36,6 +36,11 @@ class ChessConfig(ConfigBase):
             '单次匹配超过限制后取消并重新匹配；连续三次超时'
             '则标记为等待过多并结束任务'
         ),
+    )
+    limit_time: Time = Field(
+        title='运行时间限制',
+        default=Time(minute=30),
+        description='达到限制时间后不再开始下一局，已经开始的对局会正常完成',
     )
     coin_full_exit: bool = Field(
         title='刷满鼬乐币',

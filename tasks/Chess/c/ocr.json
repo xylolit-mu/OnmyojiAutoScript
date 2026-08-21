@@ -3,7 +3,7 @@
     "itemName": "shikigami_gold_5",
     "roiFront": "481,266,38,24",
     "roiBack": "481,266,38,24",
-    "mode": "Single",
+    "mode": "Digit",
     "method": "Default",
     "keyword": "",
     "description": "商店式神名称5"
@@ -12,7 +12,7 @@
     "itemName": "shikigami_gold_4",
     "roiFront": "668,266,38,24",
     "roiBack": "668,266,38,24",
-    "mode": "Single",
+    "mode": "Digit",
     "method": "Default",
     "keyword": "",
     "description": "商店式神名称4"
@@ -21,7 +21,7 @@
     "itemName": "shikigami_gold_3",
     "roiFront": "855,266,38,24",
     "roiBack": "855,266,38,24",
-    "mode": "Single",
+    "mode": "Digit",
     "method": "Default",
     "keyword": "",
     "description": "商店式神名称3"
@@ -30,7 +30,7 @@
     "itemName": "shikigami_gold_2",
     "roiFront": "1042,266,38,24",
     "roiBack": "1042,266,38,24",
-    "mode": "Single",
+    "mode": "Digit",
     "method": "Default",
     "keyword": "",
     "description": "商店式神名称2"
@@ -39,7 +39,7 @@
     "itemName": "shikigami_gold_1",
     "roiFront": "1229,266,38,24",
     "roiBack": "1229,266,38,24",
-    "mode": "Single",
+    "mode": "Digit",
     "method": "Default",
     "keyword": "",
     "description": "商店式神名称1"
@@ -111,7 +111,7 @@
     "itemName": "coin",
     "roiFront": "141,659,87,25",
     "roiBack": "141,659,87,25",
-    "mode": "Single",
+    "mode": "DigitCounter",
     "method": "Default",
     "keyword": "",
     "description": ""
@@ -264,7 +264,7 @@
     "itemName": "free_refresh_count",
     "roiFront": "1183,392,38,24",
     "roiBack": "1183,392,38,24",
-    "mode": "Single",
+    "mode": "Digit",
     "method": "Default",
     "keyword": "",
     "description": ""

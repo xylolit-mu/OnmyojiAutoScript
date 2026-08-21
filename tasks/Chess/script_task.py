@@ -1,6 +1,7 @@
 # This Python file uses the following encoding: utf-8
 
 import time
+from datetime import datetime, timedelta
 
 from module.exception import GameStuckError, TaskEnd
 from module.logger import logger
@@ -30,6 +31,19 @@ class ScriptTask(
 
     conf: Chess = None
 
+    def _wait_chess_action_state(self, condition) -> bool:
+        """在单次动作后限时轮询目标图标状态。"""
+        deadline = time.monotonic() + self.ACTION_ICON_WAIT_TIMEOUT
+        while time.monotonic() < deadline:
+            self.device.stuck_record_clear()
+            self.screenshot()
+            if condition():
+                return True
+            time.sleep(self.FAST_OPERATION_INTERVAL)
+        self.device.stuck_record_clear()
+        self.screenshot()
+        return bool(condition())
+
     def run(self):
         """按执行次数循环百鬼棋局，并可在鼬乐币刷满时提前结束。"""
         chess_task_config = getattr(self.config, 'chess', None)
@@ -49,6 +63,15 @@ class ScriptTask(
         # self.config.chess.chess_config。旧配置未包含新字段时使用默认值，
         # 避免升级后任务在进入棋局大厅时直接崩溃。
         target_count = int(getattr(chess_config, 'run_count', 1))
+        configured_limit_time = getattr(chess_config, 'limit_time', None)
+        if configured_limit_time is None:
+            self.limit_time = timedelta(minutes=30)
+        else:
+            self.limit_time = timedelta(
+                hours=configured_limit_time.hour,
+                minutes=configured_limit_time.minute,
+                seconds=configured_limit_time.second,
+            )
         coin_full_exit = bool(
             getattr(chess_config, 'coin_full_exit', False)
         )
@@ -65,7 +88,8 @@ class ScriptTask(
         logger.info(
             'Chess task constraints: '
             f'lineup={strategy["key"]} ({strategy["display_name"]}), '
-            f'run_count={target_count}, coin_full_exit={coin_full_exit}, '
+            f'run_count={target_count}, limit_time={self.limit_time}, '
+            f'coin_full_exit={coin_full_exit}, '
             f'rank_protection={rank_protection}, '
             f'matchmaking_timeout={self._matchmaking_timeout_seconds}s'
         )
@@ -75,6 +99,11 @@ class ScriptTask(
             or completed < target_count
             or rank_protection_exits_remaining > 0
         ):
+            if datetime.now() - self.start_time >= self.limit_time:
+                logger.info(
+                    'Chess task time reached; stop before starting next game'
+                )
+                break
             self.screenshot()
             if coin_full_exit and self._coin_is_full():
                 logger.info(
@@ -318,7 +347,6 @@ class ScriptTask(
             if name in self.shikigami_deploy_positions
         }
         self.equip_souls_from_hand(verified_board_names)
-        self.retry_arakawa_goldfish_after_soul_equipment()
         return self._is_preparation_mode()
 
     def _run_preparation_economy_until_time_limit(self) -> None:
@@ -533,26 +561,31 @@ class ScriptTask(
 
     def _close_chess_lobby_abnormal_page(self) -> bool:
         """关闭棋局大厅开战时偶发出现的红色返回键异常页面。"""
-        recovered = False
-        while self.appear(self.I_BACK_RED):
-            if not recovered:
-                logger.warning(
-                    'Chess start blocked by abnormal lobby page; '
-                    'close it with back red'
-                )
-            if self.appear_then_click(
-                self.I_BACK_RED,
-                interval=self.SLOW_POLL_INTERVAL,
+        if not self.appear(self.I_BACK_RED):
+            return False
+        logger.warning(
+            'Chess start blocked by abnormal lobby page; '
+            'close it with back red'
+        )
+        for attempt in range(1, self.ACTION_ICON_MAX_ATTEMPTS + 1):
+            self.device.click_record_remove(self.I_BACK_RED)
+            self.click(self.I_BACK_RED)
+            if self._wait_chess_action_state(
+                lambda: not self.appear(self.I_BACK_RED)
             ):
-                recovered = True
-            self.device.stuck_record_clear()
-            time.sleep(self.SLOW_POLL_INTERVAL)
-            self.screenshot()
-        if recovered:
-            logger.info(
-                'Chess abnormal lobby page closed; retry normal game start'
+                logger.info(
+                    'Chess abnormal lobby page closed; '
+                    f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}'
+                )
+                return True
+            logger.warning(
+                'Chess abnormal lobby page still visible after click: '
+                f'attempt={attempt}/{self.ACTION_ICON_MAX_ATTEMPTS}, '
+                f'timeout={self.ACTION_ICON_WAIT_TIMEOUT:.0f}s'
             )
-        return recovered
+        raise GameStuckError(
+            'Chess: failed to close abnormal lobby page after 3 attempts'
+        )
 
     def _wait_until_in_chess_game(
         self,

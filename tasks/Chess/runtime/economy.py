@@ -87,12 +87,11 @@ class ChessEconomyMixin:
 
     def _read_shop_gold(self) -> int | None:
         """读取当前金币；OCR 异常时返回 None，避免误停购买流程。"""
-        raw = self._normalize_ocr_text(self.O_GOLD.ocr(self.device.image))
-        matched = re.search(r'\d+', raw)
-        if matched is None:
-            logger.warning(f'Chess gold OCR invalid: [{raw}]')
+        value = self.O_GOLD.ocr(self.device.image)
+        if not isinstance(value, int) or value < 0:
+            logger.warning(f'Chess gold OCR invalid: [{value}]')
             return None
-        return int(matched.group(0))
+        return value
 
     @staticmethod
     def _parse_coin_text(raw_text: str) -> dict | None:
@@ -126,21 +125,43 @@ class ChessEconomyMixin:
             return None
         return {
             'current': current,
+            'remaining': 600 - current,
             'total': 600,
             'raw': raw,
             'recovered': recovered,
         }
 
     def _read_coin(self) -> dict | None:
-        """读取棋局大厅鼬乐币，OCR 无效时返回 None。"""
-        raw = self._normalize_ocr_text(self.O_COIN.ocr(self.device.image))
-        coin = self._parse_coin_text(raw)
+        """读取棋局大厅鼬乐币，优先消费 DigitCounter 三元组。"""
+        result = self.O_COIN.ocr(self.device.image)
+        coin = None
+        if isinstance(result, (tuple, list)) and len(result) == 3:
+            current, remaining, total = result
+            if (
+                all(isinstance(value, int) for value in result)
+                and current >= 0
+                and remaining >= 0
+                and total == 600
+                and current + remaining == total
+            ):
+                coin = {
+                    'current': current,
+                    'remaining': remaining,
+                    'total': total,
+                    'raw': f'{current}/{total}',
+                    'recovered': False,
+                }
+        else:
+            # 兼容尚未重新生成资源、仍返回文本的旧版 OCR 配置。
+            raw = self._normalize_ocr_text(result)
+            coin = self._parse_coin_text(raw)
+
         if coin is None:
-            logger.warning(f'Chess coin OCR invalid: [{raw}]')
+            logger.warning(f'Chess coin OCR invalid: [{result}]')
             return None
         if coin['recovered']:
             logger.debug(
-                f'Chess coin OCR recovered: [{raw}] -> '
+                f'Chess coin OCR recovered: [{coin["raw"]}] -> '
                 f'{coin["current"]}/{coin["total"]}'
             )
         else:
@@ -228,18 +249,15 @@ class ChessEconomyMixin:
         digit_rule = RuleOcr(
             roi=(price_x, roi_y, price_width, roi_height),
             area=(price_x, roi_y, price_width, roi_height),
-            mode='Single',
+            mode='Digit',
             method='Default',
             keyword='',
             name=f'shikigami_gold_value_{slot_index}',
         )
-        raw = self._normalize_ocr_text(
-            digit_rule.ocr(self.device.image)
-        )
-        matched = re.search(r'\d+', raw)
-        if matched is None:
+        price = digit_rule.ocr(self.device.image)
+        raw = str(price)
+        if not isinstance(price, int):
             return None, raw
-        price = int(matched.group(0))
         if price not in range(1, 6):
             return None, raw
         return price, raw

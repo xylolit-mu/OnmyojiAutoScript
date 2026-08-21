@@ -53,7 +53,7 @@ LINEUP_REGISTRY = {
     },
 }
 
-DEFAULT_LINEUP_KEY = 'qijiaoshan'
+DEFAULT_LINEUP_KEY = 'arakawa'
 
 # 枚举值使用中文，使 OASX 下拉框直接显示中文；运行时通过下面的解析
 # 函数还原成稳定的拼音键。

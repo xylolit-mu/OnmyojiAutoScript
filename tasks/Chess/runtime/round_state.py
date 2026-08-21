@@ -419,8 +419,47 @@ class ChessRoundStateMixin:
         # 不能和真正的 OCR 空结果混为一谈，否则会误累计结算空帧。
         return raw or None
 
+    def _is_boss_challenge_round(self) -> bool:
+        """当前是否为固定勾玉框会整体失效的首领挑战回合。"""
+        return getattr(self, '_current_round_no', None) in (
+            self.BOSS_CHALLENGE_ROUNDS
+        )
+
+    def _tracked_board_positions(self) -> set[int]:
+        """汇总无需依赖勾玉模板即可确认的本局站位。"""
+        positions = {
+            int(position)
+            for position in getattr(
+                self,
+                '_player_deployed_positions',
+                set(),
+            )
+        }
+        actual_positions = getattr(self, '_board_actual_positions', {})
+        for name in getattr(self, '_board_lineup_names', set()):
+            position = actual_positions.get(
+                name,
+                self.shikigami_deploy_positions.get(name),
+            )
+            if position is not None:
+                positions.add(int(position))
+        for unit in getattr(self, '_board_special_units', {}).values():
+            position = unit.get('position')
+            if position is not None:
+                positions.add(int(position))
+        return positions
+
     def _board_set_has_shikigami(self, set_index: int) -> bool:
-        """在对应站位中匹配三种头顶勾玉，任一命中即视为有人。"""
+        """判断站位是否有人；首领回合仅采用本局动态站位记录。"""
+        if self._is_boss_challenge_round():
+            occupied = int(set_index) in self._tracked_board_positions()
+            logger.debug(
+                'Chess boss-round board occupancy by runtime state: '
+                f'round={self._current_round_no}, set={set_index}, '
+                f'occupied={occupied}'
+            )
+            return occupied
+
         x, y, width, height = self._set_jade_area(set_index)
         image_height, image_width = self.device.image.shape[:2]
         if (
@@ -457,6 +496,22 @@ class ChessRoundStateMixin:
 
     def _read_board_position_count(self) -> dict:
         """统计 12 个站位勾玉区域中检测到图标的位置数量。"""
+        if self._is_boss_challenge_round():
+            occupied_positions = sorted(self._tracked_board_positions())
+            count = len(occupied_positions)
+            raw = ','.join(str(index) for index in occupied_positions)
+            logger.debug(
+                'Chess boss-round board position count by runtime state: '
+                f'round={self._current_round_no}, count={count}/12, '
+                f'occupied={occupied_positions}'
+            )
+            return {
+                'current': count,
+                'total': 12,
+                'raw': raw,
+                'occupied_positions': occupied_positions,
+            }
+
         occupied_positions = [
             set_index
             for set_index in range(1, 13)

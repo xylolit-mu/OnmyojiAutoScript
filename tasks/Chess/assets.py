@@ -92,15 +92,15 @@ class ChessAssets:
 
 	# Ocr Rule Assets
 	# 商店式神名称5
-	O_SHIKIGAMI_GOLD_5 = RuleOcr(roi=(481,266,38,24), area=(481,266,38,24), mode="Single", method="Default", keyword="", name="shikigami_gold_5")
+	O_SHIKIGAMI_GOLD_5 = RuleOcr(roi=(481,266,38,24), area=(481,266,38,24), mode="Digit", method="Default", keyword="", name="shikigami_gold_5")
 	# 商店式神名称4
-	O_SHIKIGAMI_GOLD_4 = RuleOcr(roi=(668,266,38,24), area=(668,266,38,24), mode="Single", method="Default", keyword="", name="shikigami_gold_4")
+	O_SHIKIGAMI_GOLD_4 = RuleOcr(roi=(668,266,38,24), area=(668,266,38,24), mode="Digit", method="Default", keyword="", name="shikigami_gold_4")
 	# 商店式神名称3
-	O_SHIKIGAMI_GOLD_3 = RuleOcr(roi=(855,266,38,24), area=(855,266,38,24), mode="Single", method="Default", keyword="", name="shikigami_gold_3")
+	O_SHIKIGAMI_GOLD_3 = RuleOcr(roi=(855,266,38,24), area=(855,266,38,24), mode="Digit", method="Default", keyword="", name="shikigami_gold_3")
 	# 商店式神名称2
-	O_SHIKIGAMI_GOLD_2 = RuleOcr(roi=(1042,266,38,24), area=(1042,266,38,24), mode="Single", method="Default", keyword="", name="shikigami_gold_2")
+	O_SHIKIGAMI_GOLD_2 = RuleOcr(roi=(1042,266,38,24), area=(1042,266,38,24), mode="Digit", method="Default", keyword="", name="shikigami_gold_2")
 	# 商店式神名称1
-	O_SHIKIGAMI_GOLD_1 = RuleOcr(roi=(1229,266,38,24), area=(1229,266,38,24), mode="Single", method="Default", keyword="", name="shikigami_gold_1")
+	O_SHIKIGAMI_GOLD_1 = RuleOcr(roi=(1229,266,38,24), area=(1229,266,38,24), mode="Digit", method="Default", keyword="", name="shikigami_gold_1")
 	# 当前等级
 	O_LEVEL = RuleOcr(roi=(128,678,53,34), area=(128,678,53,34), mode="Single", method="Default", keyword="", name="level")
 	# 当前回目
@@ -116,7 +116,7 @@ class ChessAssets:
 	#
 	O_BADGE_AREA = RuleOcr(roi=(181,650,945,46), area=(181,650,945,46), mode="Single", method="Default", keyword="", name="badge_area")
 	#
-	O_COIN = RuleOcr(roi=(141,659,87,25), area=(141,659,87,25), mode="Single", method="Default", keyword="", name="coin")
+	O_COIN = RuleOcr(roi=(141,659,87,25), area=(141,659,87,25), mode="DigitCounter", method="Default", keyword="", name="coin")
 	#
 	O_NOW_TIME = RuleOcr(roi=(768,0,32,28), area=(768,0,32,28), mode="Single", method="Default", keyword="", name="now_time")
 	#
@@ -150,4 +150,4 @@ class ChessAssets:
 	#
 	O_GRIGRI_OPTION_NAME_3 = RuleOcr(roi=(825,370,191,45), area=(825,370,191,45), mode="Single", method="Default", keyword="", name="grigri_option_name_3")
 	#
-	O_FREE_REFRESH_COUNT = RuleOcr(roi=(1183,392,38,24), area=(1183,392,38,24), mode="Single", method="Default", keyword="", name="free_refresh_count")
+	O_FREE_REFRESH_COUNT = RuleOcr(roi=(1183,392,38,24), area=(1183,392,38,24), mode="Digit", method="Default", keyword="", name="free_refresh_count")
