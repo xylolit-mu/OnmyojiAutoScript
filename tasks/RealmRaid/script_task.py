@@ -27,9 +27,6 @@ from module.atom.click import RuleClick
 class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
     medal_grid: ImageGrid = None
     init_tickets: int = -1
-    CLICK_REACTION_DELAY = (0.18, 0.22)
-    PREPARE_CLICK_DELAY_RANGE = (2.5, 3.5)
-    SETTLEMENT_CLICK_INTERVAL_RANGE = (0.65, 0.95)
 
     def _handle_result(self, context: BattleContext, config: GeneralBattleConfig) -> BattleAction:
         if config.quick_exit:

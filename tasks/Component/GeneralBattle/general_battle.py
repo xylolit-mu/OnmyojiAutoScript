@@ -110,8 +110,6 @@ class BattleContext:
     timed_battle_inspections: dict[str, BattleTimedInspection]
     # 锁定阵容时准备页延迟点击计时器；只统计连续停留在准备页的窗口。
     prepare_click_timer: Timer
-    # 战斗结算页连续点击的间隔计时器。
-    settlement_click_timer: Timer
     # 当前调用需要开启的 buff 配置；供 handler 和子类覆写逻辑直接读取。
     buff: Union[BuffClass | list[BuffClass] | None] = None
     # 最近一次稳定识别到的战斗页面；用于驱动连战和超时逻辑。
@@ -150,10 +148,6 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
     """
     使用这个通用的战斗必须要求这个任务的 config 有 general_battle_config。
     """
-
-    # 子任务可按需要覆写；默认值保持原有通用战斗节奏。
-    PREPARE_CLICK_DELAY_RANGE: tuple[float, float] = (PREPARE_CLICK_DELAY, PREPARE_CLICK_DELAY)
-    SETTLEMENT_CLICK_INTERVAL_RANGE: tuple[float, float] = (0.8, 0.8)
 
     def __init__(self, config, device) -> None:
         """初始化通用战斗运行时缓存。
@@ -320,25 +314,10 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
             round_behavior_state=BattleBehaviorState(),
             behavior_scopes=self._get_battle_behavior_scopes(config, battle_key),
             timed_battle_inspections=self._build_timed_battle_inspections(config, battle_key),
-            prepare_click_timer=Timer(self._next_prepare_click_delay()),
-            settlement_click_timer=Timer(self._next_settlement_click_interval()),
+            prepare_click_timer=Timer(PREPARE_CLICK_DELAY),
             buff=buff,
             quick_exit=bool(config.quick_exit),
         )
-
-    @staticmethod
-    def _sample_interval(value: tuple[float, float] | float) -> float:
-        """从声明区间中抽取一次操作间隔。"""
-        if isinstance(value, tuple):
-            low, high = value
-            return random.uniform(min(low, high), max(low, high))
-        return float(value)
-
-    def _next_prepare_click_delay(self) -> float:
-        return self._sample_interval(self.PREPARE_CLICK_DELAY_RANGE)
-
-    def _next_settlement_click_interval(self) -> float:
-        return self._sample_interval(self.SETTLEMENT_CLICK_INTERVAL_RANGE)
 
     def _get_battle_behavior_scopes(self, config: GeneralBattleConfig, battle_key: str) -> dict[str, BattleBehaviorScope]:
         """返回本次通用战斗中各一次性行为的默认执行作用域。
@@ -503,8 +482,7 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
         context.quick_exit_timer = None
         context.continuous_count = continuous_count
         context.round_behavior_state = BattleBehaviorState()
-        context.prepare_click_timer = Timer(self._next_prepare_click_delay())
-        context.settlement_click_timer = Timer(self._next_settlement_click_interval())
+        context.prepare_click_timer.clear()
 
     def _reset_timed_battle_inspection_timers(self, context: BattleContext) -> None:
         """统一重置当前 battle 生效巡检项的 timer。"""
@@ -535,23 +513,10 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
             self._reset_prepare_click_timer(context)
             return True
         if not context.prepare_click_timer.started():
-            logger.info(
-                "Lock team enabled, click prepare later: "
-                f"{context.prepare_click_timer.limit:.3f}s"
-            )
+            logger.info(f"Lock team enabled, click prepare later")
             context.prepare_click_timer.start()
             return False
         return context.prepare_click_timer.reached()
-
-    def _settlement_click(self, context: BattleContext) -> bool:
-        """按当前任务声明的浮动间隔点击一次战斗结算页。"""
-        timer = context.settlement_click_timer
-        if timer.started() and not timer.reached():
-            return False
-        self.click(random_click())
-        timer.limit = self._next_settlement_click_interval()
-        timer.reset()
-        return True
 
     def _inspection_recover_auto_mode(self, context: BattleContext) -> None:
         """默认 battle 巡检项：检测手动并恢复自动。"""
@@ -706,7 +671,7 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
         context.is_win = not self.appear(self.I_FALSE, threshold=0.8)
         if context.last_page != page_battle_result:
             self.device.click_record_clear()
-        self._settlement_click(context)
+        self.click(random_click(), interval=0.8)
         return BattleAction.CONTINUE
 
     def _handle_reward(self, context: BattleContext, config: GeneralBattleConfig) -> BattleAction:
@@ -726,7 +691,7 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
         self.appear_then_click(self.I_GB_SKIN_CONFIRM, interval=0.8)
         if context.last_page != page_reward:
             self.device.click_record_clear()
-        self._settlement_click(context)
+        self.click(random_click(), interval=0.8)
         return BattleAction.CONTINUE
 
     def _handle_missing_battle_page(self, context: BattleContext, config: GeneralBattleConfig,

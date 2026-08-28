@@ -1,7 +1,6 @@
 import asyncio
 import ctypes
 import os
-import random
 import sys
 from functools import partial, wraps
 from pathlib import Path
@@ -536,12 +535,11 @@ class NemuIpc():
         return image
 
     def click_nemu_ipc(self, x, y):
+        down = ensure_time((0.010, 0.020))
         self.nemu_ipc.down(x, y)
-        self.sleep(ensure_time((0.050, 0.110)))
-        self.nemu_ipc.down(x + random.randint(-2, 2), y + random.randint(-2, 2))
-        self.sleep(ensure_time((0.008, 0.020)))
+        self.sleep(down)
         self.nemu_ipc.up()
-        self.sleep(ensure_time((0.020, 0.045)))
+        self.sleep(0.050 - down)
 
     def long_click_nemu_ipc(self, x, y, duration=1.0):
         self.nemu_ipc.down(x, y)
@@ -554,7 +552,7 @@ class NemuIpc():
 
         for point in points:
             self.nemu_ipc.down(*point)
-            self.sleep(ensure_time((0.006, 0.015)))
+            self.sleep(0.010)
 
         self.nemu_ipc.up()
         self.sleep(0.050)

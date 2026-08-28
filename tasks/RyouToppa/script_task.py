@@ -80,9 +80,6 @@ def random_delay(min_value: float = 1.0, max_value: float = 2.0, decimal: int = 
 
 class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RyouToppaAssets):
     medal_grid: ImageGrid = None
-    CLICK_REACTION_DELAY = (0.18, 0.22)
-    PREPARE_CLICK_DELAY_RANGE = (2.5, 3.5)
-    SETTLEMENT_CLICK_INTERVAL_RANGE = (0.65, 0.95)
 
     def run(self):
         """
@@ -282,12 +279,7 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RyouToppaAssets):
             p1 = (safe_pos_x, safe_pos_y)
             p2 = (safe_pos_x, safe_pos_y - 101)
             logger.info('Swipe %s -> %s, %s ' % (point2str(*p1), point2str(*p2), duration))
-            self.device.swipe(
-                p1,
-                p2,
-                duration=duration,
-                control_name='RYOU_TOPPA_REFRESH',
-            )
+            self.device.swipe_adb(p1, p2, duration=duration)
             time.sleep(2)
 
     def attack_area(self, index: int):
