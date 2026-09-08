@@ -42,9 +42,17 @@ class GeneralRoom(BaseTask, GeneralRoomAssets):
                 return True
         return False
 
-    def ensure_private(self) -> bool:
+    def ensure_private(self, room_mark: RuleImage = None) -> bool:
         """
         确认私人房间, 不公开仅邀请
+
+        正常情况下弹窗上的"不公开(仅邀请)"开关匹配到即返回。
+        但存在建房过渡动画期间(弹窗已关闭、房间已建成)本方法仍被调用的时序,
+        此时四个弹窗资产全部匹配不到会空转直至卡死检测。传入 room_mark 后,
+        若检测到房间已建成则视为私人设置已生效, 直接返回, 避免空转。
+
+        :param room_mark: 可选。房间已建成界面的特征图(如房间标题栏/协战队伍)。
+                          为 None 时行为与旧版完全一致。
         :return:
         """
         logger.info('Ensure private')
@@ -63,6 +71,10 @@ class GeneralRoom(BaseTask, GeneralRoomAssets):
                 continue
             if self.appear_then_click(self.I_ENSURE_PRIVATE_FALSE_2, interval=1, threshold=0.7):
                 continue
+            # 弹窗上的开关匹配不到但房间已经建成: 私人设置此前已生效(或沿用上次设置), 直接放行
+            if room_mark is not None and self.appear(room_mark):
+                logger.info('Room already created, private ensured')
+                return True
         return False
 
     def ensure_public(self) -> bool:

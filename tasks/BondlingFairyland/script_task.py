@@ -219,7 +219,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
                     if self.appear(self.I_CREATE_TEAM, interval=1):
                         self.appear_then_click(self.I_CREATE_TEAM, interval=2)
                         if not self.appear(self.I_GI_IN_ROOM):
-                            self.ensure_private()
+                            self.ensure_private(room_mark=self.I_GI_IN_ROOM)
                         continue
                     # 求援
                     if self.appear(self.I_BALL_AREA, interval=1):
