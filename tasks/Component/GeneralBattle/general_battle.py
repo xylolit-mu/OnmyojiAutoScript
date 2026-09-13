@@ -1041,16 +1041,18 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
                 continue
             break
         self.click(tmp)
-        logger.info("Click preset ensure")
-        wait_ensure_timer = Timer(4).start()
-        while 1:
+        wait_ensure_timer = Timer(3).start()
+        preset_clicked = False
+        while True:
             if wait_ensure_timer.reached():
                 logger.warning(timeout_warning)
                 return
             self.screenshot()
-            if not self.appear(self.I_PRESET_ENSURE):
-                break
+            if preset_clicked and not self.appear(self.I_PRESET_ENSURE):
+                logger.info("Click preset ensure success")
+                return
             if self.appear_then_click(self.I_PRESET_ENSURE, interval=1):
+                preset_clicked = True
                 continue
 
     def random_click_swipt(self):
