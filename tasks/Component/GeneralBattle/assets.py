@@ -13,11 +13,11 @@ class GeneralBattleAssets:
 
 	# Click Rule Assets
 	# 预设队伍1 
-	C_PRESET_TEAM_1 = RuleClick(roi_front=(195,235,465,110), roi_back=(195,235,465,110), name="preset_team_1")
+	C_PRESET_TEAM_1 = RuleClick(roi_front=(195,235,464,44), roi_back=(195,235,465,44), name="preset_team_1")
 	# 预设队伍2 
-	C_PRESET_TEAM_2 = RuleClick(roi_front=(195,355,465,110), roi_back=(195,355,465,110), name="preset_team_2")
+	C_PRESET_TEAM_2 = RuleClick(roi_front=(195,355,465,44), roi_back=(195,355,465,44), name="preset_team_2")
 	# 预设队伍3 
-	C_PRESET_TEAM_3 = RuleClick(roi_front=(195,475,465,110), roi_back=(195,475,465,110), name="preset_team_3")
+	C_PRESET_TEAM_3 = RuleClick(roi_front=(195,475,465,44), roi_back=(195,475,465,44), name="preset_team_3")
 	# 预设队伍4 
 	C_PRESET_TEAM_4 = RuleClick(roi_front=(195,595,465,35), roi_back=(195,595,465,35), name="preset_team_4")
 	# 预设组1 

@@ -1,20 +1,20 @@
 [
   {
     "itemName": "preset_team_1",
-    "roiFront": "195,235,465,110",
-    "roiBack": "195,235,465,110",
+    "roiFront": "195,235,464,44",
+    "roiBack": "195,235,465,44",
     "description": "预设队伍1"
   },
   {
     "itemName": "preset_team_2",
-    "roiFront": "195,355,465,110",
-    "roiBack": "195,355,465,110",
+    "roiFront": "195,355,465,44",
+    "roiBack": "195,355,465,44",
     "description": "预设队伍2"
   },
   {
     "itemName": "preset_team_3",
-    "roiFront": "195,475,465,110",
-    "roiBack": "195,475,465,110",
+    "roiFront": "195,475,465,44",
+    "roiBack": "195,475,465,44",
     "description": "预设队伍3"
   },
   {
