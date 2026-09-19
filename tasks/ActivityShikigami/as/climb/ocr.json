@@ -21,7 +21,7 @@
     "itemName": "remain_boss",
     "roiFront": "1169,668,70,30",
     "roiBack": "1169,668,70,30",
-    "mode": "Digit",
+    "mode": "DigitCounter",
     "method": "Default",
     "keyword": "",
     "description": "boss剩余攻击次数"

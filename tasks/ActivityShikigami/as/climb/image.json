@@ -2,8 +2,8 @@
   {
     "itemName": "lock",
     "imageName": "as_lock.png",
-    "roiFront": "868,653,31,30",
-    "roiBack": "760,628,330,86",
+    "roiFront": "898,647,24,27",
+    "roiBack": "759,628,330,86",
     "method": "Template matching",
     "threshold": 0.7,
     "description": "上锁图标"
@@ -11,7 +11,7 @@
   {
     "itemName": "unlock",
     "imageName": "as_unlock.png",
-    "roiFront": "868,653,31,30",
+    "roiFront": "899,648,24,23",
     "roiBack": "752,625,313,92",
     "method": "Template matching",
     "threshold": 0.7,

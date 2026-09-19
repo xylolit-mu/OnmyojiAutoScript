@@ -16,15 +16,15 @@ class ActivityShikigamiAssets:
 	C_CL_SELECT_EASY = RuleClick(roi_front=(1166,171,71,63), roi_back=(1166,171,71,63), name="cl_select_easy")
 	#  
 	C_CL_SELECT_HARD = RuleClick(roi_front=(1121,340,71,63), roi_back=(1121,340,71,63), name="cl_select_hard")
-	#
+	#  
 	C_RANDOM_CLOSE_AUTOFIGHT = RuleClick(roi_front=(1204,88,76,449), roi_back=(1204,88,76,449), name="random_close_autofight")
 
 
 	# Image Rule Assets
 	# 上锁图标 
-	I_LOCK = RuleImage(roi_front=(868,653,31,30), roi_back=(760,628,330,86), threshold=0.7, method="Template matching", file="./tasks/ActivityShikigami/as/climb/as_lock.png")
+	I_LOCK = RuleImage(roi_front=(898,647,24,27), roi_back=(759,628,330,86), threshold=0.7, method="Template matching", file="./tasks/ActivityShikigami/as/climb/as_lock.png")
 	# 还未上锁图片 
-	I_UNLOCK = RuleImage(roi_front=(868,653,31,30), roi_back=(752,625,313,92), threshold=0.7, method="Template matching", file="./tasks/ActivityShikigami/as/climb/as_unlock.png")
+	I_UNLOCK = RuleImage(roi_front=(899,648,24,23), roi_back=(752,625,313,92), threshold=0.7, method="Template matching", file="./tasks/ActivityShikigami/as/climb/as_unlock.png")
 	# 活动爬塔标志 
 	I_CLIMB_MODE_PASS = RuleImage(roi_front=(1143,544,21,21), roi_back=(1118,510,119,186), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/climb/as_climb_mode_pass.png")
 	# 体力爬塔标志 
@@ -49,9 +49,9 @@ class ActivityShikigamiAssets:
 	I_CHECK_CLIMB_HARD = RuleImage(roi_front=(615,413,67,67), roi_back=(610,408,77,77), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/climb/climb_check_climb_hard.png")
 	#  
 	I_CHECK_CLIMB_EASY = RuleImage(roi_front=(615,413,67,67), roi_back=(610,408,77,77), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/climb/climb_check_climb_easy.png")
-	#
+	#  
 	I_USELESS_MESSAGE_CLOSE = RuleImage(roi_front=(1171,95,31,30), roi_back=(1042,68,179,170), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/climb/climb_useless_message_close.png")
-	#
+	#  
 	I_AUTOFIGHT = RuleImage(roi_front=(533,98,207,46), roi_back=(470,73,330,86), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/climb/climb_autofight.png")
 
 
@@ -61,7 +61,7 @@ class ActivityShikigamiAssets:
 	# 活动门票的剩余检测 
 	O_REMAIN_PASS = RuleOcr(roi=(756,17,88,31), area=(756,17,88,31), mode="Digit", method="Default", keyword="", name="remain_pass")
 	# boss剩余攻击次数 
-	O_REMAIN_BOSS = RuleOcr(roi=(1169,668,70,30), area=(1169,668,70,30), mode="Digit", method="Default", keyword="", name="remain_boss")
+	O_REMAIN_BOSS = RuleOcr(roi=(1169,668,70,30), area=(1169,668,70,30), mode="DigitCounter", method="Default", keyword="", name="remain_boss")
 	# 100体活动门票检测 
 	O_REMAIN_AP100 = RuleOcr(roi=(936,16,99,42), area=(911,8,129,61), mode="Digit", method="Default", keyword="", name="remain_ap100")
 	# 五倍卷剩余数量 
@@ -86,7 +86,7 @@ class ActivityShikigamiAssets:
 
 
 	# Scatter Rule Assets
-	# 开始战斗
+	# 开始战斗 
 	C_START_FIRE = RuleScatter(roi_front=(1108,573,139,130), roi_back=(1108,573,139,130), polygon=[(1129, 578), (1108, 611), (1111, 659), (1141, 690), (1180, 702), (1222, 683), (1239, 655), (1246, 619), (1232, 587), (1209, 574), (1158, 573)], name="start_fire")
 
 
@@ -121,9 +121,9 @@ class ActivityShikigamiAssets:
 	I_EVENT_STORY = RuleImage(roi_front=(1156,32,58,34), roi_back=(1132,14,115,66), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/exploration/exploration_event_story.png")
 	# 确认跳过剧情 
 	I_STORY_SKIP_ENSURE = RuleImage(roi_front=(716,445,117,34), roi_back=(674,426,203,68), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/exploration/exploration_story_skip_ensure.png")
-	# 探索Boss战斗事件标志
+	# 探索Boss战斗事件标志 
 	I_EVENT_FIGHT_BOSS = RuleImage(roi_front=(477,70,222,51), roi_back=(472,65,232,61), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/exploration/exploration_event_fight_boss.png")
-	# 探索奖励关闭按钮
+	# 探索奖励关闭按钮 
 	I_EVENT_REWARD_CLOSE = RuleImage(roi_front=(1203,140,42,38), roi_back=(1184,116,76,87), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/exploration/exploration_event_reward_close.png")
 
 
@@ -304,3 +304,5 @@ class ActivityShikigamiAssets:
 	I_CHECK_RM_MAIN = RuleImage(roi_front=(148,13,174,47), roi_back=(121,0,227,72), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/richman/rm_check_rm_main.png")
 	#  
 	I_CHECK_RM_RICHMAN = RuleImage(roi_front=(148,13,140,47), roi_back=(121,0,227,72), threshold=0.8, method="Template matching", file="./tasks/ActivityShikigami/as/richman/rm_check_rm_richman.png")
+
+

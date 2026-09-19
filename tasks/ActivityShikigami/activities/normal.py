@@ -50,10 +50,11 @@ class NormalClimbAct:
             ActivityShikigamiAssets.I_TO_BATTLE_CLIMB,
             key='climb_main->climb_ap100',
         )
-        page_climb_main.connect(
+        # 本期活动 Boss 入口在活动主界面，直接从 page_act 进入。
+        page_act.connect(
             page_boss,
             ActivityShikigamiAssets.I_TO_BATTLE_BOSS,
-            key='climb_main->climb_boss',
+            key='activity->climb_boss',
         )
         page_pass.connect(page_ap, ActivityShikigamiAssets.I_CLIMB_MODE_SWITCH, key='climb_pass->climb_ap')
         page_ap.connect(page_pass, ActivityShikigamiAssets.I_CLIMB_MODE_SWITCH, key='climb_ap->climb_pass')

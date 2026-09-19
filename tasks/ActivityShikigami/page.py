@@ -188,7 +188,8 @@ page_climb_ap100.add_enter_failure_hooks(GlobalGameAssets.I_UI_BACK_RED)
 page_climb_ap100.connect(page_climb_main, GlobalGameAssets.I_UI_BACK_YELLOW, key='climb_ap100->climb_main')
 
 page_climb_boss = Page(ActivityShikigamiAssets.I_AS_BOSS_FIRE)
-page_climb_boss.connect(page_climb_main, GlobalGameAssets.I_UI_BACK_YELLOW, key='climb_boss->climb_main')
+# 本期 Boss 入口挂在活动主界面，返回也回到活动主界面。
+page_climb_boss.connect(page_act, GlobalGameAssets.I_UI_BACK_YELLOW, key='climb_boss->activity')
 
 # 大富翁棋盘。
 page_rich_man = Page(ActivityShikigamiAssets.I_CHECK_RM_RICHMAN)
