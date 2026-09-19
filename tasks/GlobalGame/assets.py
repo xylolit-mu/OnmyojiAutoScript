@@ -1,5 +1,6 @@
 from module.atom.image import RuleImage
 from module.atom.click import RuleClick
+from module.atom.scatter import RuleScatter
 from module.atom.long_click import RuleLongClick
 from module.atom.swipe import RuleSwipe
 from module.atom.ocr import RuleOcr
@@ -35,7 +36,7 @@ class GlobalGameAssets:
 
 	# Click Rule Assets
 	# description 
-	C_UI_REWARD = RuleClick(roi_front=(919,160,208,368), roi_back=(72,107,244,503), name="ui_reward")
+	C_UI_REWARD = RuleClick(roi_front=(1029,122,175,454), roi_back=(72,107,206,509), name="ui_reward")
 
 
 	# Image Rule Assets
