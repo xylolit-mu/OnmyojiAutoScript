@@ -704,6 +704,13 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, QuickLoadout, AbyssShadowsAs
             logger.info(f"{enemy_type.name} 的预设为 -1,-1，跳过御魂切换")
             return
 
+        # 进入式神录前，若"怪物分布"导航弹窗残留（上次找怪失败未恢复），先点掉
+        # 否则弹窗遮罩会挡住式神录按钮，导致 goto_page 死循环 (GameTooManyClickError)
+        self.screenshot()
+        if self.appear(self.I_ABYSS_MAP_EXIT):
+            logger.info("Abyss map navigation popup remains, close it")
+            self.click(self.I_ABYSS_MAP_EXIT, interval=2)
+
         self.goto_page(page_shikigami_records)
         try:
             parts = preset_str.split(',')
