@@ -130,8 +130,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
     def click_fire(self):
         # 队友进房后、点开始挑战前, 采样房间锁定状态(契灵锁定后系统会自动开战)
         self.screenshot()
-        self._room_locked = self.is_in_room(False) and \
-            bool(self.appear(self.I_LOCK)) and not bool(self.appear(self.I_UNLOCK))
+        self._room_locked = self.is_in_room(False) and bool(self.appear(self.I_LOCK))
         logger.info(f'Bondling room locked: {self._room_locked}')
         return super().click_fire()
 
@@ -331,7 +330,8 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
             if self.is_in_room(False):
                 logger.info("契灵：已经在组队房间中")
                 # 开战前采样锁定状态。锁定房间会自动准备，进入准备页后不应再点击。
-                self._room_locked = bool(self.appear(self.I_LOCK)) and not bool(self.appear(self.I_UNLOCK))
+                self.screenshot()
+                self._room_locked = bool(self.appear(self.I_LOCK))
                 logger.info(f'Bondling room locked: {self._room_locked}')
                 battle_state = self.wait_battle(
                     wait_time=self.config.bondling_fairyland.invite_config.wait_time

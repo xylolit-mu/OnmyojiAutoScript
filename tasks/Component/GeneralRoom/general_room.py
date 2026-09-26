@@ -16,13 +16,16 @@ from module.base.timer import Timer
 
 class GeneralRoom(BaseTask, GeneralRoomAssets):
 
-    def create_room(self, create_room_rule: RuleImage = None) -> bool:
+    def create_room(self, create_room_rule: RuleImage = None, ensure_rules: list[RuleImage] = None) -> bool:
         """
         创建队伍  一般是下方的黄色按钮
+        :param create_room_rule: 创建房间入口按钮；缺省用组件自带资产
+        :param ensure_rules: 创建确认弹窗的识别规则；缺省用组件自带资产
         :return:
         """
         logger.info('Create room')
         create_room_rule = self.I_CREATE_ROOM if create_room_rule is None else create_room_rule
+        ensure_rules = ensure_rules if ensure_rules is not None else [self.I_CREATE_ENSURE, self.I_CREATE_ENSURE_2]
         if not self.appear(create_room_rule):
             logger.warning('No create room button')
             return False
@@ -36,70 +39,80 @@ class GeneralRoom(BaseTask, GeneralRoomAssets):
             if self.appear_then_click(create_room_rule, interval=2):
                 click_number += 1
                 continue
-            if self.appear(self.I_CREATE_ENSURE):
-                return True
-            if self.appear(self.I_CREATE_ENSURE_2):
+            if any(self.appear(rule) for rule in ensure_rules):
                 return True
         return False
 
-    def ensure_private(self, room_mark: RuleImage = None) -> bool:
+    def ensure_private(self, room_mark: RuleImage = None,
+                       private_rules: list[RuleImage] = None,
+                       private_false_rules: list[RuleImage] = None) -> bool:
         """
         确认私人房间, 不公开仅邀请
         :param room_mark: 已进入房间的标志；用于处理建房弹窗关闭时的过渡帧
+        :param private_rules: 已勾选「不公开」的识别规则；缺省用组件自带资产
+        :param private_false_rules: 未勾选「不公开」的识别规则；缺省用组件自带资产
         :return:
         """
         logger.info('Ensure private')
+        checked = private_rules if private_rules is not None else [self.I_ENSURE_PRIVATE, self.I_ENSURE_PRIVATE_2]
+        unchecked = private_false_rules if private_false_rules is not None else \
+            [self.I_ENSURE_PRIVATE_FALSE, self.I_ENSURE_PRIVATE_FALSE_2]
         timeout = Timer(15).start()
         while 1:
             self.screenshot()
             if timeout.reached():
                 logger.warning('Ensure private timeout')
                 return False
-            # 降阈值适配渲染偏差设备；小图标 0.8 太严
-            if self.appear(self.I_ENSURE_PRIVATE, threshold=0.7):
+            if any(self.appear(rule) for rule in checked):
                 return True
-            if self.appear(self.I_ENSURE_PRIVATE_2, threshold=0.7):
-                return True
-            if self.appear_then_click(self.I_ENSURE_PRIVATE_FALSE, interval=1, threshold=0.7):
-                continue
-            if self.appear_then_click(self.I_ENSURE_PRIVATE_FALSE_2, interval=1, threshold=0.7):
+            if any(self.appear_then_click(rule, interval=1) for rule in unchecked):
                 continue
             if room_mark is not None and self.appear(room_mark):
                 logger.info('Room already created, private ensured')
                 return True
         return False
 
-    def ensure_public(self) -> bool:
+    def ensure_public(self, room_mark: RuleImage = None,
+                      public_rules: list[RuleImage] = None,
+                      public_false_rules: list[RuleImage] = None) -> bool:
+        """确认公开房间
+        :param room_mark: 已进入房间的标志；用于处理建房弹窗关闭时的过渡帧
+        :param public_rules: 已勾选「公开」的识别规则；缺省用组件自带资产
+        :param public_false_rules: 未勾选「公开」的识别规则；缺省用组件自带资产
+        :return:
+        """
         logger.info('Ensure public')
+        checked = public_rules if public_rules is not None else [self.I_ENSURE_PUBLIC, self.I_ENSURE_PUBLIC_2]
+        unchecked = public_false_rules if public_false_rules is not None else \
+            [self.I_ENSURE_PUBLIC_FALSE, self.I_ENSURE_PUBLIC_FALSE_2]
         timeout = Timer(15).start()
         while 1:
             self.screenshot()
             if timeout.reached():
                 logger.warning('Ensure public timeout')
                 return False
-            if self.appear(self.I_ENSURE_PUBLIC, threshold=0.7):
+            if any(self.appear(rule) for rule in checked):
                 return True
-            if self.appear(self.I_ENSURE_PUBLIC_2, threshold=0.7):
+            if any(self.appear_then_click(rule, interval=1) for rule in unchecked):
+                continue
+            if room_mark is not None and self.appear(room_mark):
+                logger.info('Room already created, public ensured')
                 return True
-            if self.appear_then_click(self.I_ENSURE_PUBLIC_FALSE, interval=1, threshold=0.7):
-                continue
-            if self.appear_then_click(self.I_ENSURE_PUBLIC_FALSE_2, interval=1, threshold=0.7):
-                continue
         return False
 
-    def create_ensure(self) -> bool:
+    def create_ensure(self, ensure_rules: list[RuleImage] = None) -> bool:
         """
         创建确认
+        :param ensure_rules: 确认按钮的识别规则；缺省用组件自带资产
         :return:
         """
         logger.info('Create ensure')
-        appear1 = self.I_CREATE_ENSURE.match(self.device.image, frame_id=self.device.image_frame_id)
-        appear2 = self.I_CREATE_ENSURE_2.match(self.device.image, frame_id=self.device.image_frame_id)
+        rules = ensure_rules if ensure_rules is not None else [self.I_CREATE_ENSURE, self.I_CREATE_ENSURE_2]
         target = None
-        if appear1:
-            target = self.I_CREATE_ENSURE
-        elif appear2:
-            target = self.I_CREATE_ENSURE_2
+        for rule in rules:
+            if rule.match(self.device.image, frame_id=self.device.image_frame_id):
+                target = rule
+                break
         if not target:
             logger.warning('No create ensure button')
             return False

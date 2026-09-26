@@ -35,6 +35,8 @@ class ScriptTask(BaseExploration):
             pages.page_exp_settings: self.run_on_exp_settings,
             pages.page_exp_exit: self.run_on_exp_exit,
             pages.page_exp_entrance: self.run_on_exp_entrance,
+            pages.page_mainline: self.run_on_exp,
+            pages.page_gameplay: self.run_on_exp,
             pages.page_exploration: self.run_on_exp,
             pages.page_battle_prepare: self.run_on_battle,
             pages.page_battle: self.run_on_battle,
@@ -67,7 +69,7 @@ class ScriptTask(BaseExploration):
                 break
             handle = self.exp_page_handle_dict.get(current_page, None)
             if handle is None:
-                self.goto_page(pages.page_exploration)
+                self.goto_page(pages.page_mainline)
                 continue
             try:
                 handle()

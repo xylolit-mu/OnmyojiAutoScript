@@ -245,9 +245,9 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
             self.screenshot()
             if not self.is_in_room(False):
                 break
-            if self.appear_then_click(self.I_FIRE, interval=1, threshold=0.7):
+            if self.appear_then_click(self.I_FIRE, interval=1):
                 continue
-            if self.appear_then_click(self.I_FIRE_SEA, interval=1, threshold=0.7):
+            if self.appear_then_click(self.I_FIRE_SEA, interval=1):
                 continue
 
     @cached_property
@@ -469,6 +469,9 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
                 logger.warning('Cannot invite friend, maybe already existing')
                 return False
             if self.appear(self.I_LOAD_FRIEND) or self.appear(self.I_INVITE_ENSURE):
+                # 面板可能仍在加载好友列表，等转圈消失再继续
+                sleep(0.5)
+                self.wait_until_disappear(self.I_I_LOAD, timeout=5)
                 return True
             if not click_timer.started() or click_timer.reached():
                 clicked = self.appear_then_click(self.I_ADD_1) or \
@@ -494,16 +497,25 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
         识别当前可用的好友分类页签。
         :return: 分类列表，顺序与页签顺序一致
         """
-        raw_list = [
-            self.O_F_LIST_1.ocr(self.device.image).replace(' ', '').replace('、', ''),
-            self.O_F_LIST_2.ocr(self.device.image).replace(' ', '').replace('、', ''),
-            self.O_F_LIST_3.ocr(self.device.image).replace(' ', '').replace('、', ''),
-            self.O_F_LIST_4.ocr(self.device.image).replace(' ', '').replace('、', '')
-        ]
+        raw_list = []
         friend_class = []
-        for item in raw_list:
-            if item is not None and item != '' and item in self.friend_class:
-                friend_class.append(self._normalize_friend_class_name(item))
+        # 面板刚打开/动画中 OCR 可能读空或残缺，最多重试一次
+        for attempt in range(2):
+            raw_list = [
+                self.O_F_LIST_1.ocr(self.device.image).replace(' ', '').replace('、', ''),
+                self.O_F_LIST_2.ocr(self.device.image).replace(' ', '').replace('、', ''),
+                self.O_F_LIST_3.ocr(self.device.image).replace(' ', '').replace('、', ''),
+                self.O_F_LIST_4.ocr(self.device.image).replace(' ', '').replace('、', '')
+            ]
+            friend_class = []
+            for item in raw_list:
+                if item is not None and item != '' and item in self.friend_class:
+                    friend_class.append(self._normalize_friend_class_name(item))
+            if friend_class:
+                break
+            if attempt == 0:
+                logger.info('Friend class OCR empty, retry once')
+                self.screenshot()
         logger.info(f'Friend class: {friend_class}')
         return friend_class
 
@@ -549,6 +561,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
         recent_index = friend_class.index('最近')
         self._switch_friend_class(recent_index)
         sleep(0.5)
+        self.wait_until_disappear(self.I_I_LOAD, timeout=5)
         logger.info('Now find friend in ”最近“')
         self._select_current_page_friends(friend_list, selected_set)
         return True
@@ -566,6 +579,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
                 break
             self._switch_friend_class(index)
             sleep(0.5)
+            self.wait_until_disappear(self.I_I_LOAD, timeout=5)
             logger.info(f'Now find friend in {friend_class[index]}')
             self._select_current_page_friends(friend_list, selected_set)
 

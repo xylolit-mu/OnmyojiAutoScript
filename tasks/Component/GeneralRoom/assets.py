@@ -27,13 +27,13 @@ class GeneralRoomAssets:
 	# description 
 	I_CREATE_ENSURE = RuleImage(roi_front=(832,565,86,50), roi_back=(471,463,471,161), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_create_ensure.png")
 	# 勾选不公开的图 
-	I_ENSURE_PRIVATE = RuleImage(roi_front=(748,489,36,40), roi_back=(748,489,36,40), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private.png")
+	I_ENSURE_PRIVATE = RuleImage(roi_front=(748,489,36,40), roi_back=(748,489,36,40), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private.png")
 	# 这个是还没勾选的图 
-	I_ENSURE_PRIVATE_FALSE = RuleImage(roi_front=(747,489,37,40), roi_back=(747,489,37,40), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private_false.png")
+	I_ENSURE_PRIVATE_FALSE = RuleImage(roi_front=(747,489,37,40), roi_back=(747,489,37,40), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private_false.png")
 	# description 
-	I_ENSURE_PRIVATE_2 = RuleImage(roi_front=(401,409,34,40), roi_back=(401,409,34,40), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private_2.png")
+	I_ENSURE_PRIVATE_2 = RuleImage(roi_front=(401,409,34,40), roi_back=(401,409,34,40), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private_2.png")
 	# description 
-	I_ENSURE_PRIVATE_FALSE_2 = RuleImage(roi_front=(400,408,36,38), roi_back=(400,408,36,38), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private_false_2.png")
+	I_ENSURE_PRIVATE_FALSE_2 = RuleImage(roi_front=(400,408,36,38), roi_back=(400,408,36,38), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_private_false_2.png")
 	# description 
 	I_CREATE_ENSURE_2 = RuleImage(roi_front=(552,489,42,55), roi_back=(552,489,42,55), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_create_ensure_2.png")
 	# description 
@@ -43,12 +43,12 @@ class GeneralRoomAssets:
 	# 刷新 
 	I_GR_REFRESH = RuleImage(roi_front=(417,595,176,65), roi_back=(417,595,176,65), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_gr_refresh.png")
 	# description 
-	I_ENSURE_PUBLIC = RuleImage(roi_front=(400,282,35,37), roi_back=(400,282,35,37), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public.png")
+	I_ENSURE_PUBLIC = RuleImage(roi_front=(400,282,35,37), roi_back=(400,282,35,37), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public.png")
 	# description 
-	I_ENSURE_PUBLIC_FALSE = RuleImage(roi_front=(399,285,37,35), roi_back=(399,285,37,35), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public_false.png")
+	I_ENSURE_PUBLIC_FALSE = RuleImage(roi_front=(399,285,37,35), roi_back=(399,285,37,35), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public_false.png")
 	# description 
-	I_ENSURE_PUBLIC_2 = RuleImage(roi_front=(307,490,37,40), roi_back=(307,490,37,40), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public_2.png")
+	I_ENSURE_PUBLIC_2 = RuleImage(roi_front=(307,490,37,40), roi_back=(307,490,37,40), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public_2.png")
 	# description 
-	I_ENSURE_PUBLIC_FALSE_2 = RuleImage(roi_front=(307,491,38,37), roi_back=(307,491,38,37), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public_false_2.png")
+	I_ENSURE_PUBLIC_FALSE_2 = RuleImage(roi_front=(307,491,38,37), roi_back=(307,491,38,37), threshold=0.7, method="Template matching", file="./tasks/Component/GeneralRoom/gr/gr_ensure_public_false_2.png")
 
 

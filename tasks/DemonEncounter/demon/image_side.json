@@ -6,6 +6,7 @@
     "roiBack": "1198,269,81,266",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "右侧的气球"
   },
   {
@@ -15,6 +16,7 @@
     "roiBack": "1183,278,96,277",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "右侧的宝箱"
   },
   {
@@ -24,6 +26,7 @@
     "roiBack": "1211,422,28,35",
     "method": "Template matching",
     "threshold": 0.7,
+    "profile": "Default",
     "description": "挑战某一个后的封印图片"
   },
   {
@@ -33,6 +36,7 @@
     "roiBack": "1223,489,42,41",
     "method": "Template matching",
     "threshold": 0.7,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -42,6 +46,7 @@
     "roiBack": "1231,358,38,35",
     "method": "Template matching",
     "threshold": 0.7,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -51,6 +56,7 @@
     "roiBack": "1215,295,35,35",
     "method": "Template matching",
     "threshold": 0.7,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -60,6 +66,7 @@
     "roiBack": "1195,198,74,67",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "已领取四次的奖励"
   },
   {
@@ -69,6 +76,7 @@
     "roiBack": "1177,261,100,294",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "信"
   },
   {
@@ -78,6 +86,7 @@
     "roiBack": "851,43,45,45",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "关闭封魔密信"
   },
   {
@@ -87,6 +96,7 @@
     "roiBack": "1064,549,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "小鬼王的挑战"
   },
   {
@@ -96,6 +106,7 @@
     "roiBack": "1192,278,85,261",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "神秘任务"
   },
   {
@@ -105,6 +116,7 @@
     "roiBack": "1190,274,88,273",
     "method": "Template matching",
     "threshold": 0.75,
+    "profile": "Default",
     "description": "打结界的"
   },
   {
@@ -114,6 +126,7 @@
     "roiBack": "162,99,1106,610",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "结界-进攻"
   },
   {
@@ -123,6 +136,7 @@
     "roiBack": "1182,279,93,266",
     "method": "Template matching",
     "threshold": 0.7,
+    "profile": "Default",
     "description": "发现大boss"
   }
 ]

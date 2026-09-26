@@ -6,6 +6,7 @@
     "roiBack": "569,196,186,161",
     "method": "Template matching",
     "threshold": 0.9,
+    "profile": "Default",
     "description": "中间的邀请图片"
   },
   {
@@ -15,6 +16,7 @@
     "roiBack": "970,151,193,220",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "最右边的邀请"
   },
   {
@@ -24,6 +26,7 @@
     "roiBack": "1177,604,81,74",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -32,7 +35,8 @@
     "roiFront": "1179,602,81,74",
     "roiBack": "1179,602,81,74",
     "method": "Template matching",
-    "threshold": 0.8,
+    "threshold": 0.7,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -42,6 +46,7 @@
     "roiBack": "29,644,29,32",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "锁定阵容的图片"
   },
   {
@@ -51,6 +56,7 @@
     "roiBack": "30,647,23,30",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "还没有锁定阵容"
   },
   {
@@ -60,6 +66,7 @@
     "roiBack": "51,574,52,114",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "如果是到时间会退出房间，这个右边显示一个匹配的图片"
   },
   {
@@ -69,6 +76,7 @@
     "roiBack": "1160,585,100,70",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "永生之海挑战（还未有队友的图片）"
   },
   {
@@ -77,7 +85,8 @@
     "roiFront": "1160,586,100,68",
     "roiBack": "1160,586,100,68",
     "method": "Template matching",
-    "threshold": 0.8,
+    "threshold": 0.7,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -87,6 +96,7 @@
     "roiBack": "781,658,27,28",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -96,6 +106,7 @@
     "roiBack": "781,656,27,30",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "永生之海 没有锁定队伍的图片"
   },
   {
@@ -105,6 +116,7 @@
     "roiBack": "370,243,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "五人的队伍的第一个加号"
   },
   {
@@ -114,6 +126,7 @@
     "roiBack": "612,263,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -123,6 +136,7 @@
     "roiBack": "862,243,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -132,6 +146,7 @@
     "roiBack": "1118,228,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -141,6 +156,7 @@
     "roiBack": "709,546,134,60",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "游戏服务器获取在线好友时等待的图片"
   },
   {
@@ -150,6 +166,7 @@
     "roiBack": "19,13,58,55",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "左上角退出"
   },
   {
@@ -159,6 +176,7 @@
     "roiBack": "486,532,373,84",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "点击邀请"
   },
   {
@@ -168,6 +186,7 @@
     "roiBack": "347,174,589,369",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "判断是否点中好友了"
   },
   {
@@ -177,6 +196,7 @@
     "roiBack": "354,128,62,19",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "用来判断当前的列表是哪儿的"
   },
   {
@@ -186,6 +206,7 @@
     "roiBack": "353,126,58,22",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -195,6 +216,7 @@
     "roiBack": "454,74,56,26",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -204,6 +226,7 @@
     "roiBack": "469,127,58,21",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -213,6 +236,7 @@
     "roiBack": "588,126,48,22",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -222,6 +246,7 @@
     "roiBack": "590,126,41,22",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -231,6 +256,7 @@
     "roiBack": "713,128,34,21",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -240,6 +266,7 @@
     "roiBack": "703,128,53,21",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -249,6 +276,7 @@
     "roiBack": "836,231,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "永生之海添加好友"
   },
   {
@@ -258,6 +286,7 @@
     "roiBack": "12,226,64,275",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队员不接受邀请"
   },
   {
@@ -267,6 +296,7 @@
     "roiBack": "5,210,110,95",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队员不接受邀请"
   },
   {
@@ -276,6 +306,7 @@
     "roiBack": "5,320,110,95",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队员不接受邀请"
   },
   {
@@ -285,6 +316,7 @@
     "roiBack": "5,430,110,95",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队员不接受邀请"
   },
   {
@@ -294,6 +326,7 @@
     "roiBack": "113,225,63,280",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队员接受邀请"
   },
   {
@@ -303,6 +336,7 @@
     "roiBack": "205,223,61,297",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队员默认接受邀请"
   },
   {
@@ -312,6 +346,7 @@
     "roiBack": "542,343,36,35",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "不勾选 默认邀请"
   },
   {
@@ -321,6 +356,7 @@
     "roiBack": "541,342,41,39",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "勾选 默认邀请"
   },
   {
@@ -330,6 +366,7 @@
     "roiBack": "438,407,171,55",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -339,6 +376,7 @@
     "roiBack": "670,402,175,60",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队长邀请 确定"
   },
   {
@@ -348,6 +386,7 @@
     "roiBack": "794,38,46,42",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "所有的组队界面都有加成"
   },
   {
@@ -357,6 +396,7 @@
     "roiBack": "92,17,213,64",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "三人御魂组队左上角的协站队伍"
   },
   {
@@ -366,6 +406,7 @@
     "roiBack": "31,16,42,42",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -375,6 +416,7 @@
     "roiBack": "231,205,75,326",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "识别到寄养邀请"
   },
   {
@@ -384,6 +426,17 @@
     "roiBack": "107,209,69,296",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "师徒邀请图标"
+  },
+  {
+    "itemName": "i_load",
+    "imageName": "gi_i_load.png",
+    "roiFront": "631,346,22,33",
+    "roiBack": "549,273,186,161",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "加载图标"
   }
 ]

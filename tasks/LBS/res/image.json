@@ -1,0 +1,112 @@
+[
+  {
+    "itemName": "lbs_entry",
+    "imageName": "lbs_entry.png",
+    "roiFront": "1181,295,51,35",
+    "roiBack": "1167,131,80,431",
+    "method": "Template matching",
+    "threshold": 0.75,
+    "profile": "Default",
+    "description": "庭院右栏LBS活动入口（线下庆典仓鼠）"
+  },
+  {
+    "itemName": "lbs_team_challenge",
+    "imageName": "lbs_team_challenge.png",
+    "roiFront": "1118,614,63,37",
+    "roiBack": "900,450,380,270",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "活动界面组队挑战按钮（兼页面check）"
+  },
+  {
+    "itemName": "lbs_settle_confirm",
+    "imageName": "lbs_settle_confirm.png",
+    "roiFront": "595,450,93,48",
+    "roiBack": "412,158,458,473",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "战斗结算后奖励转换弹窗的确定按钮"
+  },
+  {
+    "itemName": "lbs_ensure_public",
+    "imageName": "lbs_ensure_public.png",
+    "roiFront": "504,264,40,42",
+    "roiBack": "504,264,40,42",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "队伍公开权限弹窗：已勾选的所有人"
+  },
+  {
+    "itemName": "lbs_ensure_public_false",
+    "imageName": "lbs_ensure_public_false.png",
+    "roiFront": "504,264,40,42",
+    "roiBack": "504,264,40,42",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "队伍公开权限弹窗：未勾选的所有人"
+  },
+  {
+    "itemName": "lbs_ensure_private_false",
+    "imageName": "lbs_ensure_private_false.png",
+    "roiFront": "504,391,43,43",
+    "roiBack": "505,391,42,43",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "队伍公开权限弹窗：未勾选的不公开"
+  },
+  {
+    "itemName": "lbs_ensure_private",
+    "imageName": "lbs_ensure_private.png",
+    "roiFront": "508,392,36,40",
+    "roiBack": "508,392,36,40",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "队伍公开权限弹窗：已勾选的不公开"
+  },
+  {
+    "itemName": "lbs_create_ensure",
+    "imageName": "lbs_create_ensure.png",
+    "roiFront": "596,484,86,50",
+    "roiBack": "400,420,500,180",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "profile": "Default",
+    "description": "队伍公开权限弹窗：创建按钮"
+  },
+  {
+    "itemName": "lbs_map_entry",
+    "imageName": "lbs_map_entry.png",
+    "roiFront": "1104,543,101,111",
+    "roiBack": "980,440,300,280",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "活动地图界面右下角LBS策划鼠图标（兼页面check，点击回活动）"
+  },
+  {
+    "itemName": "lbs_find_team",
+    "imageName": "lbs_find_team.png",
+    "roiFront": "973,615,65,35",
+    "roiBack": "900,540,280,175",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "活动界面右下角寻找队伍按钮（组队模式入口）"
+  },
+  {
+    "itemName": "lbs_match_cancel",
+    "imageName": "lbs_match_cancel.png",
+    "roiFront": "790,10,75,70",
+    "roiBack": "250,5,800,95",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "Default",
+    "description": "排队横幅右上角X关闭按钮（超时取消排队用）"
+  }
+]

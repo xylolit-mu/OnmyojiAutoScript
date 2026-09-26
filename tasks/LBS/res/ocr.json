@@ -1,0 +1,11 @@
+[
+  {
+    "itemName": "lbs_count",
+    "roiFront": "1080,676,88,30",
+    "roiBack": "1080,676,88,30",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "挑战次数的数字区"
+  }
+]

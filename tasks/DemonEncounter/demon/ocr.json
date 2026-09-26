@@ -7,5 +7,14 @@
     "method": "Default",
     "keyword": "",
     "description": "计数已经开启多少的"
+  },
+  {
+    "itemName": "de_challenge",
+    "roiFront": "685,65,68,34",
+    "roiBack": "540,60,220,42",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "今日挑战次数(剩余/总)"
   }
 ]

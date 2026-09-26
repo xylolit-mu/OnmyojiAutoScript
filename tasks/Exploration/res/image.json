@@ -6,6 +6,7 @@
     "roiBack": "867,538,339,165",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "进入难度选择界面"
   },
   {
@@ -15,6 +16,7 @@
     "roiBack": "867,541,337,157",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "探索按钮"
   },
   {
@@ -24,6 +26,7 @@
     "roiBack": "104,649,153,44",
     "method": "Template matching",
     "threshold": 0.9,
+    "profile": "Default",
     "description": "自动轮换开着"
   },
   {
@@ -33,6 +36,7 @@
     "roiBack": "108,650,150,46",
     "method": "Template matching",
     "threshold": 0.85,
+    "profile": "Default",
     "description": "自动轮换关闭"
   },
   {
@@ -42,6 +46,7 @@
     "roiBack": "466,110,170,50",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "成功打开设置"
   },
   {
@@ -51,6 +56,7 @@
     "roiBack": "34,288,62,47",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "选择式神稀有度"
   },
   {
@@ -60,6 +66,7 @@
     "roiBack": "42,625,46,49",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "候补N卡"
   },
   {
@@ -69,6 +76,7 @@
     "roiBack": "33,620,63,59",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "候补素材"
   },
   {
@@ -78,6 +86,7 @@
     "roiBack": "163,574,970,46",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "已候补出战的狗粮"
   },
   {
@@ -87,6 +96,7 @@
     "roiBack": "1077,367,165,152",
     "method": "Template matching",
     "threshold": 0.65,
+    "profile": "Default",
     "description": "确定按钮"
   },
   {
@@ -96,6 +106,7 @@
     "roiBack": "37,692,53,26",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "设置按钮"
   },
   {
@@ -105,6 +116,7 @@
     "roiBack": "0,0,1279,719",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "普通怪"
   },
   {
@@ -114,6 +126,7 @@
     "roiBack": "0,0,1276,719",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "boss"
   },
   {
@@ -123,6 +136,7 @@
     "roiBack": "1,1,1278,718",
     "method": "Template matching",
     "threshold": 0.9,
+    "profile": "Default",
     "description": "战后奖励"
   },
   {
@@ -132,6 +146,7 @@
     "roiBack": "1126,92,74,72",
     "method": "Template matching",
     "threshold": 0.7,
+    "profile": "Default",
     "description": "妖"
   },
   {
@@ -141,6 +156,7 @@
     "roiBack": "221,677,561,41",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -150,6 +166,7 @@
     "roiBack": "464,231,339,44",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -159,6 +176,7 @@
     "roiBack": "1021,121,54,55",
     "method": "Template matching",
     "threshold": 0.6,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -168,6 +186,7 @@
     "roiBack": "694,380,163,49",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "description"
   },
   {
@@ -177,6 +196,7 @@
     "roiBack": "968,196,311,165",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "困28滚动到最后"
   },
   {
@@ -186,6 +206,7 @@
     "roiBack": "4,407,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "队伍的表情标志"
   },
   {
@@ -195,6 +216,7 @@
     "roiBack": "875,560,134,126",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "组队按钮"
   },
   {
@@ -204,6 +226,7 @@
     "roiBack": "516,475,244,85",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "创建确认"
   },
   {
@@ -213,6 +236,7 @@
     "roiBack": "1212,88,68,123",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "打开探索侧边折叠"
   },
   {
@@ -222,6 +246,7 @@
     "roiBack": "344,258,597,209",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "退出探索标志"
   },
   {
@@ -231,6 +256,7 @@
     "roiBack": "422,380,163,49",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "探索退出取消"
   },
   {
@@ -240,6 +266,7 @@
     "roiBack": "1,73,108,553",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "探索界面大宝箱"
   },
   {
@@ -249,6 +276,7 @@
     "roiBack": "0,597,327,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "探索入口&主界面小宝箱"
   },
   {
@@ -258,6 +286,27 @@
     "roiBack": "700,574,450,46",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "Default",
     "description": "右侧候补标志"
+  },
+  {
+    "itemName": "check_main_title",
+    "imageName": "res_check_main_title.png",
+    "roiFront": "1150,457,32,32",
+    "roiBack": "1069,222,113,336",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "profile": "Default",
+    "description": "主线tab中的 “章”"
+  },
+  {
+    "itemName": "check_play_title",
+    "imageName": "res_check_play_title.png",
+    "roiFront": "1073,214,40,32",
+    "roiBack": "1065,210,190,316",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "profile": "Default",
+    "description": "玩法tab中“御魂”"
   }
 ]
