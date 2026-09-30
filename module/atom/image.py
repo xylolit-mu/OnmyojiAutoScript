@@ -13,6 +13,20 @@ from module.image.rpc import get_image_client
 from module.logger import logger
 from module.base.utils import is_approx_rectangle
 
+# 模板匹配容差：随规则下发给图像服务，服务端把 roi_back 四边各外扩该像素数，
+# 用于吸收非原生渲染环境相对模板截图环境的整体相位差（桌面客户端受 DPI 缩放
+# 重采样，约 1px）。仓库里约 1/3 的模板 roi_back 与模板等宽，此时 matchTemplate
+# 结果只剩 1 列、横向一格都平移不了，1px 相位差就足以把「元素存在」判成「不存在」。
+# 桌面模式由 Device 置为 2，模拟器保持 0、行为逐位不变。
+ROI_MATCH_PAD = 0
+DESKTOP_ROI_MATCH_PAD = 2
+
+
+def set_roi_match_padding(pad: int) -> None:
+    """设置模板匹配的 roi_back 外扩容差（像素，四边同值）。0 表示不启用。"""
+    global ROI_MATCH_PAD
+    ROI_MATCH_PAD = max(0, int(pad))
+
 
 class RuleImage:
     debug_mode: bool = False
@@ -189,6 +203,7 @@ class RuleImage:
             "threshold": float(self.threshold),
             "roi_front": list(self.roi_front),
             "roi_back": list(self.roi_back),
+            "roi_pad": ROI_MATCH_PAD,
             "scale_range": scale_range,
             "scale_step": float(self.scale_step),
             "grayscale": bool(getattr(self, 'grayscale', False)),

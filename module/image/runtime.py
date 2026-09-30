@@ -591,6 +591,11 @@ class ImageRuntime:
         """
         将 RPC 传入的规则描述规整为运行时统一使用的内部结构。
 
+        这里是所有匹配入口（单条/批量/多尺度/SIFT/亮度窗口）的唯一汇聚点，
+        因此容差也在这里统一生效：`rule_data["roi_pad"]` 非 0 时把最终搜索区域
+        （含 `roi` 覆盖值）四边各外扩该像素数，只影响搜索范围，命中回传的
+        roi_front 仍是原图坐标。
+
         Args:
             threshold: 可选的阈值覆盖值；为空时沿用 `rule_data` 中的阈值。
             roi: 可选的搜索区域覆盖值；为空时沿用 `rule_data` 中的 `roi_back`。
@@ -598,6 +603,9 @@ class ImageRuntime:
         active_threshold = float(rule_data.get("threshold", 0.0) if threshold is None else threshold)
         roi_front = [int(v) for v in rule_data.get("roi_front", [0, 0, 0, 0])]
         roi_back = [int(v) for v in (roi if roi is not None else rule_data.get("roi_back", [0, 0, 0, 0]))]
+        roi_pad = int(rule_data.get("roi_pad", 0) or 0)
+        if roi_pad > 0:
+            roi_back = self._expand_roi(roi_back, roi_pad)
         scale_range = rule_data.get("scale_range")
         if scale_range is not None:
             scale_range = tuple(float(v) for v in scale_range)
@@ -697,6 +705,18 @@ class ImageRuntime:
         """按 `[x, y, w, h]` 形式的 ROI 从图像中裁出子区域。"""
         x, y, w, h = [int(v) for v in roi]
         return image[y:y + h, x:x + w]
+
+    @staticmethod
+    def _expand_roi(roi: list[int], pad: int) -> list[int]:
+        """把 ROI 四边各外扩 `pad` 像素，用于吸收渲染相位差（见 `_normalize_rule`）。
+
+        左上侧必须夹到 0：numpy 对负索引按「倒数」语义取值，会把裁剪位置算错，
+        并连带把回传的 roi_front 算偏；右/下侧越界由 `_crop` 的切片自然截断。
+        """
+        x, y, w, h = [int(v) for v in roi]
+        x0 = max(0, x - pad)
+        y0 = max(0, y - pad)
+        return [x0, y0, x + w + pad - x0, y + h + pad - y0]
 
     @staticmethod
     def _template_image_invalid(mat: np.ndarray) -> bool:
