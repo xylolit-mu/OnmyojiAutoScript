@@ -17,6 +17,11 @@ class AppControl(Adb, Uiautomator2):
 
         这用于区分“应用被切到后台”和“应用已经被真正杀掉”两种情况。
         """
+        # 桌面模式没有 adb（pidof 必然报 device 'desktop' not found），
+        # 进程存活的等价判断是窗口仍存在
+        if self.is_desktop:
+            return self.desktop_window_exists()
+
         if not package_name:
             package_name = self.package
 
@@ -31,6 +36,9 @@ class AppControl(Adb, Uiautomator2):
         return bool(result)
 
     def app_is_running(self) -> bool:
+        # 桌面模式：窗口存在 且 已完成登录（自动启动的客户端停在登录页，需先走登录流程）
+        if self.is_desktop:
+            return self.desktop_window_exists() and getattr(self, '_desktop_login_done', True)
         method = self.config.script.device.control_method
         # if self.is_wsa:
         #     package = self.app_current_wsa()
