@@ -61,6 +61,9 @@ class EmulatorInfoType(str, Enum):
 class Device(BaseModel):
     serial: str = Field(default="auto", description='serial_help')
     handle: str = Field(default='', description='handle_help')
+    # 桌面客户端自动启动用：游戏安装目录（含 bin\onmyoji.exe 或 Launch.exe 的根目录），
+    # 留空时按 %ProgramFiles%\Onmyoji 与注册表 InstallLocation 自动发现；仅桌面模式使用
+    desktop_game_path: str = Field(default='', description='desktop_game_path_help')
     package_name: PackageName = Field(title='Package Name', default=PackageName.AUTO, description='package_name_help')
     screenshot_method: ScreenshotMethod = Field(default=ScreenshotMethod.AUTO, description='screenshot_method_help')
     control_method: ControlMethod = Field(default=ControlMethod.MINITOUCH, description='control_method_help')
