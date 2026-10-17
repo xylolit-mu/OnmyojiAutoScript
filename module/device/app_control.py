@@ -17,7 +17,7 @@ class AppControl(Adb, Uiautomator2):
 
         这用于区分“应用被切到后台”和“应用已经被真正杀掉”两种情况。
         """
-        # 桌面模式没有 adb（pidof 必然报 device 'desktop' not found），
+        # 桌面模式没有 adb（pidof 必然报 device not found），
         # 进程存活的等价判断是窗口仍存在
         if self.is_desktop:
             return self.desktop_window_exists()
