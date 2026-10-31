@@ -58,19 +58,23 @@ class ScriptTask(BaseTask):
 
     def app_restart(self):
         logger.hr('App restart')
-        # 桌面：客户端可能刚被自动启动（停在登录页），先停掉会白关一次再重开
         if self.device.is_desktop:
-            self._desktop_start_and_login()
+            if self.config.script.desktop.restart_when_window_exists:
+                self._desktop_restart_and_login()
+            else:
+                # 客户端可能刚被自动启动（停在登录页），先停掉会白关一次再重开
+                self._desktop_start_and_login()
             return
         self.device.app_stop()
         self.app_start()
 
     def recover_app(self):
         # 桌面没有 adb 生命周期（app_is_alive 走 pidof 必然失败）：窗口在就只走登录，
-        # 不在就重拉，绝不把健康客户端强杀重启
+        # 不在就重拉，绝不把健康客户端强杀重启；配置 restart_when_window_exists
+        # 时才改成窗口存在也强杀重拉
         if self.device.is_desktop:
-            logger.info('Desktop recovery: ensure client running then login')
-            self._desktop_start_and_login()
+            logger.info('Desktop recovery: recover client then login')
+            self.app_restart()
             return
 
         if not self.device.app_is_alive():
@@ -108,6 +112,23 @@ class ScriptTask(BaseTask):
                     raise RequestHumanTakeover
         logger.critical(f'桌面客户端连续 {DESKTOP_RESTART_ATTEMPTS} 轮启动失败，请检查客户端与机器状态')
         raise RequestHumanTakeover
+
+    def _desktop_restart_and_login(self) -> None:
+        """桌面模式：既有窗口就强杀重拉（真正的重启），不存在则只确保启动。
+
+        刚拉起的实例（网易 logo 先出、窗口标题后出，绑定时标题才出现）不该再杀一次，
+        否则会唤起两次客户端 —— 由 desktop_window_is_own_launch 区分。
+        """
+        if self.device.desktop_window_exists():
+            if self.device.desktop_window_is_own_launch():
+                logger.info('桌面客户端窗口存在，但这是本轮刚拉起的实例，跳过强制重启')
+            else:
+                logger.info('桌面客户端窗口存在，执行强制重启')
+                if not self.device.desktop_stop_client():
+                    logger.error('桌面客户端窗口存在但无法关闭，拒绝重建以免多开')
+                    raise RequestHumanTakeover(
+                        '桌面客户端窗口存在但无法关闭，请手动结束该进程后重试')
+        self._desktop_start_and_login()
 
     def finish_recovery(self):
         self.set_next_run(task='Restart', success=True, finish=True, server=True)

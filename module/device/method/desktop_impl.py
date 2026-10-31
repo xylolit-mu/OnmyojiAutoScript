@@ -489,15 +489,27 @@ def desktop_read_instance_state(profile) -> dict:
         return {}
 
 
-def desktop_write_instance_state(profile, pid) -> None:
-    """把当前实例 PID 写进档案状态文件（tmp + replace 原子替换，防读写半截）。"""
+def desktop_write_instance_state(profile, pid, logged_in: bool = False) -> None:
+    """把当前实例 PID 与登录态写进档案状态文件（tmp + replace 原子替换，防读写半截）。
+
+    logged_in 记录「这个 PID 是否已完成登录」：新拉起的客户端必然为 False。
+    认领窗口的实例据此判断要不要走登录流程，不必等 MPay 弹窗出现——
+    客户端刚启动那几秒还没有登录窗，实测会把未登录误判成已登录。
+
+    started 记录该 PID 的进程创建时间，供读取方识别 PID 复用（进程被关掉后
+    Windows 会把同一个 PID 分给新进程，光比 PID 会把新客户端认成老客户端）。
+    """
     path = desktop_instance_state_path(profile)
     if path is None:
         return
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+        state = {'pid': int(pid), 'logged_in': bool(logged_in)}
+        started = desktop_pid_create_time(pid)
+        if started:
+            state['started'] = started
         tmp = path.with_suffix('.json.tmp')
-        tmp.write_text(json.dumps({'pid': int(pid)}, ensure_ascii=False), encoding='utf-8')
+        tmp.write_text(json.dumps(state, ensure_ascii=False), encoding='utf-8')
         os.replace(tmp, path)
     except Exception as e:
         logger.warning(f'写入桌面实例状态文件失败: {path}: {e}')
@@ -620,6 +632,36 @@ def desktop_pid_alive(pid) -> bool:
         if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
             return True
         return code.value == 259  # STILL_ACTIVE
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def desktop_pid_create_time(pid) -> int:
+    """进程创建时间（FILETIME 计数）；取不到返回 0。
+
+    Windows 的 PID 会回收复用：客户端被关掉后，新起的进程可能拿到同一个 PID。
+    状态文件里同时记下创建时间，读的时候核对，才能区分「同一个客户端」和
+    「同号的另一个客户端」——只有后者才必须让登录态退回实测。
+    """
+    try:
+        pid_int = int(str(pid))
+    except (TypeError, ValueError):
+        return 0
+    kernel32 = ctypes.windll.kernel32
+    handle = kernel32.OpenProcess(0x1000, False, pid_int)
+    if not handle:
+        return 0
+    try:
+        creation = wintypes.FILETIME()
+        exit_time = wintypes.FILETIME()
+        kernel_time = wintypes.FILETIME()
+        user_time = wintypes.FILETIME()
+        if not kernel32.GetProcessTimes(handle, byref(creation), byref(exit_time),
+                                        byref(kernel_time), byref(user_time)):
+            return 0
+        return (creation.dwHighDateTime << 32) | creation.dwLowDateTime
+    except Exception:
+        return 0
     finally:
         kernel32.CloseHandle(handle)
 
@@ -902,6 +944,18 @@ class DesktopWindow:
             time.sleep(1)
         logger.warning(f'Desktop MPay login popup still present after {wait}s, Enter had no effect')
         return False
+
+    def desktop_window_is_own_launch(self) -> bool:
+        """当前窗口是不是本轮由 launch_desktop_client() 拉起的实例（用来避免刚启动就强杀重拉）。
+
+        客户端启动时先出网易 logo、标题稍后才出现，绑定发生在标题出现那一刻，
+        因此「窗口存在」并不等于「是旧客户端」，只能用本轮留档的 PID 判断。
+        """
+        spawned = getattr(self, '_desktop_spawned_pids', None)
+        if not spawned:
+            return False
+        pid = self.desktop_pid()
+        return pid is not None and pid in spawned
 
     def desktop_window_exists(self) -> bool:
         """桌面模式：目标 PID 对应窗口仍存在即视为客户端运行中。
@@ -1282,12 +1336,37 @@ class DesktopWindow:
                            f'无法区分归属，将重新拉起一个实例')
         return None, 0
 
-    def desktop_bind_pid(self, pid, hwnd=0) -> None:
+    def _desktop_claim_login_done(self, pid) -> bool:
+        """认领已有窗口时的登录态：优先读档案状态文件，无记录再按 MPay 弹窗实测。
+
+        刚拉起的客户端要几秒才创建登录窗，这段空窗期里枚举不到弹窗并不代表已登录；
+        而 OAS 自己拉起实例时已经写了 logged_in=False，按文件判断不会误判。
+        用户手动开的客户端没有记录，仍按弹窗实测——已登录的客户端全系统枚举不到
+        MPAY_LOGIN 顶层窗口（见 find_desktop_login_popup）。
+
+        状态文件是「进程写到一半就没了」的唯一来源（手动关脚本、崩溃），因此它只在
+        PID 仍活着且创建时间对得上时才被采信；PID 被复用说明这是另一个刚起的客户端，
+        记录里的登录态属于上一个进程，必须退回实测。
+        """
+        state = desktop_read_instance_state(self.desktop_profile_dir())
+        if str(state.get('pid')) == str(pid) and isinstance(state.get('logged_in'), bool):
+            started = state.get('started')
+            # 老状态文件没有 started 字段；取不到创建时间时按 PID 一致处理
+            if not started or started == desktop_pid_create_time(pid):
+                return state['logged_in']
+            logger.info(f'Desktop instance state stale: PID={pid} reused by another process, '
+                        f'fall back to login popup detection')
+        return not self.find_desktop_login_popup()
+
+    def desktop_bind_pid(self, pid, hwnd=0, just_launched=True) -> None:
         """把运行时 PID/HWND 绑定到实例；PID 不写配置，只进档案状态文件。
 
         PID 每次重启都会变，落配置只会认领一个死进程；配了档案目录时写
         oas_instance.json 供下次认领。同时强制显示器常亮，防止电源超时关屏导致
         BitBlt 截图返回黑帧卡死登录循环。
+
+        just_launched=True 表示窗口是本轮新拉起的，必然未登录；
+        False 表示认领已存在的窗口，登录态优先取档案状态文件，无记录再实测。
         """
         self.root_handle = str(pid)
         if hwnd:
@@ -1309,12 +1388,16 @@ class DesktopWindow:
         self.is_desktop_window = True
         # 换了新 hwnd，截图句柄缓存必须同步失效，否则截图仍走上一个客户端的废句柄
         self._desktop_clear_handle_cache()
-        # 新绑定的客户端刚启动，必然未登录，需先走 restart 登录流程
-        self._desktop_login_done = False
+        if just_launched:
+            # 新拉起的客户端必然停在登录页
+            self._desktop_login_done = False
+        else:
+            self._desktop_login_done = self._desktop_claim_login_done(pid)
         # 客户端已拉起，强制保持显示器常亮（线程级状态，随客户端关闭解除）
         desktop_keep_screen_on(True)
-        # 档案状态文件：下次启动凭它认领「这个档案的实例是哪个 PID」
-        desktop_write_instance_state(self.desktop_profile_dir(), pid)
+        # 档案状态文件：下次启动凭它认领「这个档案的实例是哪个 PID」，
+        # 登录态一并落盘，认领方不必等 MPay 弹窗出现再猜
+        desktop_write_instance_state(self.desktop_profile_dir(), pid, self._desktop_login_done)
         logger.info(f'Desktop client bound: PID={pid}, hwnd={hwnd}')
 
     def _desktop_send_enter(self, hwnd) -> None:

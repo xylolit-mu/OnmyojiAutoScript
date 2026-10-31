@@ -5,7 +5,8 @@
 这里只管「什么时候把客户端拉起来、什么时候算它在运行」。
 """
 from module.device.method.desktop_impl import (
-    desktop_pid_alive, desktop_window_titles, find_desktop_window_by_pid)
+    desktop_pid_alive, desktop_window_titles, desktop_write_instance_state,
+    find_desktop_window_by_pid)
 from module.logger import logger
 
 
@@ -37,7 +38,9 @@ class DesktopDevice:
             if not hwnd:
                 hwnd = find_desktop_window_by_pid(
                     located_pid, desktop_window_titles(self.config))
-            self.desktop_bind_pid(located_pid, hwnd)
+            # 认领的是已存在的窗口，可能是用户手动开的且已登录，
+            # 登录态由 find_desktop_login_popup 实测，不能假设未登录
+            self.desktop_bind_pid(located_pid, hwnd, just_launched=False)
             return True
         return self.launch_desktop_client()
 
@@ -54,12 +57,27 @@ class DesktopDevice:
         return True
 
     def desktop_mark_logged_in(self) -> None:
-        """标记客户端已完成登录（Restart 的登录流程成功后调用）。"""
+        """标记客户端已完成登录（登录流程成功后调用）。"""
+        if getattr(self, '_desktop_login_done', True):
+            return
         self._desktop_login_done = True
+        self._desktop_sync_login_state(True)
 
     def desktop_mark_logged_out(self) -> None:
         """标记客户端处于未登录态。"""
+        if getattr(self, '_desktop_login_done', True) is False:
+            # 运行期每帧都会探测登录窗，状态没变就不重复落盘
+            return
         self._desktop_login_done = False
+        self._desktop_sync_login_state(False)
+
+    def _desktop_sync_login_state(self, logged_in: bool) -> None:
+        """把登录态写回档案状态文件，供新绑定的实例认领时判断。"""
+        pid = self.desktop_pid()
+        profile = self.desktop_profile_dir()
+        if pid is None or profile is None:
+            return
+        desktop_write_instance_state(profile, pid, logged_in=logged_in)
 
     def _init_desktop(self) -> None:
         """桌面客户端模式初始化：跳过模拟器健康检查/full_recovery。"""
