@@ -73,6 +73,16 @@ def press_and_drag(
             swipe_duration=swipe_duration,
             release_duration=release_duration,
         )
+    elif method == 'window_message':
+        _press_and_drag_window_message(
+            device,
+            p1,
+            p2,
+            hold_duration=hold_duration,
+            point_random=point_random,
+            swipe_duration=swipe_duration,
+            release_duration=release_duration,
+        )
     else:
         logger.warning(
             f'Control method {method} cannot hold before moving; '
@@ -202,3 +212,14 @@ def _press_and_drag_scrcpy(device, p1, p2, hold_duration, point_random,
             if not completed:
                 _best_effort_release(lambda: device._scrcpy_control.touch(*last, scrcpy_const.ACTION_UP))
     device.sleep(0.05)
+
+
+def _press_and_drag_window_message(device, p1, p2, hold_duration, point_random,
+                                   swipe_duration, release_duration):
+    p1, p2 = _randomized_points(p1, p2, point_random)
+    steps = _motion_steps(p1, p2, swipe_duration)
+    device.press_and_drag_window_message(
+        p1, p2, steps,
+        hold_duration=hold_duration,
+        release_duration=release_duration,
+    )

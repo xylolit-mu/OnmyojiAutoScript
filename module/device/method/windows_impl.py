@@ -402,6 +402,60 @@ class Window(Handle):
         SendMessage(hwnd, WM_CAPTURECHANGED, 0, 0)
         self._desktop_cursor = (int(endPos[0]), int(endPos[1]))
 
+    def press_and_drag_window_message(self, p1, p2, steps, hold_duration, release_duration) -> None:
+        """按住 → 停顿 hold_duration → 沿 steps 逐点拖动 → 停顿 → 抬起。
+
+        steps 由 module.device.press_and_drag 生成，元素为 (point, wait_seconds)，
+        点之间手指始终按下。桌面客户端与模拟器共用同一套消息序列，区别只在
+        句柄、坐标换算和 hover 预处理。
+        """
+        if getattr(self, 'is_desktop_window', False):
+            self.desktop_window_restore_if_minimized()
+            hwnd = self.root_handle_num
+            # 客户端是鼠标语义，控件依赖 hover 状态：先沿轨迹移到起点再按下
+            self.move_desktop_window_message(p1[0], p1[1])
+
+            def to_lparam(point):
+                return MAKELONG(*self.desktop_message_coord(point[0], point[1]))
+        else:
+            hwnd = None
+            if self.emulator_family == EmulatorFamily.FAMILY_MUMU:
+                hwnd = self.control_handle_list[1]
+            elif self.emulator_family == EmulatorFamily.FAMILY_NOX:
+                hwnd = self.control_handle_list[3]
+            elif self.emulator_family == EmulatorFamily.FAMILY_LD:
+                hwnd = self.control_handle_list[0]
+            if hwnd is None:
+                logger.warning('Window message drag is not supported by this emulator, skip')
+                return
+            start = MAKELONG(p1[0], p1[1])
+            SendMessage(hwnd, WM_NCHITTEST, 0, start)
+            SendMessage(hwnd, WM_SETCURSOR, hwnd, MAKELONG(HTCLIENT, WM_LBUTTONDOWN))
+            PostMessage(hwnd, WM_MOUSEMOVE, 0, start)
+
+            def to_lparam(point):
+                return MAKELONG(point[0], point[1])
+
+        last = to_lparam(p1)
+        released = False
+        try:
+            PostMessage(hwnd, WM_LBUTTONDOWN, MK_LBUTTON, last)
+            time.sleep(hold_duration)
+            for point, wait in steps:
+                last = to_lparam(point)
+                PostMessage(hwnd, WM_MOUSEMOVE, MK_LBUTTON, last)
+                time.sleep(wait)
+            time.sleep(release_duration)
+            PostMessage(hwnd, WM_LBUTTONUP, 0, last)
+            released = True
+        finally:
+            if not released:
+                # 异常路径也必须抬起，不能把客户端留在按住状态
+                PostMessage(hwnd, WM_LBUTTONUP, 0, last)
+        if getattr(self, 'is_desktop_window', False):
+            SendMessage(hwnd, WM_CAPTURECHANGED, 0, 0)
+            self._desktop_cursor = (int(p2[0]), int(p2[1]))
+
     def swipe_vector_window_message2(self, startPos: list, endPos: list) -> None:
         """
         后台滑动, 直线滑动
