@@ -136,12 +136,13 @@ class DraftDuelRecoveryMixin:
         if any(self.appear(rule) for rule in (
                 self.I_DRAFT_SHARE, self.I_FIGHT_STATISTIC, self.I_FIGHT_RESULT)):
             return 'settlement'
-        for phase, rules in (
-                ('fight', (self.I_POST_DRAFT_FIGHT,)),
-                ('rank', (self.I_POST_DRAFT_RANK, self.I_FIGHT_WAIT)),
-                ('select', (self.I_POST_DRAFT_SELECT,)),
-                ('lobby', (self.I_WAIT_FIGHT_LOBBY,))):
-            if any(self.appear(rule) for rule in rules):
-                return phase
+        if self.appear(self.I_POST_DRAFT_FIGHT):
+            return 'fight'
+        if self._is_draft_rank_page() or self.appear(self.I_FIGHT_WAIT):
+            return 'rank'
+        if self._is_draft_selection_page():
+            return 'select'
+        if self.appear(self.I_WAIT_FIGHT_LOBBY):
+            return 'lobby'
         # 未识别到过渡画面时继续最后阶段；首次任务仍走通用大厅入口。
         return getattr(self, '_draft_resume_phase', 'lobby')

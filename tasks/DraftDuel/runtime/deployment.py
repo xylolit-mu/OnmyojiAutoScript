@@ -159,9 +159,16 @@ class DraftDuelDeploymentMixin:
             portraits = self.runframe(self.F_FIGHT_SHIKIGAMI)
             if not portraits or len(portraits) != 6:
                 if pending and not pending['clicked']:
-                    pending['failures'] += 1
+                    pending['preview'] = None
+                    pending['preview_stable'] = 0
+                    pending['failures'] = min(3, pending.get('failures', 0) + 1)
                     if pending['failures'] >= 3:
                         pending['clicked'] = bool(self.appear_then_click(self.I_SELECT_ENSURE, interval=1))
+                        if pending['clicked']:
+                            logger.warning('DraftDuel top portrait unavailable after three checks; confirm fallback')
+                            self._save_draft_checkpoint('fight')
+                    else:
+                        self._log_deployment_wait(f"目标={pending['name']}，顶部栏未完整识别，等待重试")
                 time.sleep(0.3)
                 continue
             if slots is None:
@@ -175,18 +182,24 @@ class DraftDuelDeploymentMixin:
                 actual = identify_portrait(portraits[slots[index]], self.draft_named_heads,
                                            scale=FIGHT_PORTRAIT_SCALE)
                 if actual and actual == pending.get('preview'):
-                    pending['preview_stable'] = pending.get('preview_stable', 0) + 1
+                    pending['preview_stable'] = min(2, pending.get('preview_stable', 0) + 1)
                 else:
                     pending['preview'] = actual
                     pending['preview_stable'] = 1 if actual else 0
                 if not pending['clicked']:
                     if actual != pending['name']:
-                        pending['failures'] += 1
-                    if (actual == pending['name'] and pending['preview_stable'] >= 2) or pending['failures'] >= 3:
+                        pending['failures'] = min(3, pending.get('failures', 0) + 1)
+                    if (actual == pending['name'] and pending['preview_stable'] >= 2) or pending.get('failures', 0) >= 3:
+                        self._draft_deployment_wait_reason = None
+                        if actual != pending['name']:
+                            logger.warning(f"DraftDuel target={pending['name']}, actual={actual}; confirm after three failed checks")
                         pending['clicked'] = bool(self.appear_then_click(self.I_SELECT_ENSURE, interval=1))
                         if pending['clicked']:
                             self._save_draft_checkpoint('fight')
                             logger.info(f"DraftDuel round {index + 1}: select_ensure clicked")
+                    else:
+                        self._log_deployment_wait(
+                            f"目标={pending['name']}，顶部识别={actual}，连续帧数={pending['preview_stable']}，等待一致再确定")
                 elif actual and actual not in self.draft_fielded:
                     if actual == pending.get('actual'):
                         pending['stable'] += 1

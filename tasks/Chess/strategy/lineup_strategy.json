@@ -302,10 +302,6 @@
           "weight": 1,
           "equipment": [
             {
-              "kind": "emblem",
-              "key": "huixiang"
-            },
-            {
               "kind": "soul",
               "key": "wangqie"
             }

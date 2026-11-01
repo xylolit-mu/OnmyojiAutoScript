@@ -147,13 +147,44 @@ class MuMu12Handler(EmulatorHandler):
         # MuMuManager.exe control -v 1 shutdown
         return f'"{console}" control -v {mumu_id} shutdown'
 
+    def start_instance(self, instance, platform, command: str, show_window: bool) -> bool:
+        # Wait for the manager to acknowledge the request before starting the
+        # launch timer or releasing the lifecycle lock. Popen alone only proves
+        # that the CLI was created, not that it accepted the launch request.
+        logger.info(f'Execute: {command}')
+        result = platform.execute_output(
+            command, timeout=30, show_window=show_window, encoding='utf-8'
+        )
+        stdout = result.stdout.strip() if isinstance(result.stdout, str) else ''
+        stderr = result.stderr.strip() if isinstance(result.stderr, str) else ''
+        logger.info(
+            f'[emu-start] launch command result: serial={instance.serial}, '
+            f'returncode={result.returncode}, stdout={stdout!r}, stderr={stderr!r}'
+        )
+        if result.returncode != 0:
+            logger.error(f'[emu-start] MuMu manager exited with code {result.returncode}')
+            return False
+        for output in (stdout, stderr):
+            try:
+                response = json.loads(output.lstrip('\ufeff'))
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(response, dict):
+                continue
+            error = response.get('errcode', response.get('error_code', 0))
+            if error not in (None, 0, '0'):
+                logger.error(f'[emu-start] MuMu rejected launch: {response!r}')
+                return False
+        return True
+
     # ------------------------------------------------------------------
     # 现代 MuMu 专属扩展
     # ------------------------------------------------------------------
 
     def build_launch_confirm_timer(self, instance):
         from module.base.timer import Timer
-        return Timer(12).start()
+        # A cold manager/VM startup can take longer than the previous 12 seconds.
+        return Timer(30).start()
 
     def build_stop_confirm_timer(self, instance) -> t.Any:
         from module.base.timer import Timer
@@ -313,6 +344,13 @@ class MuMu12Handler(EmulatorHandler):
             return 'ready', None
 
         player_info = self.query_player_info(instance, state._platform)
+        if player_info.get('launch_err_code') not in (None, 0, '0'):
+            logger.error(
+                f'[emu-start] MuMu launch failed: serial={instance.serial}, '
+                f'code={player_info["launch_err_code"]}, '
+                f'message={player_info.get("launch_err_msg", "")!r}'
+            )
+            return 'fail', player_info
         current_state = 'unknown'
         process_state = self._parse_process_state(player_info)
         if process_state == 'stopped':

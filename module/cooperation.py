@@ -197,8 +197,11 @@ class Cooperation:
                 if mode == '组队':
                     mode = settings.get('role', '队长')
                 return {'队长': 'leader', '队员': 'member', '单人': 'alone'}.get(mode)
-            return next((v.get('user_status') for v in item.values()
-                         if isinstance(v, dict) and 'user_status' in v), None)
+            status = next((v.get('user_status') for v in item.values()
+                           if isinstance(v, dict) and 'user_status' in v), None)
+            if task == 'BondlingFairyland':
+                return {'handoff1': 'leader', 'handoff2': 'member'}.get(status, status)
+            return status
         if {role(own), role(other)} != {'leader', 'member'}:
             raise ScriptError('组队身份有误')
         # A configured pair cannot also be the target of a third enabled instance.

@@ -49,7 +49,7 @@ class DraftDuelSelectionMixin:
             self.screenshot()
             self._observe_duel_lobby()
             self._save_draft_checkpoint('select')
-            if self.appear(self.I_POST_DRAFT_RANK):
+            if self._is_draft_rank_page():
                 # 最后一选可能直接切页，来不及在选人页观察两帧空位消失。
                 # 明确进入等待匹配且本轮空位消失时，补记已点击的候选。
                 if pending:
@@ -65,9 +65,9 @@ class DraftDuelSelectionMixin:
             if time.monotonic() >= deadline:
                 logger.warning('DraftDuel selection made no progress for 600s')
                 return False
-            if not self.appear(self.I_POST_DRAFT_SELECT):
+            if not self._is_draft_selection_page():
                 self._draft_candidate_round = None
-                self._log_selection_wait('未识别到 post_draft_select')
+                self._log_selection_wait('未识别到选人阶段标志或备用选择按钮')
                 time.sleep(0.3)
                 continue
             raw_number = self.O_SELECT_NUMBER.ocr(self.device.image)

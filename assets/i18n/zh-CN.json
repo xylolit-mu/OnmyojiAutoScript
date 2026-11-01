@@ -98,6 +98,8 @@
   "leader": "队长",
   "member": "队员",
   "alone": "单刷",
+  "handoff1": "交换身份-队长",
+  "handoff2": "交换身份-队员",
   "wild": "野队",
   "thirteen_switch": "十三层御魂配置",
   "thirteen_switch_help": "虚无",

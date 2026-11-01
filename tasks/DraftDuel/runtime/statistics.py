@@ -37,7 +37,7 @@ class DraftDuelStatisticsMixin:
             if attempt:
                 time.sleep(0.15)
                 self.screenshot()
-            if not self.appear(self.I_POST_DRAFT_RANK):
+            if not self._is_draft_rank_page():
                 break
             value = self._parse_victory_count(self.O_VICTORY_COUNT.ocr(self.device.image))
             if value is not None and value == candidate:

@@ -63,7 +63,7 @@ class DraftDuelBattleMixin:
                         self._confirm_small_game_end()
                         self._observe_duel_lobby()
                         return 'lobby'
-                    elif self.appear(self.I_POST_DRAFT_RANK):
+                    elif self._is_draft_rank_page():
                         self._confirm_small_game_end()
                         self._observe_victory_count()
                         self._save_draft_checkpoint('rank')

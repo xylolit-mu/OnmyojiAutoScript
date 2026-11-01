@@ -49,7 +49,7 @@ class DraftDuelMatchmakingMixin:
                 if leader and now - active_since >= limit:
                     cancelling = True
                     self.appear_then_click(self.I_FIGHT_CANCEL_WAIT_LEADER, interval=1)
-            elif self.appear(self.I_POST_DRAFT_RANK):
+            elif self._is_draft_rank_page():
                 self._observe_victory_count()
                 if not self._capture_draft_heads():
                     if now >= progress_deadline:

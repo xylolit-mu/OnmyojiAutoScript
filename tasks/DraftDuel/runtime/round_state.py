@@ -6,6 +6,24 @@ from tasks.GameUi.assets import GameUiAssets
 
 
 class DraftDuelRoundStateMixin:
+    def _is_draft_selection_page(self):
+        """顶部阶段文字被遮挡时，用至少两个独立的选择按钮确认选人页。"""
+        if self.appear(self.I_POST_DRAFT_SELECT):
+            return True
+        return sum(bool(self.appear(rule)) for rule in (
+            self.I_SELECT_1, self.I_SELECT_2, self.I_SELECT_3)) >= 2
+
+    def _is_draft_rank_page(self):
+        """等待匹配备用识别：自动上阵状态与队长/队员开始按钮同时可见。"""
+        if self.appear(self.I_POST_DRAFT_RANK):
+            return True
+        if not any(self.appear(rule) for rule in (self.I_AUTO_DOWN, self.I_AUTO_RIGHT)):
+            return False
+        if self.appear(self.I_POST_DRAFT_FIGHT) or self.appear(self.I_WAIT_FIGHT_LOBBY):
+            return False
+        return any(self.appear(rule) for rule in (
+            self.I_LOBBY_BATTLE, self.I_LOBBY_TEAMMATE_WAIT))
+
     def _initialize_duel_state(self):
         """初始化内存容器；初始化本身不代表观察到新一轮。"""
         self.draft_heads = ()
@@ -53,9 +71,10 @@ class DraftDuelRoundStateMixin:
             logger.info(f'DraftDuel new big round: {self.draft_big_round}')
         if in_lobby:
             self._draft_wait_lobby_seen = True
-        elif getattr(self, '_draft_wait_lobby_seen', False) and any(self.appear(rule) for rule in (
-                self.I_POST_DRAFT_SELECT, self.I_POST_DRAFT_RANK, self.I_POST_DRAFT_FIGHT,
-                self.I_FIGHT_WAIT, GameUiAssets.I_CHECK_TOWN)):
+        elif getattr(self, '_draft_wait_lobby_seen', False) and (
+                self._is_draft_selection_page() or self._is_draft_rank_page()
+                or any(self.appear(rule) for rule in (
+                    self.I_POST_DRAFT_FIGHT, self.I_FIGHT_WAIT, GameUiAssets.I_CHECK_TOWN))):
             # 邀请面板或单帧漏识别不算离开大厅，避免重新看到大厅时误清本轮。
             self._draft_wait_lobby_seen = False
 

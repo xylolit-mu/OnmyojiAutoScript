@@ -88,8 +88,7 @@ class DraftDuelInvitationMixin:
         """以明确的选人/战斗标志确认开始，不把等待标志漏识别当开战。"""
         if self.appear(self.I_LOBBY_TEAMMATE_WAIT):
             return False
-        return any(self.appear(rule) for rule in (
-            self.I_POST_DRAFT_SELECT,
+        return self._is_draft_selection_page() or any(self.appear(rule) for rule in (
             self.I_SELECT_1,
             self.I_SELECT_2,
             self.I_SELECT_3,

@@ -93,6 +93,10 @@ class EmulatorHandler(ABC):
         """启动时命令本身是否默认需要窗口（如 MuMu12 通过 manager 启动，不需要窗口）。"""
         return True
 
+    def start_instance(self, instance, platform, command: str, show_window: bool) -> t.Optional[bool]:
+        """Return None to use the generic asynchronous launcher."""
+        return None
+
     # ------------------------------------------------------------------
     # 启动监视扩展点（特殊模拟器可覆盖）
     # ------------------------------------------------------------------

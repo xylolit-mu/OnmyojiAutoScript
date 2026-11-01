@@ -162,7 +162,8 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(GeneralBattleAssets.I_BATTLE_INFO.file, default_file)
         self.assertNotEqual(captain._battle_info_rule().file, member._battle_info_rule().file)
 
-    def deployment(self, fail_first=False, ready=True, reset_clock=True, expected=True):
+    def deployment(self, fail_first=False, ready=True, reset_clock=True, expected=True,
+                   missing_top=False, recover_after=None):
         owner = self.owner('队员')
         owner.draft_named_heads = [(n, n) for n in 'abcde']
         owner.draft_selected = list('abcde')
@@ -172,6 +173,8 @@ class DeploymentTests(unittest.TestCase):
         owner.F_FIGHT_SHIKIGAMI = object()
         owner.F_FIGHT_SHIKIGAMI_SET = object()
         owner.runframe = Mock(side_effect=lambda rule: (
+            None if missing_top and rule is owner.F_FIGHT_SHIKIGAMI
+            and owner.device.press_and_drag.call_count else
             [('top', i) for i in range(6)] if rule is owner.F_FIGHT_SHIKIGAMI else
             [(i * 100, 300, 60, 60) for i in range(6)]))
         state = {'round': 0, 'clicked': False, 'checks': 0}
@@ -196,6 +199,7 @@ class DeploymentTests(unittest.TestCase):
             state['checks'] = 0
             state['after_ticks'] = 0
         def click(*args, **kw):
+            state.setdefault('confirm_checks', []).append(state['checks'])
             state['clicked'] = True
             return True
         owner.device.press_and_drag.side_effect = drag
@@ -209,8 +213,10 @@ class DeploymentTests(unittest.TestCase):
         def identify(region, heads, **kw):
             if fail_first and not owner.draft_fielded:
                 state['checks'] += 1
+                if recover_after is not None and state['checks'] > recover_after:
+                    return 'a'
                 if not state['clicked']:
-                    return None
+                    return 'd' if fail_first == 'wrong' else None
                 return 'd'
             return next(n for n in 'abc' if n not in owner.draft_fielded)
         ticks = iter(range(10000))
@@ -234,12 +240,24 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(owner.draft_deployment_rounds,
                          [{'round': i + 1, 'slot': i + 4, 'name': n} for i, n in enumerate('abc')])
 
-    def test_three_failed_checks_still_confirm_and_record_actual(self):
-        owner, candidates, _ = self.deployment(fail_first=True)
-        self.assertEqual(owner.draft_fielded, ('d', 'a', 'b'))
-        self.assertEqual(owner.device.press_and_drag.call_count, 3)
+    def test_unknown_or_wrong_top_confirms_after_three_failures_and_records_actual(self):
+        for failure in (True, 'wrong'):
+            owner, _, state = self.deployment(fail_first=failure)
+            self.assertEqual(state['confirm_checks'][0], 3)
+            self.assertEqual(owner.appear_then_click.call_count, 3)
+            self.assertEqual(owner.draft_fielded, ('d', 'a', 'b'))
+
+    def test_missing_top_frame_confirms_but_does_not_invent_actual_name(self):
+        owner, _, _ = self.deployment(missing_top=True, expected=False)
+        self.assertEqual(owner.device.press_and_drag.call_count, 1)
+        self.assertEqual(owner.appear_then_click.call_count, 1)
+        self.assertEqual(owner.draft_fielded, ())
+
+    def test_confirms_only_after_wrong_top_recovers_to_target(self):
+        owner, _, state = self.deployment(fail_first='wrong', recover_after=2)
+        self.assertEqual(state['confirm_checks'][0], 4)
+        self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
         self.assertEqual(owner.appear_then_click.call_count, 3)
-        self.assertTrue(all('d' not in names for r, names in candidates if r >= 1))
 
     def test_ensure_without_ready_and_without_countdown_reset_does_not_advance(self):
         owner, _, _ = self.deployment(ready=False, reset_clock=False, expected=False)

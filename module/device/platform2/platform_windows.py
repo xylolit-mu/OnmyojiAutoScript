@@ -587,6 +587,9 @@ class PlatformWindows(PlatformBase, EmulatorManager):
             and not self.config.script.device.run_background_only
             and handler.start_show_window()
         )
+        result = handler.start_instance(instance, self, cmd, show_window=show_window)
+        if result is not None:
+            return result
         self.execute(cmd, show_window=show_window)
 
     def _wait_emulator_stop(self, instance: EmulatorInstance, handler) -> bool:

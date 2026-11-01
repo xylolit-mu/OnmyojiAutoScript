@@ -142,6 +142,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
 
     def run(self):
         cong = self.config.bondling_fairyland
+        self._bondling_start_status = cong.bondling_config.user_status
 
         if cong.bondling_config.check_enable:
             logger.hr('第一步, 检查契忆数量', 2)
@@ -154,9 +155,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
                 cu = int(str(cu)[1:])
             if cu >= MAX_COUNT:
                 logger.info(f'契忆数量: {cu} 大于 {MAX_COUNT}')
-                self.finish_task_navigation()
-                self.set_next_run(task='BondlingFairyland', finish=True, success=True)
-                raise TaskEnd
+                self._finish_bondling_task()
             logger.info(f'契忆数量: {cu} 小于 {MAX_COUNT}, 继续任务')
         logger.hr('第二步, 切换御魂', 2)
         self.switch_soul()
@@ -173,25 +172,32 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
                 raise ValueError(
                     f'Now is model1, but user status is not alone, current: {cong.bondling_config.user_status.value}')
             self.run_search(cong.bondling_config)
-            self.finish_task_navigation()
-            self.set_next_run(task='BondlingFairyland', finish=True, success=True)
-            raise TaskEnd
+            self._finish_bondling_task()
         match cong.bondling_config.user_status:
-            case UserStatus.handoff1:
-                self.limit_count //= 2
+            case UserStatus.handoff1 | UserStatus.LEADER | UserStatus.ALONE:
                 self.switch_ball()
-            case UserStatus.handoff2:
-                self.limit_count //= 2
-                self.run_member()
-                self.current_count = 0
-                self.goto_page(page_bondling_fairyland)
-                self.switch_ball()
-            case UserStatus.LEADER | UserStatus.ALONE:
-                self.switch_ball()
-            case UserStatus.MEMBER:
+            case UserStatus.handoff2 | UserStatus.MEMBER:
                 self.run_member()
             case _:
                 logger.error(f'Unknown user status: {cong.bondling_config.user_status}')
+
+    def _finish_bondling_task(self):
+        """本次只执行一种身份；正常结束后交换下一次任务的身份。"""
+        status = getattr(self, '_bondling_start_status',
+                         self.config.bondling_fairyland.bondling_config.user_status)
+        self.finish_task_navigation()
+        self.set_next_run(task='BondlingFairyland', finish=True, success=True)
+        next_status = {UserStatus.handoff1: UserStatus.handoff2,
+                       UserStatus.handoff2: UserStatus.handoff1}.get(status)
+        if next_status is not None:
+            # 调度更新会 reload；重新取最新配置，不覆盖用户运行期间的身份修改。
+            self.config.reload()
+            settings = self.config.model.bondling_fairyland.bondling_config
+            if settings.user_status == status:
+                settings.user_status = next_status
+                self.config.save()
+                logger.info(f'BondlingFairyland next task identity: {status.value} -> {next_status.value}')
+        raise TaskEnd
 
     def _create_private_bond_team(self):
         if not self.ensure_private():
@@ -327,13 +333,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
             pass
 
         self.goto_page(page_bondling_fairyland)
-        # 引用配置
-        if UserStatus.handoff1 == self.config.bondling_fairyland.bondling_config.user_status:
-            self.current_count = 0
-            self.run_member()
-        self.finish_task_navigation()
-        self.set_next_run(task='BondlingFairyland', finish=True, success=True)
-        raise TaskEnd
+        self._finish_bondling_task()
 
     def run_member(self):
         self.prepare_battle_cooperation('BondlingFairyland')
@@ -407,10 +407,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
             if self.exit_battle():
                 pass
                 # 引用配置
-        if UserStatus.MEMBER == self.config.bondling_fairyland.bondling_config.user_status:
-            self.finish_task_navigation()
-            self.set_next_run(task='BondlingFairyland', finish=True, success=True)
-            raise TaskEnd
+        self._finish_bondling_task()
 
     def switch_ball(self):
         logger.hr('Start switch ball', 2)
@@ -460,9 +457,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
                 break
 
         logger.info('BondlingFairyland task finished')
-        self.finish_task_navigation()
-        self.set_next_run(task='BondlingFairyland', finish=True, success=True)
-        raise TaskEnd
+        self._finish_bondling_task()
 
     def run_stone(self, bondling_stone_enable: bool):
         """
