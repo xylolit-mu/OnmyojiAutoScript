@@ -68,9 +68,9 @@ class SixRealmsCommon(GameUi, SixRealmsAssets):
             # The summon entry remains visible underneath this modal. Never
             # click it again while the summon dialog is present.
             if self.appear(SixRealmsAssets.I_MS_CHECK_OPEN_STORE):
-                self.appear_then_click(GlobalGameAssets.I_UI_CONFIRM_BACKUP, interval=0.7)
+                pages.handle_sr_confirm(self, interval=0.7)
                 continue
-            if self.appear_then_click(GlobalGameAssets.I_UI_CONFIRM_BACKUP, interval=0.7):
+            if pages.handle_sr_confirm(self, interval=0.7):
                 continue
             if self.appear_then_click(store_rule, interval=1.5):
                 continue
@@ -137,7 +137,7 @@ class SixRealmsCommon(GameUi, SixRealmsAssets):
         buy_cnt = 0
         while True:
             self.screenshot()
-            if self.appear_then_click(GlobalGameAssets.I_UI_CONFIRM_BACKUP, interval=0.7):
+            if pages.handle_sr_confirm(self, interval=0.7):
                 continue
             if not buy_interval_timer.reached():
                 continue

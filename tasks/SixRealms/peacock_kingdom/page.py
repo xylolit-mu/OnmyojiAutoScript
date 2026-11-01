@@ -5,7 +5,7 @@ from tasks.GameUi.matcher import any_of, all_of
 from tasks.GameUi.page_definition import Page
 from tasks.GlobalGame.assets import GlobalGameAssets
 from tasks.SixRealms.assets import SixRealmsAssets
-from tasks.SixRealms.page import page_peacock_kingdom, page_sr_prepare_exit, page_sr_open_store
+from tasks.SixRealms.page import handle_sr_confirm, page_peacock_kingdom, page_sr_prepare_exit, page_sr_open_store
 
 # 孔雀国准备界面
 page_pk_prepare = Page(any_of(SixRealmsAssets.I_PK_START_CONFIRM, SixRealmsAssets.I_PK_START_CONFIRM2,
@@ -61,7 +61,7 @@ page_pk_main.connect(page_pk_exit, GlobalGameAssets.I_UI_BACK_BLUE, key="page_pk
 page_pk_battle_land.connect(page_pk_exit, GlobalGameAssets.I_UI_BACK_BLUE, key="page_pk_battle_land->page_pk_exit")
 
 # 准备界面退出
-page_sr_prepare_exit.connect(page_peacock_kingdom, GlobalGameAssets.I_UI_CONFIRM_BACKUP, key="page_sr_prepare_exit->page_moon_sea")
+page_sr_prepare_exit.connect(page_peacock_kingdom, handle_sr_confirm, key="page_sr_prepare_exit->page_moon_sea")
 page_sr_prepare_exit.connect(page_pk_prepare, GlobalGameAssets.I_UI_CANCEL, key="page_sr_prepare_exit->page_pk_prepare")
 page_pk_prepare.connect(page_sr_prepare_exit, GlobalGameAssets.I_UI_BACK_BLUE, key="page_pk_prepare->page_sr_prepare_exit")
 page_sr_prepare_exit.add_enter_failure_hooks(GlobalGameAssets.I_UI_BACK_BLUE)

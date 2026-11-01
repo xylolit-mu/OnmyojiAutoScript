@@ -5,7 +5,7 @@ from tasks.GameUi.matcher import any_of, all_of
 from tasks.GameUi.page_definition import Page
 from tasks.GlobalGame.assets import GlobalGameAssets
 from tasks.SixRealms.assets import SixRealmsAssets
-from tasks.SixRealms.page import page_moon_sea, page_sr_prepare_exit, page_sr_open_store
+from tasks.SixRealms.page import handle_sr_confirm, page_moon_sea, page_sr_prepare_exit, page_sr_open_store
 
 # 月之海准备界面
 page_ms_prepare = Page(any_of(SixRealmsAssets.I_MSTART_CONFIRM, SixRealmsAssets.I_MSTART_CONFIRM2,
@@ -65,7 +65,7 @@ page_ms_main.connect(page_ms_exit, GlobalGameAssets.I_UI_BACK_BLUE, key="page_ms
 page_ms_battle_land.connect(page_ms_exit, GlobalGameAssets.I_UI_BACK_BLUE, key="page_ms_battle_land->page_ms_exit")
 
 # 准备界面退出
-page_sr_prepare_exit.connect(page_moon_sea, GlobalGameAssets.I_UI_CONFIRM_BACKUP, key="page_sr_prepare_exit->page_moon_sea")
+page_sr_prepare_exit.connect(page_moon_sea, handle_sr_confirm, key="page_sr_prepare_exit->page_moon_sea")
 page_sr_prepare_exit.connect(page_ms_prepare, GlobalGameAssets.I_UI_CANCEL, key="page_sr_prepare_exit->page_ms_prepare")
 page_ms_prepare.connect(page_sr_prepare_exit, GlobalGameAssets.I_UI_BACK_BLUE, key="page_ms_prepare->page_sr_prepare_exit")
 page_sr_prepare_exit.add_enter_failure_hooks(GlobalGameAssets.I_UI_BACK_BLUE)

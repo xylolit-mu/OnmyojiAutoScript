@@ -1,4 +1,5 @@
 from tasks.GlobalGame.assets import GlobalGameAssets
+from tasks.SixRealms.page import handle_sr_confirm
 import time
 
 import random
@@ -149,7 +150,7 @@ class MoonSea(BaseMoonSea):
                 self.click(pages.random_click(), interval=1.5)
                 imitated = True
                 continue
-            if self.appear_then_click(GlobalGameAssets.I_UI_CONFIRM_BACKUP, interval=1.5):
+            if handle_sr_confirm(self, interval=1.5):
                 imitated = True
                 continue
             if self.appear_then_click(self.I_MISTERY_IMITATE, interval=2.5):

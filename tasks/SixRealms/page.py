@@ -10,6 +10,15 @@ page_sr_prepare_exit = Page(SixRealmsAssets.I_MS_CHECK_EXIT_PREPARE, priority=88
 # 商店打开弹窗
 page_sr_open_store = Page(SixRealmsAssets.I_MS_CHECK_OPEN_STORE, priority=88)
 
+
+def handle_sr_confirm(task, interval: float = 0.7) -> bool:
+    """优先普通确认；确认识别失败且取消可见时才尝试备用确认。"""
+    if task.appear(GlobalGameAssets.I_UI_CONFIRM):
+        return task.appear_then_click(GlobalGameAssets.I_UI_CONFIRM, interval=interval)
+    if task.appear(GlobalGameAssets.I_UI_CANCEL):
+        return task.appear_then_click(GlobalGameAssets.I_UI_CONFIRM_BACKUP, interval=interval)
+    return False
+
 # Shared transient dialog: the short confirm button identifies the page.
 from module.logger import logger
 

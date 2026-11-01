@@ -730,7 +730,13 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
 
         self.maybe_screenshot(skip_first_screenshot)
         logger.warning("Try switch to a supported page")
-        for action in [*self.navigator.local_unknown_closers, *self.DEFAULT_UNKNOWN_CLOSERS]:
+        actions = [*self.navigator.local_unknown_closers, *self.DEFAULT_UNKNOWN_CLOSERS]
+        if getattr(self, '_six_realms_confirm_overlays', False) is True:
+            from tasks.SixRealms.page import handle_sr_confirm
+            actions = [handle_sr_confirm, *[
+                action for action in actions if action is not GlobalGameAssets.I_UI_CONFIRM
+            ]]
+        for action in actions:
             action_name = self._action_name(action)
             # 若最后3次执行的都是该动作，则跳过该动作尝试其他动作
             if len(self.navigator.unknown_close_history) >= 3 and \
