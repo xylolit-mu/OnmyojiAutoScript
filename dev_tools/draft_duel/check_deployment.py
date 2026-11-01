@@ -13,14 +13,16 @@ class DeploymentTests(unittest.TestCase):
     def test_hand_threshold_falls_by_point_zero_five_and_stops_at_first_match(self):
         owner = self.owner('队员')
         owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=0.65, roi_back=(0, 0, 100, 100))
-        hit = ((10, 20, 30, 40), 0.57)
+        hit = ((10, 20, 30, 40), 0.67)
         with patch('tasks.DraftDuel.runtime.deployment.locate_portrait',
                    side_effect=[None, None, hit]) as locate:
             self.assertEqual(owner._locate_deployment_portrait('head'), hit)
-        self.assertEqual([c.kwargs['threshold'] for c in locate.call_args_list], [.65, .6, .55])
+        self.assertEqual([c.kwargs['threshold'] for c in locate.call_args_list], [.75, .70, .65])
+        self.assertTrue(all(c.kwargs['scale'] == 1.60 and 'scales' not in c.kwargs
+                            for c in locate.call_args_list))
 
-    def test_hand_threshold_never_falls_below_point_five(self):
-        for initial, expected in ((.65, [.65, .6, .55, .5]), (.63, [.63, .58, .53, .5])):
+    def test_hand_threshold_never_falls_below_point_six_five(self):
+        for initial, expected in ((.75, [.75, .70, .65]), (.63, [.75, .70, .65])):
             owner = self.owner('队长')
             owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=initial, roi_back=(0, 0, 100, 100))
             with patch('tasks.DraftDuel.runtime.deployment.locate_portrait', return_value=None) as locate:
@@ -117,6 +119,20 @@ class DeploymentTests(unittest.TestCase):
         card = np.zeros((120, 100, 3), dtype=np.uint8)
         card[20:65, 20:65] = cv2.resize(head, (45, 45))
         self.assertEqual(identify_portrait(card, [('a', head)]), 'a')
+
+    def test_hand_scale_search_keeps_best_match_instead_of_first_above_threshold(self):
+        import cv2
+        rng = np.random.default_rng(55)
+        head = rng.integers(0, 255, (31, 35, 3), dtype=np.uint8)
+        image = np.zeros((130, 300, 3), dtype=np.uint8)
+        first = cv2.resize(head, None, fx=1.5, fy=1.5)
+        noisy = np.clip(first.astype(float) + rng.normal(0, 35, first.shape), 0, 255).astype(np.uint8)
+        image[10:10+first.shape[0], 10:10+first.shape[1]] = noisy
+        exact = cv2.resize(head, None, fx=1.69, fy=1.69)
+        image[50:50+exact.shape[0], 180:180+exact.shape[1]] = exact
+        area, score = locate_portrait(head, image, (0, 0, 300, 130), scales=(1.5, 1.69))
+        self.assertEqual(area, (180, 50, exact.shape[1], exact.shape[0]))
+        self.assertGreater(score, .99)
 
     def test_locate_target_anywhere_in_back_and_return_global_coordinates(self):
         import cv2

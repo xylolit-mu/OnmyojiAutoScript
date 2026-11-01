@@ -5,27 +5,24 @@ from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup
 from tasks.DraftDuel.runtime.portrait_match import (
-    FIGHT_PORTRAIT_SCALE, HAND_PORTRAIT_SCALE, identify_portrait, portrait_score, locate_portrait,
+    FIGHT_PORTRAIT_SCALE, HAND_PORTRAIT_SCALE, HAND_PORTRAIT_THRESHOLDS,
+    identify_portrait, portrait_score, locate_portrait,
 )
 
 
 class DraftDuelDeploymentMixin:
     def _locate_deployment_portrait(self, head):
         """手牌未命中时逐级降低阈值，每级取整个搜索区的最高分。"""
-        initial = max(0.5, float(self.I_HAND_CARD_AREA.threshold))
-        threshold = initial
-        while True:
+        for threshold in HAND_PORTRAIT_THRESHOLDS:
             located = locate_portrait(
                 head, self.device.image, self.I_HAND_CARD_AREA.roi_back,
                 scale=HAND_PORTRAIT_SCALE, threshold=threshold)
             if located is not None:
-                if threshold < initial:
+                if threshold < HAND_PORTRAIT_THRESHOLDS[0]:
                     logger.info(f'DraftDuel hand portrait matched at reduced threshold '
                                 f'{threshold:.2f}, score={located[1]:.3f}')
                 return located
-            if threshold <= 0.5:
-                return None
-            threshold = max(0.5, round(threshold - 0.05, 10))
+        return None
 
     def _update_deployment_clock(self):
         value = self.O_FIGHT_WAIT_TIME.ocr(self.device.image)
