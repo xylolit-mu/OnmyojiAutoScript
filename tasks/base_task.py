@@ -9,7 +9,7 @@ from datetime import datetime, time as clock_time, timedelta
 from module.atom.animate import RuleAnimate
 from module.atom.click import RuleClick
 from module.atom.gif import RuleGif
-from module.atom.image import RuleImage
+from module.atom.image import RuleImage, roi_match_padding
 from module.atom.frame import RuleFrame, FrameResult
 from module.atom.list import RuleList
 from module.atom.long_click import RuleLongClick
@@ -193,14 +193,24 @@ class BaseTask(GlobalGameAssets, CostumeBase):
         if not unique_targets:
             return
 
+        with self._image_roi_context():
+            payloads = [target.to_service_payload() for target in unique_targets]
         results = get_image_client().match_many(
-            rules_data=[target.to_service_payload() for target in unique_targets],
+            rules_data=payloads,
             image=self.device.image,
             frame_id=frame_id,
         )
         self.device.update_image_batch_cache(unique_targets, results, frame_id=frame_id)
 
-    def appear(self,
+    def _image_roi_context(self):
+        pad = getattr(self.device, 'image_roi_padding', 0)
+        return roi_match_padding(pad if type(pad) is int else 0)
+
+    def appear(self, *args, **kwargs):
+        with BaseTask._image_roi_context(self):
+            return BaseTask._appear(self, *args, **kwargs)
+
+    def _appear(self,
                target: RuleImage | RuleGif | RuleOcr,
                interval: float = None,
                threshold: float = None):

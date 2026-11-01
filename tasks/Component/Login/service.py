@@ -9,6 +9,9 @@ from tasks.GameUi.chess_battle import ChessBattleNavigationMixin
 from tasks.Restart.assets import RestartAssets
 from tasks.base_task import BaseTask
 
+# 登录期间 MPay 弹窗「关掉又重弹」的容忍上限，超过说明回车已走不出去，交 Restart 重建
+DESKTOP_MPAY_CLOSE_LIMIT = 5
+
 
 class LoginService(
     ChessBattleNavigationMixin,
@@ -36,13 +39,40 @@ class LoginService(
         skip_login_animation = True
         login_success = False
         enter_game_fallback_used = False
+        popup_handled = 0
+
+        def handle_desktop_login_popup() -> bool:
+            """登录期间处理 MPay 弹窗，返回是否刚关闭了弹窗。
+
+            MPay 是独立顶层窗口，主窗口截图识别不到，只能按 HWND 枚举检查。
+            """
+            nonlocal popup_handled
+            if not self.device.is_desktop or not self.device.find_desktop_login_popup():
+                return False
+            popup_handled += 1
+            if popup_handled > DESKTOP_MPAY_CLOSE_LIMIT:
+                raise GameStuckError(
+                    f'Desktop MPay login popup reappeared more than {DESKTOP_MPAY_CLOSE_LIMIT} times')
+            if not self.device.desktop_confirm_login_popup():
+                # 弹窗可能恰好在确认函数最后一次枚举后自行关闭，重新确认避免误判卡死
+                if not self.device.find_desktop_login_popup():
+                    return True
+                # 弹窗仍存活时不能继续识别页面，否则 MPay 会被当成未知页面
+                raise GameStuckError('Desktop MPay login popup cannot be closed')
+            return True
 
         while 1:
+            # MPay 可能在启动后、重登时或登录中途反复出现，每轮都要处理
+            if handle_desktop_login_popup():
+                continue
             if not login_success and orientation_timer.reached():
                 self.device.get_orientation()
                 orientation_timer.reset()
 
             self.screenshot()
+            # 截图与窗口枚举有竞态，截图后再查一次，避免刚出现的 MPay 进入图像识别
+            if handle_desktop_login_popup():
+                continue
             if self.appear_then_click(
                 self.I_RETURN_CHESS_CANCEL,
                 interval=0.8,
@@ -170,6 +200,9 @@ class LoginService(
         self.device.click_record_clear()
         try:
             self._app_handle_login()
+            # 桌面：登录成功后标记登录态，app_is_running 才会判定为已在游戏中
+            if self.device.is_desktop:
+                self.device.desktop_mark_logged_in()
             return True
         except (GameTooManyClickError, GameStuckError) as e:
             logger.warning(e)

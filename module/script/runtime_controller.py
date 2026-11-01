@@ -206,19 +206,25 @@ class ScriptRuntimeController:
 
         _ = self.device
 
-    def _run_restart_recovery(self, reason: str) -> ScriptRuntimeDecision:
+    def _run_game_recovery(self, reason: str) -> ScriptRuntimeDecision:
         """
-        通过 `Restart` 任务恢复游戏运行环境。
+        恢复游戏运行环境：桌面客户端只是没登录时直接登录，否则交给 `Restart` 任务。
 
         Args:
             reason: 触发恢复的原因说明。
 
         Returns:
             ScriptRuntimeDecision:
+                `READY` 表示已就地登录，当前流程可继续；
                 `RESCHEDULE` 表示恢复成功但需要回到主调度器重新选任务，
                 `FAILED` 表示恢复失败。
         """
         logger.info(reason)
+        if self.script.desktop_login_recovery():
+            # 登录流程结束即已在庭院，不必再跑 GotoMain，也不占用重启任务
+            logger.info('Desktop client logged in without restart, continue')
+            return ScriptRuntimeDecision.READY
+
         if not self.script.run('Restart'):
             logger.warning('Restart task failed during runtime recovery')
             return ScriptRuntimeDecision.FAILED
@@ -260,11 +266,16 @@ class ScriptRuntimeController:
         self._ensure_emulator_running('Wake emulator before ensuring game state')
 
         if not self.device.app_is_running():
-            return self._run_restart_recovery('Game is not running, recover it via Restart')
+            return self._run_game_recovery('Game is not running, recover it via Restart')
 
         if require_main:
             logger.info('Ensure game stays at main page during wait')
             if self.script.run('GotoMain'):
+                # GotoMain 掉登录或卡死时，Script 内部已排队恢复动作（重新登录或重启）
+                # 并返回 True。若按「已在主界面」继续等待，排队的恢复永远轮不到。
+                if self.script.recovery_pending:
+                    logger.info('GotoMain scheduled recovery, return to scheduler')
+                    return ScriptRuntimeDecision.RESCHEDULE
                 return ScriptRuntimeDecision.READY
             decision = self._consume_server_update_delay_outcome('GotoMain preparation')
             if decision is not None:
@@ -338,7 +349,7 @@ class ScriptRuntimeController:
                 from e
 
         if not running:
-            return self._run_restart_recovery(f'Game is not running before task `{task}`, recover it via Restart')
+            return self._run_game_recovery(f'Game is not running before task `{task}`, recover it via login or Restart')
 
         return ScriptRuntimeDecision.READY
 

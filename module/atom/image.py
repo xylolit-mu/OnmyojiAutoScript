@@ -3,6 +3,8 @@
 # github https://github.com/runhey
 import cv2
 import numpy as np
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from numpy import float32, int32, uint8, fromfile
 from pathlib import Path
@@ -12,6 +14,24 @@ from module.base.decorator import cached_property
 from module.image.rpc import get_image_client
 from module.logger import logger
 from module.base.utils import is_approx_rectangle
+
+# 模板匹配容差：随规则下发给图像服务，服务端把 roi_back 四边各外扩该像素数，
+# 用于吸收非原生渲染环境相对模板截图环境的整体相位差（桌面客户端受 DPI 缩放
+# 重采样，约 1px）。仓库里约 1/3 的模板 roi_back 与模板等宽，此时 matchTemplate
+# 结果只剩 1 列、横向一格都平移不了，1px 相位差就足以把「元素存在」判成「不存在」。
+# 桌面模式由 Device 置为 2，模拟器保持 0、行为逐位不变。
+ROI_MATCH_PAD = ContextVar('image_roi_padding', default=0)
+DESKTOP_ROI_MATCH_PAD = 2
+
+
+@contextmanager
+def roi_match_padding(pad: int):
+    """请求级容差，退出时复位；不同设备/线程互不污染。"""
+    token = ROI_MATCH_PAD.set(max(0, int(pad)))
+    try:
+        yield
+    finally:
+        ROI_MATCH_PAD.reset(token)
 
 
 class RuleImage:
@@ -189,6 +209,7 @@ class RuleImage:
             "threshold": float(self.threshold),
             "roi_front": list(self.roi_front),
             "roi_back": list(self.roi_back),
+            "roi_pad": ROI_MATCH_PAD.get(),
             "scale_range": scale_range,
             "scale_step": float(self.scale_step),
             "grayscale": bool(getattr(self, 'grayscale', False)),

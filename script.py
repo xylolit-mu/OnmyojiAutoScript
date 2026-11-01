@@ -45,6 +45,10 @@ from module.server.log_service import build_error_log_dir_name
 
 _log_switch_lock = threading.Lock()#线程锁
 
+# 桌面客户端连续登录恢复的容忍次数：超过就交给重启任务（或按重启开关停下），
+# 避免账号被顶号时「登录→任务失败→再登录」无限循环
+DESKTOP_LOGIN_RETRY_LIMIT = 3
+
 
 class Script:
     def __init__(self, config_name: str ='oas') -> None:
@@ -62,6 +66,9 @@ class Script:
         self.failure_record = {}
         self._error_restart_count = 0
         self._error_restart_pending = False
+        # 桌面掉登录后直接登录恢复（不经过重启任务）的次数与「原任务待重跑」标记
+        self._desktop_login_count = 0
+        self._login_retry_pending = False
         self.last_task_runtime_outcome: dict[str, Any] | None = None
         # 连续任务休息只统计调度器未进入等待状态的墙钟时间。
         self._continuous_task_started_at: float | None = None
@@ -483,8 +490,14 @@ class Script:
 
     def _reset_task_runtime_outcome(self) -> None:
         self.last_task_runtime_outcome = None
+        self._login_retry_pending = False
         if 'config' in self.__dict__:
             self.config.task_runtime_outcome = None
+
+    @property
+    def recovery_pending(self) -> bool:
+        """是否有排队中的恢复动作（异常重启，或登录后需重跑原任务）。"""
+        return self._error_restart_pending or self._login_retry_pending
 
     def _set_task_runtime_outcome(self, task: str, status: str, wait_until: datetime | None = None) -> None:
         outcome = {
@@ -725,6 +738,47 @@ class Script:
         self._error_restart_pending = True
         self.config.task_call('Restart', force_call=False)
 
+    def desktop_login_recovery(self, command: str = '') -> bool:
+        """桌面客户端停在登录页时直接登录，不占用重启任务。
+
+        MPay 登录窗是独立顶层窗口，未登录时游戏画面只有开屏画、识别不到任何页面，
+        登录动作只存在于此。它并不重启客户端，与「重启」开关无关；把它算成异常重启，
+        关掉重启的用户每次冷启动都会直接停摆。进程/窗口真的没了才需要 Restart。
+        """
+        if not self.device.is_desktop:
+            return False
+        if not self.device.desktop_window_exists():
+            return False
+        if self.device.app_is_running() and not self.device.find_desktop_login_popup():
+            return False
+        limit = DESKTOP_LOGIN_RETRY_LIMIT
+        if self._desktop_login_count >= limit:
+            logger.warning(f'Desktop login recovery reached limit ({limit}), escalate to Restart')
+            return False
+        self._desktop_login_count += 1
+        logger.info(f'Desktop client is not logged in, login directly '
+                    f'({self._desktop_login_count}/{limit})')
+        from tasks.Component.Login.service import LoginService
+        try:
+            LoginService(config=self.config, device=self.device).app_handle_login()
+        except RequestHumanTakeover as e:
+            self._request_human_takeover(e, command)
+        except GameNotRunningError as e:
+            # 登录过程中窗口被关掉：登录无从继续，退回重启路径由 Restart 重拉客户端
+            logger.warning(f'Desktop client window lost during login: {e}')
+            return False
+        return True
+
+    def _request_human_takeover(self, e: Exception, command: str) -> None:
+        logger.critical(e)
+        self.exception_handler(e=e, command=command)
+        logger.critical('Request human takeover')
+        self.config.notifier.push(
+            title=f'{I18n.trans_zh_cn(command)}{command}',
+            content=f"<{self.config_name}> RequestHumanTakeover",
+        )
+        exit(1)
+
     def _handle_task_exception(self, e: Exception, command: str) -> bool:
         """
         统一处理任务执行 / 准备阶段抛出的异常。
@@ -766,11 +820,18 @@ class Script:
         if isinstance(e, TaskEnd):
             self._capture_task_runtime_outcome(command)
             outcome = self.last_task_runtime_outcome or {}
+            if outcome.get('status') != 'cooperation_failed':
+                # 任务正常收尾，说明登录态是稳的，桌面登录恢复的容忍次数重新计数
+                self._desktop_login_count = 0
             return outcome.get('status') != 'cooperation_failed'
 
         if isinstance(e, GameNotRunningError):
             logger.warning(e)
             self.exception_handler(e=e, command=command)
+            if self.desktop_login_recovery(command):
+                # 登录完成，回调度器重跑原任务（GotoMain 由 require_main 重新驱动）
+                self._login_retry_pending = True
+                return True
             self._request_error_restart(command)
             return True
 
@@ -826,14 +887,7 @@ class Script:
             exit(1)
 
         if isinstance(e, RequestHumanTakeover):
-            logger.critical(e)
-            self.exception_handler(e=e, command=command)
-            logger.critical('Request human takeover')
-            self.config.notifier.push(
-                title=f'{I18n.trans_zh_cn(command)}{command}',
-                content=f"<{self.config_name}> RequestHumanTakeover",
-            )
-            exit(1)
+            self._request_human_takeover(e, command)
 
         # generic
         logger.exception(e)

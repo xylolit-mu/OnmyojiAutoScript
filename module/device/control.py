@@ -205,8 +205,8 @@ class Control(Minitouch, Adb, Scrcpy, Window):
         """先按住再连续拖动；保留快速/重试时序，业务结果由任务确认。
 
         hold_duration 和 swipe_duration 的单位为秒；retry 使用较慢的默认时序，
-        不会自动重放手势。minitouch、uiautomator2、scrcpy 支持完整触摸事件，
-        其他通道沿用 ADB swipe 兜底。
+        不会自动重放手势。minitouch、uiautomator2、scrcpy、window_message（含
+        桌面客户端）支持完整触摸/鼠标事件与起点停顿，其余通道沿用 ADB swipe 兜底。
         """
         return _press_and_drag(
             self, p1, p2, hold_duration=hold_duration, point_random=point_random,

@@ -3,11 +3,21 @@
 # github https://github.com/runhey
 from datetime import datetime
 
-from module.exception import RequestHumanTakeover, TaskEnd
+from module.exception import (
+    RequestHumanTakeover,
+    TaskEnd,
+    GameNotRunningError,
+    GameStuckError,
+    GameTooManyClickError,
+)
 from module.logger import logger
 from tasks.Component.Login.service import LoginService
 from tasks.Restart.server_update import delay_pending_tasks_for_server_update, is_server_update_window
 from tasks.base_task import BaseTask
+
+# 桌面客户端「启动+登录」的就地重试轮数：Restart 就是负责启动客户端的任务，
+# 起不来必须自己扛住，抛给调度器会形成无限重启循环
+DESKTOP_RESTART_ATTEMPTS = 3
 
 
 class ScriptTask(BaseTask):
@@ -39,16 +49,34 @@ class ScriptTask(BaseTask):
 
     def app_start(self):
         logger.hr('App start')
+        if self.device.is_desktop:
+            self._desktop_start_and_login()
+            return
         self.device.app_start()
         self.device.wait_app_start_ready()
         LoginService(config=self.config, device=self.device).app_handle_login()
 
     def app_restart(self):
         logger.hr('App restart')
+        if self.device.is_desktop:
+            if self.config.script.desktop.restart_when_window_exists:
+                self._desktop_restart_and_login()
+            else:
+                # 客户端可能刚被自动启动（停在登录页），先停掉会白关一次再重开
+                self._desktop_start_and_login()
+            return
         self.device.app_stop()
         self.app_start()
 
     def recover_app(self):
+        # 桌面没有 adb 生命周期（app_is_alive 走 pidof 必然失败）：窗口在就只走登录，
+        # 不在就重拉，绝不把健康客户端强杀重启；配置 restart_when_window_exists
+        # 时才改成窗口存在也强杀重拉
+        if self.device.is_desktop:
+            logger.info('Desktop recovery: recover client then login')
+            self.app_restart()
+            return
+
         if not self.device.app_is_alive():
             logger.info('Recovery branch: game process not alive and not in foreground -> full restart')
             self.app_restart()
@@ -61,6 +89,46 @@ class ScriptTask(BaseTask):
 
         logger.info('Recovery branch: game process alive but in background -> bring to foreground')
         self.app_start()
+
+    def _desktop_start_and_login(self) -> None:
+        """桌面模式：启动客户端并登录，起不来就就地重建，不把异常抛给调度器。
+
+        Restart 就是负责启动客户端的任务：GameNotRunningError / GameStuckError
+        抛出去会被 script.py 接住再 task_call('Restart')，形成无限重启循环
+        （每轮日志都「正常」，比直接崩更难排查），因此必须在这里就地消化。
+        """
+        for attempt in range(1, DESKTOP_RESTART_ATTEMPTS + 1):
+            try:
+                self.device.app_start()
+                LoginService(config=self.config, device=self.device).app_handle_login()
+                return
+            except (GameNotRunningError, GameStuckError, GameTooManyClickError) as e:
+                logger.warning(f'桌面客户端启动后仍未就绪（第 {attempt}/{DESKTOP_RESTART_ATTEMPTS} 轮）: {e}')
+                # 每轮失败都清掉本轮客户端，否则残留窗口会干扰下一轮的新窗口识别
+                logger.info('清理本轮残留客户端')
+                if not self.device.desktop_stop_client():
+                    # 关不掉就别重建：残留窗口会让下一轮绑错句柄，越试越乱
+                    logger.critical('桌面客户端无法关闭，残留进程会干扰重建，请手动结束该进程')
+                    raise RequestHumanTakeover
+        logger.critical(f'桌面客户端连续 {DESKTOP_RESTART_ATTEMPTS} 轮启动失败，请检查客户端与机器状态')
+        raise RequestHumanTakeover
+
+    def _desktop_restart_and_login(self) -> None:
+        """桌面模式：既有窗口就强杀重拉（真正的重启），不存在则只确保启动。
+
+        刚拉起的实例（网易 logo 先出、窗口标题后出，绑定时标题才出现）不该再杀一次，
+        否则会唤起两次客户端 —— 由 desktop_window_is_own_launch 区分。
+        """
+        if self.device.desktop_window_exists():
+            if self.device.desktop_window_is_own_launch():
+                logger.info('桌面客户端窗口存在，但这是本轮刚拉起的实例，跳过强制重启')
+            else:
+                logger.info('桌面客户端窗口存在，执行强制重启')
+                if not self.device.desktop_stop_client():
+                    logger.error('桌面客户端窗口存在但无法关闭，拒绝重建以免多开')
+                    raise RequestHumanTakeover(
+                        '桌面客户端窗口存在但无法关闭，请手动结束该进程后重试')
+        self._desktop_start_and_login()
 
     def finish_recovery(self):
         self.set_next_run(task='Restart', success=True, finish=True, server=True)

@@ -260,6 +260,12 @@ async def script_stop(script_name: str):
     mm.script_process[script_name].stop()
     return
 
+@script_app.get('/{script_name}/desktop/launch-status')
+async def desktop_launch_status(script_name: str):
+    from module.device.desktop_launch import desktop_launch_status as read_status
+    return read_status(script_name)
+
+
 @script_app.get('/{script_name}/{task}/args')
 async def script_task(script_name: str, task: str):
     return mm.config_cache(script_name).model.script_task(task)
