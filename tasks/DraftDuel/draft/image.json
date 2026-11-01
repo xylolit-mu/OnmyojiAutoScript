@@ -275,7 +275,7 @@
     "roiFront": "8,486,1021,223",
     "roiBack": "8,486,1021,223",
     "method": "Template matching",
-    "threshold": 0.75,
+    "threshold": 0.8,
     "profile": "High",
     "description": "手牌搜索区域：仅使用back，无固定图片模板"
   },

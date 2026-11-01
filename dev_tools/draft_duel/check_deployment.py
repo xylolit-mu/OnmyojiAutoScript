@@ -13,14 +13,18 @@ class DeploymentTests(unittest.TestCase):
     def test_five_frame_crops_bind_selection_order_and_are_copied_once(self):
         owner = self.owner('队长')
         owner.draft_selected = list('abcde')
-        crops = [np.full((41, 56, 3), i, dtype=np.uint8) for i in range(5)]
+        crops = [np.random.default_rng(i).integers(0, 255, (41, 56, 3), dtype=np.uint8) for i in range(5)]
+        original = crops[1].copy()
         owner.runframe = Mock(return_value=crops)
         owner._save_draft_checkpoint = Mock()
-        self.assertTrue(owner._capture_deployment_hand_templates())
-        owner.runframe.assert_called_once_with(owner.F_HAND_CARD)
+        with patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=[0, .3, .7]):
+            self.assertFalse(owner._capture_deployment_hand_templates())
+            self.assertFalse(owner._capture_deployment_hand_templates())
+            self.assertTrue(owner._capture_deployment_hand_templates())
+        self.assertEqual(owner.runframe.call_count, 3)
         self.assertEqual([n for n, _ in owner.draft_hand_templates], list('abcde'))
         crops[1][:] = 99
-        self.assertTrue((owner.draft_hand_templates[1][1] == 1).all())
+        np.testing.assert_array_equal(owner.draft_hand_templates[1][1], original)
         owner.runframe.reset_mock()
         self.assertTrue(owner._capture_deployment_hand_templates())
         owner.runframe.assert_not_called()
@@ -34,6 +38,44 @@ class DeploymentTests(unittest.TestCase):
             self.assertFalse(owner._capture_deployment_hand_templates())
             self.assertFalse(getattr(owner, 'draft_hand_templates', ()))
 
+    def test_motion_or_anchor_shift_restarts_stability_window(self):
+        for change in ('pixels', 'position', 'missing'):
+            owner = self.owner('队长')
+            owner.draft_selected = list('abcde')
+            crops = [np.random.default_rng(i).integers(0, 255, (41, 56, 3), dtype=np.uint8)
+                     for i in range(5)]
+            owner.F_HAND_CARD = SimpleNamespace(matched_ranges=[(283+i*114, 554, 56, 41) for i in range(5)])
+            owner.runframe = Mock(return_value=crops)
+            owner._save_draft_checkpoint = Mock()
+            with patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=range(20)):
+                self.assertFalse(owner._capture_deployment_hand_templates())
+                self.assertFalse(owner._capture_deployment_hand_templates())
+                if change == 'pixels':
+                    crops[2] = 255-crops[2]
+                elif change == 'position':
+                    owner.F_HAND_CARD.matched_ranges[2] = (512, 554, 56, 41)
+                else:
+                    owner.runframe.return_value = None
+                self.assertFalse(owner._capture_deployment_hand_templates())
+                owner._save_draft_checkpoint.assert_not_called()
+                owner.runframe.return_value = crops
+                if change == 'missing':
+                    self.assertFalse(owner._capture_deployment_hand_templates())
+                self.assertFalse(owner._capture_deployment_hand_templates())
+                self.assertTrue(owner._capture_deployment_hand_templates())
+
+    def test_three_rapid_frames_wait_for_minimum_observation_span(self):
+        owner = self.owner('队长')
+        owner.draft_selected = list('abcde')
+        owner.runframe = Mock(return_value=[np.random.default_rng(i).integers(
+            0, 255, (41, 56, 3), dtype=np.uint8) for i in range(5)])
+        owner._save_draft_checkpoint = Mock()
+        with patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=[0, .1, .2, .7]):
+            for _ in range(3):
+                self.assertFalse(owner._capture_deployment_hand_templates())
+            owner._save_draft_checkpoint.assert_not_called()
+            self.assertTrue(owner._capture_deployment_hand_templates())
+
     def test_hand_middle_confirms_top_at_recorded_scale(self):
         import cv2
         from tasks.DraftDuel.runtime.portrait_match import HAND_MIDDLE_FIGHT_SCALE
@@ -43,24 +85,13 @@ class DeploymentTests(unittest.TestCase):
         top[10:10+scaled.shape[0], 10:10+scaled.shape[1]] = scaled
         self.assertEqual(identify_portrait(top, [('kaguya', head)], scale=HAND_MIDDLE_FIGHT_SCALE), 'kaguya')
 
-    def test_hand_threshold_falls_by_point_zero_five_and_stops_at_first_match(self):
+    def test_hand_threshold_is_fixed_point_eight_without_retrying_lower(self):
         owner = self.owner('队员')
-        owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=0.65, roi_back=(0, 0, 100, 100))
-        hit = ((10, 20, 30, 40), 0.67)
-        with patch('tasks.DraftDuel.runtime.deployment.locate_portrait',
-                   side_effect=[None, None, hit]) as locate:
-            self.assertEqual(owner._locate_deployment_portrait('head'), hit)
-        self.assertEqual([c.kwargs['threshold'] for c in locate.call_args_list], [.75, .70, .65])
-        self.assertTrue(all(c.kwargs['scale'] == 1.60 and 'scales' not in c.kwargs
-                            for c in locate.call_args_list))
-
-    def test_hand_threshold_never_falls_below_point_six_five(self):
-        for initial, expected in ((.75, [.75, .70, .65]), (.63, [.75, .70, .65])):
-            owner = self.owner('队长')
-            owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=initial, roi_back=(0, 0, 100, 100))
-            with patch('tasks.DraftDuel.runtime.deployment.locate_portrait', return_value=None) as locate:
-                self.assertIsNone(owner._locate_deployment_portrait('head'))
-            self.assertEqual([c.kwargs['threshold'] for c in locate.call_args_list], expected)
+        owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=0.8, roi_back=(0, 0, 100, 100))
+        with patch('tasks.DraftDuel.runtime.deployment.locate_portrait', return_value=None) as locate:
+            self.assertIsNone(owner._locate_deployment_portrait('head'))
+        locate.assert_called_once()
+        self.assertEqual(locate.call_args.kwargs['threshold'], .8)
 
     def test_hand_matching_selects_highest_score_among_multiple_hits(self):
         scores = np.array([[.51, .72, .61], [.65, .89, .55]], dtype=np.float32)

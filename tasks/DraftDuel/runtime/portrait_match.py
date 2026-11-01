@@ -9,10 +9,10 @@ HAND_MIDDLE_FIGHT_SCALE = 0.67
 # 两组截图在各框 ±2 像素范围校准后，固定为 1.60 倍。
 HAND_PORTRAIT_SCALE = 1.60
 HAND_PORTRAIT_SCALES = (HAND_PORTRAIT_SCALE,)
-HAND_PORTRAIT_THRESHOLDS = (0.75, 0.70, 0.65)
+HAND_PORTRAIT_THRESHOLDS = (0.8,)
 
 
-def locate_portrait(template, image, area, *, scale=HAND_PORTRAIT_SCALE, threshold=0.65, scales=None):
+def locate_portrait(template, image, area, *, scale=HAND_PORTRAIT_SCALE, threshold=0.8, scales=None):
     """在整个 back 内定位目标头像，返回截图坐标 (x,y,w,h) 和得分。"""
     x, y, w, h = (int(round(v)) for v in area)
     if x < 0 or y < 0 or w <= 0 or h <= 0 or x + w > image.shape[1] or y + h > image.shape[0]:

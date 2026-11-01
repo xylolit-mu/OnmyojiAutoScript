@@ -75,7 +75,7 @@ class DraftDuelAssets:
 	#  
 	I_SELECT_ENSURE_READY = RuleImage(roi_front=(1095,546,146,78), roi_back=(1062,503,207,166), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_select_ensure_ready.png")
 	# 手牌搜索区域：仅使用back，无固定图片模板 
-	I_HAND_CARD_AREA = RuleImage(roi_front=(8,486,1021,223), roi_back=(8,486,1021,223), threshold=0.75, method="Template matching", profile="High", file="")
+	I_HAND_CARD_AREA = RuleImage(roi_front=(8,486,1021,223), roi_back=(8,486,1021,223), threshold=0.8, method="Template matching", profile="High", file="")
 	I_HAND_CARD_AREA.name = "HAND_CARD_AREA"
 	# 取消自动 
 	I_AUTO_RIGHT = RuleImage(roi_front=(1000,619,58,71), roi_back=(957,579,142,138), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_auto_right.png")

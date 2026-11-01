@@ -48,6 +48,8 @@ class RankMatchingTests(unittest.TestCase):
         owner = self.owner()
         owner.draft_finished_small_games = 1
         owner.draft_small_game = 1
+        owner.draft_hand_templates = (('莹草', np.ones((41, 56, 3), dtype=np.uint8)),)
+        owner.draft_named_heads = ()
         owner._capture_draft_heads = Mock(return_value=True)
         owner._observe_duel_lobby = Mock()
         owner._save_draft_checkpoint = Mock()
@@ -60,11 +62,20 @@ class RankMatchingTests(unittest.TestCase):
         owner.screenshot = Mock(side_effect=lambda: page.update(index=page['index'] + 1))
         owner.appear = Mock(side_effect=lambda rule: rule in frames[page['index']])
         clicks = []
-        owner.appear_then_click = Mock(side_effect=lambda rule, **kw: clicks.append((page['index'], rule)))
+        def click(rule, **kw):
+            if rule is owner.I_AUTO_DOWN:
+                self.assertTrue(owner.draft_hand_templates)
+            elif rule is owner.I_LOBBY_BATTLE:
+                self.assertEqual(owner.draft_hand_templates, ())
+            clicks.append((page['index'], rule))
+        owner.appear_then_click = Mock(side_effect=click)
         with patch('tasks.DraftDuel.runtime.matchmaking.time.sleep'):
             self.assertTrue(owner._match_battle())
         self.assertEqual(clicks, [(0, owner.I_AUTO_DOWN), (1, owner.I_LOBBY_BATTLE)])
         self.assertEqual(owner.draft_small_game, 2)
+        self.assertEqual(owner.draft_hand_templates, ())
+        self.assertEqual(len(owner.draft_selected), 5)
+        owner._save_draft_checkpoint.assert_any_call('rank')
 
     def test_head_copies_are_cached_only_for_this_game(self):
         owner = self.owner()

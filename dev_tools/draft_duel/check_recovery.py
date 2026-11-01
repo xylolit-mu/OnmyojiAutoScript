@@ -19,6 +19,27 @@ class RecoveryChecks(unittest.TestCase):
         clock.start()
         self.addCleanup(clock.stop)
 
+    def test_release_templates_removes_checkpoint_images_but_keeps_roster(self):
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / 'state.npz'
+            owner = self.owner(path)
+            owner.draft_selected = ['莹草', '季', '辉夜姬', '椒图', '鬼童丸']
+            owner.draft_hand_templates = (('莹草', np.ones((41, 56, 3), dtype=np.uint8)),)
+            owner.draft_fielded = ('莹草',)
+            owner.draft_deployment_rounds = [{'round': 1, 'slot': 1, 'name': '莹草'}]
+            owner.draft_planned_lineup = ('莹草', '季', '辉夜姬')
+            owner._save_draft_checkpoint('battle')
+            owner._release_deployment_templates()
+            with np.load(path, allow_pickle=False) as saved:
+                self.assertEqual(saved.files, ['metadata'])
+            restored = self.owner(path)
+            self.assertTrue(restored._restore_draft_checkpoint())
+            self.assertEqual(restored.draft_hand_templates, ())
+            self.assertEqual(restored.draft_selected, owner.draft_selected)
+            self.assertEqual(restored.draft_fielded, ('莹草',))
+            self.assertEqual(restored.draft_planned_lineup, ())
+            self.assertEqual(restored.draft_deployment_rounds, owner.draft_deployment_rounds)
+
     def test_checkpoint_retries_temporary_replacement_denial(self):
         with TemporaryDirectory() as folder:
             path = Path(folder) / 'state.npz'

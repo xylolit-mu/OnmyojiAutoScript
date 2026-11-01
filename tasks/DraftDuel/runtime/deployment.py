@@ -1,6 +1,7 @@
 """协同对弈：deployment。"""
 
 import time
+import numpy as np
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup
@@ -12,7 +13,7 @@ from tasks.DraftDuel.runtime.portrait_match import (
 
 class DraftDuelDeploymentMixin:
     def _locate_deployment_portrait(self, head):
-        """手牌未命中时逐级降低阈值，每级取整个搜索区的最高分。"""
+        """使用固定0.8阈值，在整个手牌区域取最高分。"""
         for threshold in HAND_PORTRAIT_THRESHOLDS:
             located = locate_portrait(
                 head, self.device.image, self.I_HAND_CARD_AREA.roi_back,
@@ -32,16 +33,51 @@ class DraftDuelDeploymentMixin:
         if len(names) != 5 or len(set(names)) != 5:
             return False
         result = self.runframe(self.F_HAND_CARD)
-        if not result or len(result) != 5:
+        if not result or len(result) != 5 or any(
+                getattr(crop, 'size', 0) == 0 or crop.std() < 5 for crop in result):
+            self._draft_hand_capture_candidate = None
             return False
-        if any(getattr(crop, 'size', 0) == 0 for crop in result):
+        regions = tuple(tuple(int(round(v)) for v in area)
+                        for area in self.F_HAND_CARD.matched_ranges)
+        now = time.monotonic()
+        candidate = getattr(self, '_draft_hand_capture_candidate', None)
+        stable = candidate is not None and candidate['regions'] == regions
+        if stable:
+            for first, current in zip(candidate['crops'], result):
+                if first.shape != current.shape:
+                    stable = False
+                    break
+                difference = np.abs(first.astype(np.int16) - current.astype(np.int16))
+                if difference.mean() > 3 or np.percentile(difference, 95) > 12:
+                    stable = False
+                    break
+        if not stable:
+            self._draft_hand_capture_candidate = dict(
+                regions=regions, crops=tuple(c.copy() for c in result), since=now, frames=1)
             return False
+        candidate['frames'] += 1
+        if candidate['frames'] < 3 or now - candidate['since'] < 0.6:
+            return False
+        self._draft_hand_capture_candidate = None
         templates = [(name, crop.copy()) for name, crop in zip(names, result)]
         self.draft_hand_templates = tuple(templates)
         logger.info(f'DraftDuel saved five hand middles in selection order: {names}, '
                     f'top_scale={HAND_MIDDLE_FIGHT_SCALE}')
         self._save_draft_checkpoint('fight')
         return True
+
+    def _release_deployment_templates(self):
+        """首局结束且确认自动上阵后，释放图片和预规划，保留实际上阵记录。"""
+        self._draft_hand_capture_candidate = None
+        if not any(getattr(self, key, ()) for key in
+                   ('draft_hand_templates', 'draft_heads', 'draft_named_heads', 'draft_planned_lineup')):
+            return
+        self.draft_hand_templates = ()
+        self.draft_heads = ()
+        self.draft_named_heads = ()
+        self.draft_planned_lineup = ()
+        self._save_draft_checkpoint('rank')
+        logger.info('DraftDuel automatic deployment confirmed; released portrait templates and planned lineup')
 
     def _update_deployment_clock(self):
         value = self.O_FIGHT_WAIT_TIME.ocr(self.device.image)
@@ -171,7 +207,7 @@ class DraftDuelDeploymentMixin:
                     # 自己最后确认时可能看不到 ready，倒计时重开证明前轮已结束。
                     pending['locked'] = True
             if not self._capture_deployment_hand_templates():
-                self._log_deployment_wait('等待首次完整采集五张手牌中段')
+                self._log_deployment_wait('等待五张手牌中段连续三帧稳定（至少0.6秒）')
                 time.sleep(0.3)
                 continue
             portraits = self.runframe(self.F_FIGHT_SHIKIGAMI)

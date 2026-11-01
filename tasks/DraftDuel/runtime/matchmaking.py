@@ -8,7 +8,7 @@ from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
 
 class DraftDuelMatchmakingMixin:
     def _match_battle(self) -> bool:
-        """采集头像后匹配；取消必须确认回到待匹配页面才能重开。"""
+        """交换名单后匹配；取消必须确认回到待匹配页面才能重开。"""
         leader = self.config.draft_duel.draft_duel_config.match_mode != DraftMatchMode.MEMBER
         limit = self.config.draft_duel.draft_duel_config.match_wait_seconds
         state = getattr(self, '_draft_match_state', None) or {}
@@ -58,6 +58,8 @@ class DraftDuelMatchmakingMixin:
                         self.draft_finished_small_games if self.appear(self.I_AUTO_RIGHT) else None)
                     if self._draft_auto_ready_after is None:
                         self.appear_then_click(self.I_AUTO_DOWN, interval=1)
+                    else:
+                        self._release_deployment_templates()
                 if not self._sync_draft_state(require_auto=require_auto) or (
                         require_auto and self._draft_auto_ready_after is None):
                     if now >= progress_deadline:
