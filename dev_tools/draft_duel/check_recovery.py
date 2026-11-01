@@ -4,6 +4,7 @@ import os
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
+from datetime import datetime as ScheduleDateTime, timezone as ScheduleTimezone, timedelta as ScheduleDelta
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -13,6 +14,11 @@ from tasks.DraftDuel.script_task import ScriptTask
 
 
 class RecoveryChecks(unittest.TestCase):
+    def setUp(self):
+        clock = patch('module.draft_duel_schedule.draft_duel_now', return_value=ScheduleDateTime(2026, 11, 1, 12, tzinfo=ScheduleTimezone(ScheduleDelta(hours=8))))
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def test_checkpoint_retries_temporary_replacement_denial(self):
         with TemporaryDirectory() as folder:
             path = Path(folder) / 'state.npz'
@@ -70,6 +76,7 @@ class RecoveryChecks(unittest.TestCase):
             a = self.owner(path)
             a.draft_selected = ['莹草', '季', '辉夜姬', '椒图', '鬼童丸']
             a.draft_heads = tuple(np.full((20, 20, 3), i, dtype=np.uint8) for i in range(5))
+            a.draft_hand_templates = (('辉夜姬', np.full((41, 56, 3), 127, dtype=np.uint8)),)
             a.draft_fielded = ('莹草',)
             a.draft_completed_rounds = 2
             a._draft_field_weights = {'莹草': 8.0}
@@ -78,6 +85,8 @@ class RecoveryChecks(unittest.TestCase):
             a._save_draft_checkpoint('fight')
             b = self.owner(path)
             self.assertTrue(b._restore_draft_checkpoint())
+            self.assertEqual(b.draft_hand_templates[0][0], '辉夜姬')
+            np.testing.assert_array_equal(b.draft_hand_templates[0][1], a.draft_hand_templates[0][1])
             self.assertEqual(b._stats_round_id, a._stats_round_id)
             self.assertEqual(b.draft_fielded, ('莹草',))
             self.assertEqual(b.draft_completed_rounds, 2)

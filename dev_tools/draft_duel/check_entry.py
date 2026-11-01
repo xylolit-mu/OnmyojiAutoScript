@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+from datetime import datetime as ScheduleDateTime, timezone as ScheduleTimezone, timedelta as ScheduleDelta
 from unittest.mock import Mock
 
 from module.exception import TaskEnd
@@ -22,6 +24,11 @@ TASK = ROOT / 'tasks/DraftDuel'
 
 
 class DraftDuelMigrationTests(unittest.TestCase):
+    def setUp(self):
+        clock = patch('module.draft_duel_schedule.draft_duel_now', return_value=ScheduleDateTime(2026, 11, 1, 12, tzinfo=ScheduleTimezone(ScheduleDelta(hours=8))))
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def test_task_registration_and_safe_defaults(self):
         self.assertIn('DraftDuel', ConfigMenu().menu['Weekly Task'])
         self.assertIn('DraftDuel', ConfigManual.SCHEDULER_PRIORITY)

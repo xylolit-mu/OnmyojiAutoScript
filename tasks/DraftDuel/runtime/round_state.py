@@ -28,6 +28,8 @@ class DraftDuelRoundStateMixin:
         """初始化内存容器；初始化本身不代表观察到新一轮。"""
         self.draft_heads = ()
         self.draft_named_heads = ()
+        self.draft_hand_templates = ()
+        self.draft_planned_lineup = ()
         self.draft_selected = []
         self.draft_fielded = ()
         self.draft_deployment_rounds = []

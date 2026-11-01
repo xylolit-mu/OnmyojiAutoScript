@@ -1,6 +1,7 @@
 """协斗进入匹配阶段的离线检查，不操作游戏。"""
 
 import unittest
+from datetime import datetime as ScheduleDateTime, timezone as ScheduleTimezone, timedelta as ScheduleDelta
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
 
@@ -13,6 +14,11 @@ from tasks.GameUi.page import page_town
 
 
 class MatchmakingTests(unittest.TestCase):
+    def setUp(self):
+        clock = patch('module.draft_duel_schedule.draft_duel_now', return_value=ScheduleDateTime(2026, 11, 1, 12, tzinfo=ScheduleTimezone(ScheduleDelta(hours=8))))
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def owner(self, mode):
         owner = Mock()
         owner.config.draft_duel = DraftDuel(draft_duel_config={'match_mode': mode})

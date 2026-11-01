@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 from module.exception import TaskEnd
+from module.draft_duel_schedule import require_draft_duel_hours
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
 from tasks.DraftDuel.assets import DraftDuelAssets
@@ -48,6 +49,7 @@ class ScriptTask(
 
     def run(self):
         """按大轮执行选人，再循环小局的匹配、上阵、战斗和结算。"""
+        require_draft_duel_hours(self.config)
         self.draft_completed_rounds = 0
         self.draft_big_round = 0
         self._draft_wait_lobby_seen = False
@@ -56,6 +58,7 @@ class ScriptTask(
         # 每次启动从大厅流程开始，不自动恢复上次运行保存的对局。
         phase = 'lobby'
         while True:
+            require_draft_duel_hours(self.config)
             if phase == 'battle' and getattr(self, '_draft_deployment_state', None):
                 state = self._draft_deployment_state
                 self._finish_deployment_on_battle(state['pending'], state['slots'])

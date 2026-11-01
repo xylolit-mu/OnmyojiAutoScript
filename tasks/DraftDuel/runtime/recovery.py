@@ -9,6 +9,7 @@ from zipfile import BadZipFile
 
 import numpy as np
 from module.logger import logger
+from tasks.DraftDuel.runtime.portrait_match import HAND_MIDDLE_FIGHT_SCALE
 
 
 class DraftDuelRecoveryMixin:
@@ -24,7 +25,7 @@ class DraftDuelRecoveryMixin:
         '_draft_field_weights', 'draft_unresolved_slots',
         '_draft_end_recorded',
         '_draft_match_state',
-        '_draft_deploy_clock_wall',
+        '_draft_deploy_clock_wall', 'draft_planned_lineup',
     )
 
     def _draft_checkpoint_path(self):
@@ -54,9 +55,13 @@ class DraftDuelRecoveryMixin:
         data = {key: getattr(self, key) for key in self._CHECKPOINT_FIELDS if hasattr(self, key)}
         data.update(version=1, identity=self._checkpoint_identity(),
                     phase=getattr(self, '_draft_resume_phase', 'lobby'))
+        hand_templates = tuple(getattr(self, 'draft_hand_templates', ()))
+        data['hand_template_names'] = [name for name, _ in hand_templates]
+        data['hand_template_scale'] = HAND_MIDDLE_FIGHT_SCALE
         serialized = json.dumps(data, ensure_ascii=False, sort_keys=True)
         heads = tuple(getattr(self, 'draft_heads', ()))
-        signature = (serialized, tuple(hashlib.sha256(h.tobytes()).digest() for h in heads))
+        images = (*heads, *(h for _, h in hand_templates))
+        signature = (serialized, tuple(hashlib.sha256(h.tobytes()).digest() for h in images))
         if signature == getattr(self, '_draft_checkpoint_signature', None):
             return
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,7 +69,8 @@ class DraftDuelRecoveryMixin:
         try:
             with os.fdopen(descriptor, 'wb') as stream:
                 np.savez_compressed(stream, metadata=np.array(serialized),
-                                    **{f'head{i}': h for i, h in enumerate(heads)})
+                                    **{f'head{i}': h for i, h in enumerate(heads)},
+                                    **{f'hand{i}': h for i, (_, h) in enumerate(hand_templates)})
             for attempt in range(5):
                 try:
                     os.replace(temp, path)
@@ -112,12 +118,21 @@ class DraftDuelRecoveryMixin:
                 if heads and (len(data.get('draft_selected', [])) != 5 or
                               any(h.ndim != 3 or not h.size for h in heads)):
                     raise ValueError('invalid portrait checkpoint')
+                hand_names = data.get('hand_template_names', [])
+                if (not isinstance(hand_names, list) or any(n not in names for n in hand_names)
+                        or len(set(hand_names)) != len(hand_names)):
+                    raise ValueError('invalid hand template names')
+                hand_templates = tuple((name, saved[f'hand{i}'].copy())
+                                       for i, name in enumerate(hand_names))
+                if any(h.ndim != 3 or not h.size for _, h in hand_templates):
+                    raise ValueError('invalid hand template images')
             for key in self._CHECKPOINT_FIELDS:
                 if key in data:
                     value = data[key]
-                    if key in ('draft_fielded', 'draft_peer_picks', 'draft_peer_rounds'):
+                    if key in ('draft_fielded', 'draft_peer_picks', 'draft_peer_rounds', 'draft_planned_lineup'):
                         value = tuple(value)
                     setattr(self, key, value)
+            self.draft_hand_templates = hand_templates
             self.draft_heads = heads
             self.draft_named_heads = tuple(zip(self.draft_selected, heads))
             self._draft_resume_phase = data.get('phase', 'lobby')

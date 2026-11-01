@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
+from datetime import datetime as ScheduleDateTime, timezone as ScheduleTimezone, timedelta as ScheduleDelta
 from unittest.mock import Mock, patch
 
 from module.cooperation import Cooperation, prepare_task_cooperation
@@ -17,6 +18,9 @@ from tasks.GameUi.game_ui import GameUi
 
 class DraftCooperationTests(unittest.TestCase):
     def setUp(self):
+        clock = patch('module.draft_duel_schedule.draft_duel_now', return_value=ScheduleDateTime(2026, 11, 1, 12, tzinfo=ScheduleTimezone(ScheduleDelta(hours=8))))
+        clock.start()
+        self.addCleanup(clock.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         (self.root / 'config').mkdir()

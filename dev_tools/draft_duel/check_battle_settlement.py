@@ -1,5 +1,6 @@
 """战斗信息标志与小局结算衔接的离线检查。"""
 import unittest
+from datetime import datetime as ScheduleDateTime, timezone as ScheduleTimezone, timedelta as ScheduleDelta
 from collections import deque
 from contextlib import nullcontext
 from unittest.mock import Mock, patch
@@ -10,6 +11,11 @@ from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
 
 
 class BattleSettlementTests(unittest.TestCase):
+    def setUp(self):
+        clock = patch('module.draft_duel_schedule.draft_duel_now', return_value=ScheduleDateTime(2026, 11, 1, 12, tzinfo=ScheduleTimezone(ScheduleDelta(hours=8))))
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def play(self, states, advance=2, device=None, battle_seen=False):
         owner = object.__new__(ScriptTask)
         owner.device = device if device is not None else Mock()

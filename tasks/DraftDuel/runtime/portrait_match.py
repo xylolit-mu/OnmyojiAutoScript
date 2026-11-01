@@ -4,6 +4,8 @@ import numpy as np
 
 # 35x31 内部卡面模板在顶部头像内搜索；保留完整顶部槽位以识别队友标志。
 FIGHT_PORTRAIT_SCALE = 0.986
+# 辉夜姬手牌中段离线扫描 0.63~0.69（步长0.01）的最佳倍率。
+HAND_MIDDLE_FIGHT_SCALE = 0.67
 # 两组截图在各框 ±2 像素范围校准后，固定为 1.60 倍。
 HAND_PORTRAIT_SCALE = 1.60
 HAND_PORTRAIT_SCALES = (HAND_PORTRAIT_SCALE,)

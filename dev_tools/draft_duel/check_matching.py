@@ -25,6 +25,25 @@ class RankMatchingTests(unittest.TestCase):
         owner._observe_victory_count = Mock()
         return owner
 
+    def test_first_rank_exchanges_roster_then_plans_before_start(self):
+        owner = self.owner()
+        events = []
+        owner._observe_duel_lobby = Mock()
+        owner._save_draft_checkpoint = Mock()
+        owner._capture_draft_heads = Mock(side_effect=lambda: events.append('heads') or True)
+        owner._sync_draft_state = Mock(side_effect=lambda **kw: events.append('exchange') or True)
+        owner._deployment_plan = Mock(side_effect=lambda: events.append('plan') or ('莹草', '椒图', '辉夜姬'))
+        page = {'index': -1}
+        frames = [[owner.I_POST_DRAFT_RANK, owner.I_LOBBY_BATTLE], [owner.I_POST_DRAFT_FIGHT]]
+        owner.screenshot = Mock(side_effect=lambda: page.update(index=page['index'] + 1))
+        owner.appear = Mock(side_effect=lambda rule: rule in frames[page['index']])
+        owner.appear_then_click = Mock(side_effect=lambda *a, **kw: events.append('start') or True)
+        with patch('tasks.DraftDuel.runtime.matchmaking.time.sleep'):
+            self.assertTrue(owner._match_battle())
+        self.assertEqual(events, ['exchange', 'plan', 'start'])
+        owner._capture_draft_heads.assert_not_called()
+        self.assertEqual(owner.draft_planned_lineup, ('莹草', '椒图', '辉夜姬'))
+
     def test_after_first_battle_auto_is_confirmed_before_matching(self):
         owner = self.owner()
         owner.draft_finished_small_games = 1

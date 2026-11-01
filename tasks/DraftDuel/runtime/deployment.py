@@ -5,7 +5,7 @@ from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup
 from tasks.DraftDuel.runtime.portrait_match import (
-    FIGHT_PORTRAIT_SCALE, HAND_PORTRAIT_SCALE, HAND_PORTRAIT_THRESHOLDS,
+    HAND_MIDDLE_FIGHT_SCALE, HAND_PORTRAIT_SCALE, HAND_PORTRAIT_THRESHOLDS,
     identify_portrait, portrait_score, locate_portrait,
 )
 
@@ -23,6 +23,25 @@ class DraftDuelDeploymentMixin:
                                 f'{threshold:.2f}, score={located[1]:.3f}')
                 return located
         return None
+
+    def _capture_deployment_hand_templates(self):
+        """大轮首次进入上阵，按手牌从左到右绑定此前五次选人名单。"""
+        if len(getattr(self, 'draft_hand_templates', ())) == 5:
+            return True
+        names = tuple(getattr(self, 'draft_selected', ()))
+        if len(names) != 5 or len(set(names)) != 5:
+            return False
+        result = self.runframe(self.F_HAND_CARD)
+        if not result or len(result) != 5:
+            return False
+        if any(getattr(crop, 'size', 0) == 0 for crop in result):
+            return False
+        templates = [(name, crop.copy()) for name, crop in zip(names, result)]
+        self.draft_hand_templates = tuple(templates)
+        logger.info(f'DraftDuel saved five hand middles in selection order: {names}, '
+                    f'top_scale={HAND_MIDDLE_FIGHT_SCALE}')
+        self._save_draft_checkpoint('fight')
+        return True
 
     def _update_deployment_clock(self):
         value = self.O_FIGHT_WAIT_TIME.ocr(self.device.image)
@@ -129,8 +148,6 @@ class DraftDuelDeploymentMixin:
                 self._finish_deployment_on_battle(pending, slots)
                 logger.info('DraftDuel battle_info detected; finish deployment immediately')
                 return True
-            if len(getattr(self, 'draft_named_heads', ())) != 5:
-                return False
             self._observe_duel_lobby()
             if not self._sync_draft_state(require_small_game=True):
                 time.sleep(0.3)
@@ -153,6 +170,10 @@ class DraftDuelDeploymentMixin:
                       and self._draft_deploy_epoch > pending['epoch']):
                     # 自己最后确认时可能看不到 ready，倒计时重开证明前轮已结束。
                     pending['locked'] = True
+            if not self._capture_deployment_hand_templates():
+                self._log_deployment_wait('等待首次完整采集五张手牌中段')
+                time.sleep(0.3)
+                continue
             portraits = self.runframe(self.F_FIGHT_SHIKIGAMI)
             if not portraits or len(portraits) != 6:
                 if pending and not pending['clicked']:
@@ -176,8 +197,9 @@ class DraftDuelDeploymentMixin:
                 logger.info(f'DraftDuel own deployment slots: {tuple(i + 1 for i in slots)}')
             if pending is not None:
                 index = pending['index']
-                actual = identify_portrait(portraits[slots[index]], self.draft_named_heads,
-                                           scale=FIGHT_PORTRAIT_SCALE)
+                actual = identify_portrait(
+                    portraits[slots[index]], getattr(self, 'draft_hand_templates', ()),
+                    scale=HAND_MIDDLE_FIGHT_SCALE)
                 if actual and actual == pending.get('preview'):
                     pending['preview_stable'] = min(2, pending.get('preview_stable', 0) + 1)
                 else:
@@ -228,7 +250,7 @@ class DraftDuelDeploymentMixin:
             except ValueError as exc:
                 logger.warning(f'DraftDuel lineup unavailable: {exc}')
                 return False
-            remaining_heads = tuple((n, h) for n, h in self.draft_named_heads
+            remaining_heads = tuple((n, h) for n, h in self.draft_hand_templates
                                     if n not in self.draft_fielded)
             name = next((n for n in lineup if n not in self.draft_fielded), None)
             if name is None:
@@ -240,7 +262,9 @@ class DraftDuelDeploymentMixin:
                 time.sleep(0.3)
                 continue
             head = next(h for n, h in remaining_heads if n == name)
-            located = self._locate_deployment_portrait(head)
+            located = locate_portrait(
+                head, self.device.image, self.I_HAND_CARD_AREA.roi_back,
+                scale=1.0, threshold=0.8)
             if located is None:
                 self._log_deployment_wait(f'第{index + 1}次上阵目标={name}，整个手牌back内未匹配到目标')
                 time.sleep(0.3)

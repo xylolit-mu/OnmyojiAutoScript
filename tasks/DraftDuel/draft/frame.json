@@ -1,5 +1,61 @@
 [
   {
+    "itemName": "hand_card",
+    "imageName": "hand_card_badge_1.png",
+    "roiBack": "8,486,1021,223",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "五张手牌中段，从左到右绑定选人名单，按0.67倍缩放验证顶部",
+    "roiBadge": "37,634,67,60",
+    "badgeSerial": 1,
+    "badgeGrayscale": false,
+    "roiRange": [
+      "283,554,56,41",
+      "397,554,56,41",
+      "511,554,56,41",
+      "625,554,56,41",
+      "739,554,56,41"
+    ],
+    "badges": [
+      {
+        "imageName": "hand_card_badge_1.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      }
+    ]
+  },
+  {
     "itemName": "shikigami_head",
     "imageName": "shikigami_head_badge_1.png",
     "roiBack": "410,5,512,103",

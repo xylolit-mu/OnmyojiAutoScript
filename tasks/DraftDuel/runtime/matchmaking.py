@@ -51,12 +51,6 @@ class DraftDuelMatchmakingMixin:
                     self.appear_then_click(self.I_FIGHT_CANCEL_WAIT_LEADER, interval=1)
             elif self._is_draft_rank_page():
                 self._observe_victory_count()
-                if not self._capture_draft_heads():
-                    if now >= progress_deadline:
-                        logger.warning('DraftDuel could not capture five heads within 600s')
-                        return False
-                    time.sleep(0.3)
-                    continue
                 require_auto = getattr(self, 'draft_finished_small_games', 0) > 0
                 if require_auto:
                     # 每帧重新确认，点击后必须在后续截图看到 auto_right。
@@ -71,6 +65,15 @@ class DraftDuelMatchmakingMixin:
                         return False
                     time.sleep(0.3)
                     continue
+                if (not getattr(self, 'draft_planned_lineup', ())
+                        and getattr(self, 'draft_small_game', 0) == 0):
+                    try:
+                        self.draft_planned_lineup = tuple(self._deployment_plan())
+                    except ValueError as exc:
+                        logger.warning(f'DraftDuel pre-match lineup unavailable: {exc}')
+                        return False
+                    logger.info(f'DraftDuel pre-match lineup: {self.draft_planned_lineup}')
+                    self._save_draft_checkpoint('rank')
                 if cancelling:
                     # lobby_battle 再次可见才算取消完成，不以等待标志漏识别为依据。
                     if self.appear(self.I_LOBBY_BATTLE):

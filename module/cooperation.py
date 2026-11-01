@@ -242,6 +242,11 @@ class Cooperation:
         for task, source in self.requested():
             key = convert_to_underscore(task)
             item = getattr(config.model, key, None)
+            if task == 'DraftDuel':
+                from module.draft_duel_schedule import skip_draft_duel_outside_hours
+                if skip_draft_duel_outside_hours(config, runtime=self):
+                    self.ack(task)
+                    continue
             configured = getattr(getattr(item, 'invite_config', None), 'cooperation_script', '')
             if task == 'DraftDuel' and (not configured or item.draft_duel_config.match_mode == '单人'):
                 # 协斗显式留空时，不因对方单向填写而被动接入协同。
@@ -276,7 +281,26 @@ class Cooperation:
         with self.connect() as db:
             db.execute('DELETE FROM wakes WHERE target=? AND task=?', (self.name, task))
 
+    def skip_without_wake(self, task, peer, reason):
+        """清除双方旧唤醒；仅向心跳有效的实例发布跳过通知，不创建唤醒。"""
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute('DELETE FROM wakes WHERE task=? AND '
+                       '((target=? AND source=?) OR (target=? AND source=?))',
+                       (task, peer, self.name, self.name, peer))
+            db.execute('DELETE FROM waiting WHERE task=? AND '
+                       '((name=? AND peer=?) OR (name=? AND peer=?))',
+                       (task, self.name, peer, peer, self.name))
+            runner = db.execute('SELECT heartbeat FROM runners WHERE name=?', (peer,)).fetchone()
+            if runner and 0 <= time.time()-runner[0] < 30:
+                db.execute('INSERT OR REPLACE INTO task_completions VALUES (?, ?, ?, ?, ?)',
+                           (self.name, peer, task, time.time(), reason))
+                logger.info(f'Cooperation skip: {self.name} -> {peer}/{task}: {reason}')
+
     def prepare(self, config, task, peer):
+        if task == 'DraftDuel':
+            from module.draft_duel_schedule import require_draft_duel_hours
+            require_draft_duel_hours(config)
         self.validate(task, peer)
         now = time.time()
         with self.connect() as db:
@@ -320,6 +344,9 @@ class Cooperation:
 
 def prepare_task_cooperation(config, task):
     """Check and wake the partner as soon as the scheduler activates this task."""
+    if task == 'DraftDuel':
+        from module.draft_duel_schedule import require_draft_duel_hours
+        require_draft_duel_hours(config)
     item = getattr(config.model, convert_to_underscore(task))
     if task == 'DraftDuel' and (item.draft_duel_config.match_mode == '单人'
                                 or not item.invite_config.cooperation_script):

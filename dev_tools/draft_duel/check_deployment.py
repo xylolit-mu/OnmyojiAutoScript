@@ -10,6 +10,39 @@ from tasks.DraftDuel.runtime.portrait_match import identify_portrait, locate_por
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_five_frame_crops_bind_selection_order_and_are_copied_once(self):
+        owner = self.owner('队长')
+        owner.draft_selected = list('abcde')
+        crops = [np.full((41, 56, 3), i, dtype=np.uint8) for i in range(5)]
+        owner.runframe = Mock(return_value=crops)
+        owner._save_draft_checkpoint = Mock()
+        self.assertTrue(owner._capture_deployment_hand_templates())
+        owner.runframe.assert_called_once_with(owner.F_HAND_CARD)
+        self.assertEqual([n for n, _ in owner.draft_hand_templates], list('abcde'))
+        crops[1][:] = 99
+        self.assertTrue((owner.draft_hand_templates[1][1] == 1).all())
+        owner.runframe.reset_mock()
+        self.assertTrue(owner._capture_deployment_hand_templates())
+        owner.runframe.assert_not_called()
+
+    def test_incomplete_hand_frame_does_not_bind_partial_roster(self):
+        owner = self.owner('队长')
+        owner.draft_selected = list('abcde')
+        for result in ([np.ones((41, 56, 3), dtype=np.uint8)] * 4,
+                       [np.ones((41, 56, 3), dtype=np.uint8)] * 4 + [np.empty((0, 0, 3))]):
+            owner.runframe = Mock(return_value=result)
+            self.assertFalse(owner._capture_deployment_hand_templates())
+            self.assertFalse(getattr(owner, 'draft_hand_templates', ()))
+
+    def test_hand_middle_confirms_top_at_recorded_scale(self):
+        import cv2
+        from tasks.DraftDuel.runtime.portrait_match import HAND_MIDDLE_FIGHT_SCALE
+        head = np.random.default_rng(19).integers(0, 255, (41, 56, 3), dtype=np.uint8)
+        scaled = cv2.resize(head, None, fx=HAND_MIDDLE_FIGHT_SCALE, fy=HAND_MIDDLE_FIGHT_SCALE)
+        top = np.zeros((66, 67, 3), dtype=np.uint8)
+        top[10:10+scaled.shape[0], 10:10+scaled.shape[1]] = scaled
+        self.assertEqual(identify_portrait(top, [('kaguya', head)], scale=HAND_MIDDLE_FIGHT_SCALE), 'kaguya')
+
     def test_hand_threshold_falls_by_point_zero_five_and_stops_at_first_match(self):
         owner = self.owner('队员')
         owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=0.65, roi_back=(0, 0, 100, 100))
@@ -146,9 +179,10 @@ class DeploymentTests(unittest.TestCase):
         self.assertGreater(score, .99)
         self.assertIsNone(locate_portrait(head, image, (0, 0, 100, 100)))
 
-    def test_hand_resource_is_image_area_without_template_or_old_frame(self):
+    def test_hand_middle_frame_has_five_card_ranges_and_search_area_remains_available(self):
         from tasks.DraftDuel.assets import DraftDuelAssets
-        self.assertFalse(hasattr(DraftDuelAssets, 'F_HAND_CARD'))
+        self.assertEqual(DraftDuelAssets.F_HAND_CARD.roi_ranges,
+                         [(283+i*114, 554, 56, 41) for i in range(5)])
         self.assertEqual(DraftDuelAssets.I_HAND_CARD_AREA.file, '')
         self.assertEqual(DraftDuelAssets.I_HAND_CARD_AREA.roi_back, (8, 486, 1021, 223))
 
@@ -183,6 +217,8 @@ class DeploymentTests(unittest.TestCase):
         owner = self.owner('队员')
         owner.draft_named_heads = [(n, n) for n in 'abcde']
         owner.draft_selected = list('abcde')
+        owner._capture_deployment_hand_templates = Mock(return_value=True)
+        owner.draft_hand_templates = tuple((n, 'middle_' + n) for n in 'abcde')
         owner.appear = Mock(side_effect=lambda rule: (
             False if rule is owner._battle_info_rule() else
             ready if rule is owner.I_SELECT_ENSURE_READY else True))
@@ -221,12 +257,15 @@ class DeploymentTests(unittest.TestCase):
         owner.device.press_and_drag.side_effect = drag
         owner.appear_then_click = Mock(side_effect=click)
         def locate(head, image, area, **kw):
-            self.assertNotIn(head, owner.draft_fielded)
+            self.assertNotIn(head.removeprefix('middle_'), owner.draft_fielded)
+            self.assertEqual(kw['scale'], 1.0)
             candidates.append((len(owner.draft_fielded),
                                tuple(n for n in 'abcde' if n not in owner.draft_fielded)))
             self.assertEqual(tuple(area), tuple(owner.I_HAND_CARD_AREA.roi_back))
             return (0, 500, 80, 160), 0.9
         def identify(region, heads, **kw):
+            self.assertEqual(heads, owner.draft_hand_templates)
+            self.assertEqual(kw['scale'], .67)
             if fail_first and not owner.draft_fielded:
                 state['checks'] += 1
                 if recover_after is not None and state['checks'] > recover_after:
