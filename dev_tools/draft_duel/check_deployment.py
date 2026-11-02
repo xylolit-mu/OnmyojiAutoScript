@@ -10,71 +10,53 @@ from tasks.DraftDuel.runtime.portrait_match import identify_portrait, locate_por
 
 
 class DeploymentTests(unittest.TestCase):
-    def test_five_frame_crops_bind_selection_order_and_are_copied_once(self):
+    def capture_owner(self):
         owner = self.owner('队长')
         owner.draft_selected = list('abcde')
-        crops = [np.random.default_rng(i).integers(0, 255, (41, 56, 3), dtype=np.uint8) for i in range(5)]
-        original = crops[1].copy()
-        owner.runframe = Mock(return_value=crops)
+        owner.runframe = Mock(return_value=[np.random.default_rng(i).integers(
+            0, 255, (41, 56, 3), dtype=np.uint8) for i in range(5)])
         owner._save_draft_checkpoint = Mock()
-        with patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=[0, .3, .7]):
-            self.assertFalse(owner._capture_deployment_hand_templates())
-            self.assertFalse(owner._capture_deployment_hand_templates())
-            self.assertTrue(owner._capture_deployment_hand_templates())
-        self.assertEqual(owner.runframe.call_count, 3)
+        return owner
+
+    def test_countdown_decreases_before_five_crops_are_bound_once(self):
+        owner = self.capture_owner()
+        original = owner.runframe.return_value[1].copy()
+        self.assertFalse(owner._capture_deployment_hand_templates(countdown=30))
+        self.assertFalse(owner._capture_deployment_hand_templates(countdown=30))
+        owner.runframe.assert_not_called()
+        self.assertTrue(owner._capture_deployment_hand_templates(countdown=29))
+        owner.runframe.assert_called_once_with(owner.F_HAND_CARD)
         self.assertEqual([n for n, _ in owner.draft_hand_templates], list('abcde'))
-        crops[1][:] = 99
+        owner.runframe.return_value[1][:] = 99
         np.testing.assert_array_equal(owner.draft_hand_templates[1][1], original)
         owner.runframe.reset_mock()
         self.assertTrue(owner._capture_deployment_hand_templates())
         owner.runframe.assert_not_called()
 
     def test_incomplete_hand_frame_does_not_bind_partial_roster(self):
-        owner = self.owner('队长')
-        owner.draft_selected = list('abcde')
+        owner = self.capture_owner()
         for result in ([np.ones((41, 56, 3), dtype=np.uint8)] * 4,
                        [np.ones((41, 56, 3), dtype=np.uint8)] * 4 + [np.empty((0, 0, 3))]):
-            owner.runframe = Mock(return_value=result)
-            self.assertFalse(owner._capture_deployment_hand_templates())
+            owner.runframe.return_value = result
+            owner._draft_hand_capture_clock = (0, 30)
+            self.assertFalse(owner._capture_deployment_hand_templates(countdown=29))
             self.assertFalse(getattr(owner, 'draft_hand_templates', ()))
 
-    def test_motion_or_anchor_shift_restarts_stability_window(self):
-        for change in ('pixels', 'position', 'missing'):
-            owner = self.owner('队长')
-            owner.draft_selected = list('abcde')
-            crops = [np.random.default_rng(i).integers(0, 255, (41, 56, 3), dtype=np.uint8)
-                     for i in range(5)]
-            owner.F_HAND_CARD = SimpleNamespace(matched_ranges=[(283+i*114, 554, 56, 41) for i in range(5)])
-            owner.runframe = Mock(return_value=crops)
-            owner._save_draft_checkpoint = Mock()
-            with patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=range(20)):
-                self.assertFalse(owner._capture_deployment_hand_templates())
-                self.assertFalse(owner._capture_deployment_hand_templates())
-                if change == 'pixels':
-                    crops[2] = 255-crops[2]
-                elif change == 'position':
-                    owner.F_HAND_CARD.matched_ranges[2] = (512, 554, 56, 41)
-                else:
-                    owner.runframe.return_value = None
-                self.assertFalse(owner._capture_deployment_hand_templates())
-                owner._save_draft_checkpoint.assert_not_called()
-                owner.runframe.return_value = crops
-                if change == 'missing':
-                    self.assertFalse(owner._capture_deployment_hand_templates())
-                self.assertFalse(owner._capture_deployment_hand_templates())
-                self.assertTrue(owner._capture_deployment_hand_templates())
+    def test_invalid_countdown_and_repeated_values_do_not_trigger_capture(self):
+        owner = self.capture_owner()
+        for value in (None, '', 0, 61, 30, 30, 31, 31, None):
+            self.assertFalse(owner._capture_deployment_hand_templates(countdown=value))
+        owner.runframe.assert_not_called()
+        self.assertTrue(owner._capture_deployment_hand_templates(countdown=30))
 
-    def test_three_rapid_frames_wait_for_minimum_observation_span(self):
-        owner = self.owner('队长')
-        owner.draft_selected = list('abcde')
-        owner.runframe = Mock(return_value=[np.random.default_rng(i).integers(
-            0, 255, (41, 56, 3), dtype=np.uint8) for i in range(5)])
-        owner._save_draft_checkpoint = Mock()
-        with patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=[0, .1, .2, .7]):
-            for _ in range(3):
-                self.assertFalse(owner._capture_deployment_hand_templates())
-            owner._save_draft_checkpoint.assert_not_called()
-            self.assertTrue(owner._capture_deployment_hand_templates())
+    def test_new_countdown_epoch_restarts_capture_wait(self):
+        owner = self.capture_owner()
+        owner._draft_deploy_epoch = 0
+        self.assertFalse(owner._capture_deployment_hand_templates(countdown=30))
+        owner._draft_deploy_epoch = 1
+        self.assertFalse(owner._capture_deployment_hand_templates(countdown=29))
+        owner.runframe.assert_not_called()
+        self.assertTrue(owner._capture_deployment_hand_templates(countdown=28))
 
     def test_hand_middle_confirms_top_at_recorded_scale(self):
         import cv2

@@ -27,9 +27,9 @@ class ScheduleTests(unittest.TestCase):
                                cooperation_runtime=self.a if name == 'A' else self.b,
                                task_delay=Mock(), task_call=Mock())
 
-    def clock(self, hour, minute=0, second=0):
+    def clock(self, hour, minute=0, second=0, day=1):
         return patch('module.draft_duel_schedule.draft_duel_now',
-                     return_value=datetime(2026, 11, 1, hour, minute, second, tzinfo=CHINA_TIME))
+                     return_value=datetime(2026, 11, day, hour, minute, second, tzinfo=CHINA_TIME))
 
     def test_boundaries_and_next_opening(self):
         for hour, minute, second, skipped, day in (
@@ -39,11 +39,30 @@ class ScheduleTests(unittest.TestCase):
             with self.clock(hour, minute, second):
                 self.assertEqual(skip_draft_duel_outside_hours(config), skipped)
             if skipped:
-                expected = datetime(2026, 11, day, 8, tzinfo=CHINA_TIME).astimezone().replace(tzinfo=None)
+                expected = datetime(2026, 11, day, 10 if day == 2 else 8, tzinfo=CHINA_TIME).astimezone().replace(tzinfo=None)
                 config.task_delay.assert_called_once_with(task='DraftDuel', target=expected, server=False)
                 self.assertEqual(config.task_runtime_outcome['status'], 'time_window_skipped')
             else:
                 config.task_delay.assert_not_called()
+
+    def test_weekday_boundaries_and_weekend_transitions(self):
+        # 11月2日周一，6日周五，7日周六，8日周日。
+        cases = [(2, 9, 59, 59, (2, 10)), (2, 10, 0, 0, None),
+                 (2, 22, 59, 59, None), (2, 23, 0, 0, (3, 10)),
+                 (6, 23, 0, 0, (7, 8)), (7, 7, 59, 59, (7, 8)),
+                 (7, 8, 0, 0, None), (7, 23, 0, 0, (8, 8)),
+                 (8, 23, 0, 0, (9, 10))]
+        for day, hour, minute, second, target in cases:
+            with self.subTest(day=day, hour=hour, minute=minute, second=second):
+                config = self.config('A', mode='单人')
+                with self.clock(hour, minute, second, day=day):
+                    self.assertEqual(skip_draft_duel_outside_hours(config), target is not None)
+                if target:
+                    expected = datetime(2026, 11, target[0], target[1], tzinfo=CHINA_TIME)
+                    config.task_delay.assert_called_once_with(
+                        task='DraftDuel', target=expected.astimezone().replace(tzinfo=None), server=False)
+                else:
+                    config.task_delay.assert_not_called()
 
     def test_live_peer_notified_without_ping_pong_or_wake(self):
         self.a.publish('DraftDuel')

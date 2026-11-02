@@ -29,7 +29,7 @@ class DraftDuelRoundStateMixin:
         self.draft_heads = ()
         self.draft_named_heads = ()
         self.draft_hand_templates = ()
-        self._draft_hand_capture_candidate = None
+        self._draft_hand_capture_clock = None
         self.draft_planned_lineup = ()
         self.draft_selected = []
         self.draft_fielded = ()

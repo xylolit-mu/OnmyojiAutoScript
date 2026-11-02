@@ -1,7 +1,6 @@
 """协同对弈：deployment。"""
 
 import time
-import numpy as np
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup
@@ -25,40 +24,27 @@ class DraftDuelDeploymentMixin:
                 return located
         return None
 
-    def _capture_deployment_hand_templates(self):
+    def _capture_deployment_hand_templates(self, countdown=None):
         """大轮首次进入上阵，按手牌从左到右绑定此前五次选人名单。"""
         if len(getattr(self, 'draft_hand_templates', ())) == 5:
             return True
         names = tuple(getattr(self, 'draft_selected', ()))
         if len(names) != 5 or len(set(names)) != 5:
             return False
+        if type(countdown) is not int or not 1 <= countdown <= 60:
+            return False
+        epoch = getattr(self, '_draft_deploy_epoch', 0)
+        baseline = getattr(self, '_draft_hand_capture_clock', None)
+        if baseline is None or baseline[0] != epoch or countdown > baseline[1]:
+            self._draft_hand_capture_clock = (epoch, countdown)
+            return False
+        if baseline[1] - countdown < 1:
+            return False
         result = self.runframe(self.F_HAND_CARD)
         if not result or len(result) != 5 or any(
-                getattr(crop, 'size', 0) == 0 or crop.std() < 5 for crop in result):
-            self._draft_hand_capture_candidate = None
+                getattr(crop, 'size', 0) == 0 for crop in result):
             return False
-        regions = tuple(tuple(int(round(v)) for v in area)
-                        for area in self.F_HAND_CARD.matched_ranges)
-        now = time.monotonic()
-        candidate = getattr(self, '_draft_hand_capture_candidate', None)
-        stable = candidate is not None and candidate['regions'] == regions
-        if stable:
-            for first, current in zip(candidate['crops'], result):
-                if first.shape != current.shape:
-                    stable = False
-                    break
-                difference = np.abs(first.astype(np.int16) - current.astype(np.int16))
-                if difference.mean() > 3 or np.percentile(difference, 95) > 12:
-                    stable = False
-                    break
-        if not stable:
-            self._draft_hand_capture_candidate = dict(
-                regions=regions, crops=tuple(c.copy() for c in result), since=now, frames=1)
-            return False
-        candidate['frames'] += 1
-        if candidate['frames'] < 3 or now - candidate['since'] < 0.6:
-            return False
-        self._draft_hand_capture_candidate = None
+        self._draft_hand_capture_clock = None
         templates = [(name, crop.copy()) for name, crop in zip(names, result)]
         self.draft_hand_templates = tuple(templates)
         logger.info(f'DraftDuel saved five hand middles in selection order: {names}, '
@@ -68,7 +54,7 @@ class DraftDuelDeploymentMixin:
 
     def _release_deployment_templates(self):
         """首局结束且确认自动上阵后，释放图片和预规划，保留实际上阵记录。"""
-        self._draft_hand_capture_candidate = None
+        self._draft_hand_capture_clock = None
         if not any(getattr(self, key, ()) for key in
                    ('draft_hand_templates', 'draft_heads', 'draft_named_heads', 'draft_planned_lineup')):
             return
@@ -102,6 +88,7 @@ class DraftDuelDeploymentMixin:
         self._draft_clock_candidate = None
         self._draft_deploy_time = value
         self._draft_deploy_clock_wall = now
+        return value
 
     def _deployment_slots(self, portraits):
         mode = self.config.draft_duel.draft_duel_config.match_mode
@@ -192,7 +179,7 @@ class DraftDuelDeploymentMixin:
             if pending is None and not self.appear(self.I_POST_DRAFT_FIGHT):
                 time.sleep(0.3)
                 continue
-            self._update_deployment_clock()
+            countdown = self._update_deployment_clock()
             if recovering and pending and not pending['clicked'] and (
                     self.appear(self.I_SELECT_ENSURE_READY) or
                     self._draft_deploy_epoch > pending['epoch']):
@@ -206,8 +193,8 @@ class DraftDuelDeploymentMixin:
                       and self._draft_deploy_epoch > pending['epoch']):
                     # 自己最后确认时可能看不到 ready，倒计时重开证明前轮已结束。
                     pending['locked'] = True
-            if not self._capture_deployment_hand_templates():
-                self._log_deployment_wait('等待五张手牌中段连续三帧稳定（至少0.6秒）')
+            if not self._capture_deployment_hand_templates(countdown=countdown):
+                self._log_deployment_wait('等待上阵倒计时减少至少1秒后采集五张手牌中段')
                 time.sleep(0.3)
                 continue
             portraits = self.runframe(self.F_FIGHT_SHIKIGAMI)
