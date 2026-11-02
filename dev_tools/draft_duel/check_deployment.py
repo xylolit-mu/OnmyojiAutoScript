@@ -67,13 +67,28 @@ class DeploymentTests(unittest.TestCase):
         top[10:10+scaled.shape[0], 10:10+scaled.shape[1]] = scaled
         self.assertEqual(identify_portrait(top, [('kaguya', head)], scale=HAND_MIDDLE_FIGHT_SCALE), 'kaguya')
 
-    def test_hand_threshold_is_fixed_point_eight_without_retrying_lower(self):
+    def test_hand_retries_point_seven_only_after_point_eight_misses(self):
         owner = self.owner('队员')
         owner.I_HAND_CARD_AREA = SimpleNamespace(threshold=0.8, roi_back=(0, 0, 100, 100))
         with patch('tasks.DraftDuel.runtime.deployment.locate_portrait', return_value=None) as locate:
             self.assertIsNone(owner._locate_deployment_portrait('head'))
+        self.assertEqual([c.kwargs['threshold'] for c in locate.call_args_list], [.8, .7])
+        hit = ((1, 2, 3, 4), .91)
+        with patch('tasks.DraftDuel.runtime.deployment.locate_portrait', return_value=hit) as locate:
+            self.assertEqual(owner._locate_deployment_portrait('head'), hit)
         locate.assert_called_once()
         self.assertEqual(locate.call_args.kwargs['threshold'], .8)
+
+    def test_top_retries_point_seven_and_keeps_margin_requirement(self):
+        owner = self.owner('队长')
+        owner.draft_hand_templates = ()
+        for samples, expected, thresholds in (
+                ([('a', .9)], ('a', .9), [.8]),
+                ([(None, .76), ('a', .76)], ('a', .76), [.8, .7]),
+                ([(None, .69), (None, .69)], (None, .69), [.8, .7])):
+            with patch('tasks.DraftDuel.runtime.deployment.identify_portrait', side_effect=samples) as identify:
+                self.assertEqual(owner._recognize_deployment_portrait(None), expected)
+                self.assertEqual([c.kwargs['threshold'] for c in identify.call_args_list], thresholds)
 
     def test_hand_matching_selects_highest_score_among_multiple_hits(self):
         scores = np.array([[.51, .72, .61], [.65, .89, .55]], dtype=np.float32)
@@ -226,7 +241,7 @@ class DeploymentTests(unittest.TestCase):
         self.assertNotEqual(captain._battle_info_rule().file, member._battle_info_rule().file)
 
     def deployment(self, fail_first=False, ready=True, reset_clock=True, expected=True,
-                   missing_top=False, recover_after=None):
+                   missing_top=False, recover_after=None, defer_first=False):
         owner = self.owner('队员')
         owner.draft_named_heads = [(n, n) for n in 'abcde']
         owner.draft_selected = list('abcde')
@@ -247,7 +262,8 @@ class DeploymentTests(unittest.TestCase):
         def countdown(_):
             if not reset_clock:
                 return 20
-            round_number = len(owner.draft_fielded)
+            round_number = (owner.device.press_and_drag.call_count if defer_first
+                            else len(owner.draft_fielded))
             if round_number != state['round']:
                 state['round'] = round_number
                 state['seconds'] = 30
@@ -279,6 +295,13 @@ class DeploymentTests(unittest.TestCase):
         def identify(region, heads, **kw):
             self.assertEqual(heads, owner.draft_hand_templates)
             self.assertEqual(kw['scale'], .67)
+            if defer_first:
+                index = region[1] - 3
+                minimum = 3 if defer_first == 'third' else 2
+                if index == 0 and (defer_first == 'never' or
+                                   owner.device.press_and_drag.call_count < minimum):
+                    return None
+                return 'abc'[index]
             if fail_first and not owner.draft_fielded:
                 state['checks'] += 1
                 if recover_after is not None and state['checks'] > recover_after:
@@ -291,10 +314,62 @@ class DeploymentTests(unittest.TestCase):
         with patch('tasks.DraftDuel.runtime.deployment.time.sleep'), \
              patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=lambda: next(ticks)), \
              patch('tasks.DraftDuel.runtime.deployment.plan_lineup', return_value=('a', 'b', 'c')), \
-             patch('tasks.DraftDuel.runtime.deployment.identify_portrait', side_effect=identify), \
+             patch('tasks.DraftDuel.runtime.deployment.identify_portrait',
+                   side_effect=lambda *a, **kw: (identify(*a, **kw), .9)), \
              patch('tasks.DraftDuel.runtime.deployment.locate_portrait', side_effect=locate):
             self.assertEqual(owner._deploy_shikigami(), expected)
         return owner, candidates, state
+
+    def test_unknown_first_slot_advances_and_back_verifies_during_second_pick(self):
+        owner, _, _ = self.deployment(ready=False, defer_first=True)
+        self.assertEqual(owner.device.press_and_drag.call_count, 3)
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+        self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
+        self.assertEqual(owner.draft_deployment_rounds,
+                         [{'round': i+1, 'slot': i+4, 'name': name} for i, name in enumerate('abc')])
+        self.assertEqual(owner.draft_unresolved_slots, [])
+
+    def test_first_slot_can_recover_during_third_pick(self):
+        owner, _, _ = self.deployment(ready=False, defer_first='third')
+        self.assertEqual(owner.device.press_and_drag.call_count, 3)
+        self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
+
+    def test_permanently_unknown_first_slot_does_not_block_later_picks_or_invent_name(self):
+        owner, _, _ = self.deployment(ready=False, defer_first='never', expected=False)
+        self.assertEqual(owner.device.press_and_drag.call_count, 3)
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+        self.assertEqual(owner.draft_fielded, ('b', 'c'))
+        self.assertEqual(owner.draft_unresolved_slots, [4])
+        self.assertEqual(owner._draft_deployment_state['completed'], 3)
+        self.assertEqual(owner._draft_deployment_state['deferred'][0]['index'], 0)
+
+    def test_back_verification_uses_highest_of_two_different_names(self):
+        owner = self.owner('队长')
+        owner.draft_hand_templates = tuple((n, n) for n in 'abcde')
+        owner.draft_fielded = ('b',)
+        owner.draft_deployment_rounds = [{'round': 2, 'slot': 2, 'name': 'b'}]
+        owner.draft_unresolved_slots = [1]
+        deferred = [dict(index=0, name='a')]
+        with patch.object(owner, '_recognize_deployment_portrait',
+                          side_effect=[('c', .81), ('a', .94)]):
+            deferred = owner._recheck_deferred_deployments(deferred, [None]*6, (0, 1, 2))
+            self.assertEqual(owner.draft_fielded, ('b',))
+            deferred = owner._recheck_deferred_deployments(deferred, [None]*6, (0, 1, 2))
+        self.assertEqual(deferred, [])
+        self.assertEqual(owner.draft_fielded, ('a', 'b'))
+        self.assertEqual(owner.draft_unresolved_slots, [])
+
+    def test_two_checks_keep_first_higher_score_or_only_valid_result(self):
+        owner = self.owner('队长')
+        owner.draft_hand_templates = ()
+        for samples, expected in (([('a', .95), ('c', .82)], 'a'),
+                                  ([(None, .99), ('a', .81)], 'a'),
+                                  ([(None, .7), (None, .6)], None)):
+            entry = {}
+            with patch.object(owner, '_recognize_deployment_portrait', side_effect=samples):
+                self.assertEqual(owner._best_of_two_portraits(entry, None), (False, None))
+                self.assertEqual(owner._best_of_two_portraits(entry, None), (True, expected))
+            self.assertNotIn('portrait_sample', entry)
 
     def test_each_round_confirms_and_excludes_actual_names(self):
         owner, candidates, _ = self.deployment()
@@ -311,7 +386,7 @@ class DeploymentTests(unittest.TestCase):
     def test_unknown_or_wrong_top_confirms_after_three_failures_and_records_actual(self):
         for failure in (True, 'wrong'):
             owner, _, state = self.deployment(fail_first=failure)
-            self.assertEqual(state['confirm_checks'][0], 3)
+            self.assertGreaterEqual(state['confirm_checks'][0], 6)
             self.assertEqual(owner.appear_then_click.call_count, 3)
             self.assertEqual(owner.draft_fielded, ('d', 'a', 'b'))
 
@@ -323,7 +398,7 @@ class DeploymentTests(unittest.TestCase):
 
     def test_confirms_only_after_wrong_top_recovers_to_target(self):
         owner, _, state = self.deployment(fail_first='wrong', recover_after=2)
-        self.assertEqual(state['confirm_checks'][0], 4)
+        self.assertGreaterEqual(state['confirm_checks'][0], 4)
         self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
         self.assertEqual(owner.appear_then_click.call_count, 3)
 

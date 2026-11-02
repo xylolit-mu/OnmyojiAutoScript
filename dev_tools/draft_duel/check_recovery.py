@@ -102,6 +102,8 @@ class RecoveryChecks(unittest.TestCase):
             a.draft_completed_rounds = 2
             a._draft_field_weights = {'莹草': 8.0}
             a._draft_deployment_state = {'next_epoch': 1, 'slots': [0, 1, 2],
+                                        'completed': 1,
+                                        'deferred': [{'index': 0, 'name': '莹草', 'stable': 0}],
                                         'pending': {'index': 1, 'clicked': True}}
             a._save_draft_checkpoint('fight')
             b = self.owner(path)
@@ -112,6 +114,8 @@ class RecoveryChecks(unittest.TestCase):
             self.assertEqual(b.draft_fielded, ('莹草',))
             self.assertEqual(b.draft_completed_rounds, 2)
             self.assertTrue(b._draft_deployment_state['pending']['clicked'])
+            self.assertEqual(b._draft_deployment_state['completed'], 1)
+            self.assertEqual(b._draft_deployment_state['deferred'][0]['index'], 0)
             self.assertEqual(b._draft_field_weights, a._draft_field_weights)
             for index, (name, image) in enumerate(b.draft_named_heads):
                 self.assertEqual(name, a.draft_selected[index])

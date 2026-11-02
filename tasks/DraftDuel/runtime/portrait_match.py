@@ -9,7 +9,8 @@ HAND_MIDDLE_FIGHT_SCALE = 0.67
 # 两组截图在各框 ±2 像素范围校准后，固定为 1.60 倍。
 HAND_PORTRAIT_SCALE = 1.60
 HAND_PORTRAIT_SCALES = (HAND_PORTRAIT_SCALE,)
-HAND_PORTRAIT_THRESHOLDS = (0.8,)
+HAND_PORTRAIT_THRESHOLDS = (0.8, 0.7)
+FIGHT_PORTRAIT_THRESHOLDS = (0.8, 0.7)
 
 
 def locate_portrait(template, image, area, *, scale=HAND_PORTRAIT_SCALE, threshold=0.8, scales=None):
@@ -46,11 +47,12 @@ def portrait_score(template, region, scale=None):
     return best
 
 
-def identify_portrait(region, named_heads, threshold=0.8, margin=0.05, *, scale=None):
+def identify_portrait(region, named_heads, threshold=0.8, margin=0.05, *, scale=None,
+                      return_score=False):
     ranked = sorted(((portrait_score(head, region, scale=scale), name) for name, head in named_heads),
                     reverse=True)
-    if not ranked or ranked[0][0] < threshold:
-        return None
-    if len(ranked) > 1 and ranked[0][0] - ranked[1][0] < margin:
-        return None
-    return ranked[0][1]
+    name = None
+    score = ranked[0][0] if ranked else -1.0
+    if ranked and score >= threshold and (len(ranked) == 1 or score-ranked[1][0] >= margin):
+        name = ranked[0][1]
+    return (name, score) if return_score else name

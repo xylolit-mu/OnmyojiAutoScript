@@ -6,17 +6,18 @@ from tasks.DraftDuel.config import DraftMatchMode
 from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup
 from tasks.DraftDuel.runtime.portrait_match import (
     HAND_MIDDLE_FIGHT_SCALE, HAND_PORTRAIT_SCALE, HAND_PORTRAIT_THRESHOLDS,
+    FIGHT_PORTRAIT_THRESHOLDS,
     identify_portrait, portrait_score, locate_portrait,
 )
 
 
 class DraftDuelDeploymentMixin:
-    def _locate_deployment_portrait(self, head):
-        """使用固定0.8阈值，在整个手牌区域取最高分。"""
+    def _locate_deployment_portrait(self, head, *, scale=HAND_PORTRAIT_SCALE):
+        """先以0.8阈值定位手牌，未命中时以0.7补测。"""
         for threshold in HAND_PORTRAIT_THRESHOLDS:
             located = locate_portrait(
                 head, self.device.image, self.I_HAND_CARD_AREA.roi_back,
-                scale=HAND_PORTRAIT_SCALE, threshold=threshold)
+                scale=scale, threshold=threshold)
             if located is not None:
                 if threshold < HAND_PORTRAIT_THRESHOLDS[0]:
                     logger.info(f'DraftDuel hand portrait matched at reduced threshold '
@@ -106,8 +107,8 @@ class DraftDuelDeploymentMixin:
             return (0, 1, 2)
         return None
 
-    def _deployment_plan(self):
-        own_locked = tuple(getattr(self, 'draft_fielded', ()))
+    def _deployment_plan(self, reserved=()):
+        own_locked = tuple(dict.fromkeys((*getattr(self, 'draft_fielded', ()), *reserved)))
         mate = getattr(self, 'draft_peer_picks', ())
         if not mate:
             return plan_lineup(self.draft_selected, team_size=3, locked=own_locked)
@@ -125,10 +126,51 @@ class DraftDuelDeploymentMixin:
         index = pending['index']
         if actual in self.draft_fielded:
             return
-        self.draft_fielded = (*self.draft_fielded, actual)
         self.draft_deployment_rounds.append(
             {'round': index + 1, 'slot': slots[index] + 1, 'name': actual})
+        self.draft_deployment_rounds.sort(key=lambda row: row['round'])
+        self.draft_fielded = tuple(row['name'] for row in self.draft_deployment_rounds)
+        self.draft_unresolved_slots = [slot for slot in getattr(self, 'draft_unresolved_slots', ())
+                                       if slot != slots[index] + 1]
         logger.info(f'DraftDuel round {index + 1} actual fielded: {actual}')
+
+    def _recognize_deployment_portrait(self, region):
+        for threshold in FIGHT_PORTRAIT_THRESHOLDS:
+            actual, score = identify_portrait(
+                region, self.draft_hand_templates, threshold=threshold,
+                scale=HAND_MIDDLE_FIGHT_SCALE, return_score=True)
+            if actual:
+                if threshold < FIGHT_PORTRAIT_THRESHOLDS[0]:
+                    logger.info(f'DraftDuel top portrait supplemental check: {actual}, '
+                                f'threshold={threshold:.2f}, score={score:.3f}')
+                return actual, score
+        return None, score
+
+    def _best_of_two_portraits(self, entry, region):
+        """两次识别后，取满足阈值和候选分差要求的最高分结果。"""
+        actual, score = self._recognize_deployment_portrait(region)
+        previous = entry.pop('portrait_sample', None)
+        if previous is None:
+            entry['portrait_sample'] = [actual, score]
+            return False, None
+        candidates = [(name, value) for name, value in (previous, (actual, score)) if name]
+        if not candidates:
+            return True, None
+        name, best_score = max(candidates, key=lambda sample: sample[1])
+        logger.info(f'DraftDuel best of two portrait checks: {name}, score={best_score:.3f}')
+        return True, name
+
+    def _recheck_deferred_deployments(self, deferred, portraits, slots):
+        """后续上卡期间回查未识别槽位，每两次取最高分补记。"""
+        remaining = []
+        for entry in deferred:
+            complete, actual = self._best_of_two_portraits(entry, portraits[slots[entry['index']]])
+            if complete and actual and actual not in self.draft_fielded:
+                self._record_deployed_portrait(entry, slots, actual)
+                logger.info(f"DraftDuel back-verified round {entry['index'] + 1}: {actual}")
+                continue
+            remaining.append(entry)
+        return remaining
 
     def _finish_deployment_on_battle(self, pending, slots):
         if pending and pending['clicked'] and slots:
@@ -159,9 +201,12 @@ class DraftDuelDeploymentMixin:
             state = {'next_epoch': 0, 'slots': None, 'pending': None}
         self._draft_deployment_wait_reason = None
         next_epoch, slots, pending = state['next_epoch'], state['slots'], state['pending']
+        completed = state.get('completed', len(self.draft_fielded))
+        deferred = state.get('deferred', [])
         deadline = time.monotonic() + 120
         while time.monotonic() < deadline:
-            self._draft_deployment_state = {'next_epoch': next_epoch, 'slots': slots, 'pending': pending}
+            self._draft_deployment_state = {'next_epoch': next_epoch, 'slots': slots, 'pending': pending,
+                                            'completed': completed, 'deferred': deferred}
             self._save_draft_checkpoint('fight')
             self.device.stuck_record_clear()
             self.screenshot()
@@ -193,6 +238,17 @@ class DraftDuelDeploymentMixin:
                       and self._draft_deploy_epoch > pending['epoch']):
                     # 自己最后确认时可能看不到 ready，倒计时重开证明前轮已结束。
                     pending['locked'] = True
+            if (pending and pending['clicked'] and pending['locked']
+                    and self._draft_deploy_epoch > pending['epoch']
+                    and pending.get('preview_stable', 0) < 2):
+                deferred.append(dict(index=pending['index'], name=pending['name'], stable=0))
+                completed = pending['index'] + 1
+                next_epoch = pending['epoch'] + 1
+                self.draft_unresolved_slots = [slots[e['index']] + 1 for e in deferred]
+                logger.warning(f"DraftDuel round {pending['index'] + 1} locked but unverified; "
+                               'continue deployment and recheck previous slot')
+                pending = None
+                recovering = False
             if not self._capture_deployment_hand_templates(countdown=countdown):
                 self._log_deployment_wait('等待上阵倒计时减少至少1秒后采集五张手牌中段')
                 time.sleep(0.3)
@@ -202,6 +258,7 @@ class DraftDuelDeploymentMixin:
                 if pending and not pending['clicked']:
                     pending['preview'] = None
                     pending['preview_stable'] = 0
+                    pending.pop('portrait_sample', None)
                     pending['failures'] = min(3, pending.get('failures', 0) + 1)
                     if pending['failures'] >= 3:
                         pending['clicked'] = bool(self.appear_then_click(self.I_SELECT_ENSURE, interval=1))
@@ -218,16 +275,22 @@ class DraftDuelDeploymentMixin:
                     time.sleep(0.3)
                     continue
                 logger.info(f'DraftDuel own deployment slots: {tuple(i + 1 for i in slots)}')
+            deferred = self._recheck_deferred_deployments(deferred, portraits, slots)
+            if completed >= 3 and pending is None:
+                if not deferred:
+                    self._draft_deployment_state = None
+                    self._save_draft_checkpoint('battle')
+                    return True
+                time.sleep(0.3)
+                continue
             if pending is not None:
                 index = pending['index']
-                actual = identify_portrait(
-                    portraits[slots[index]], getattr(self, 'draft_hand_templates', ()),
-                    scale=HAND_MIDDLE_FIGHT_SCALE)
-                if actual and actual == pending.get('preview'):
-                    pending['preview_stable'] = min(2, pending.get('preview_stable', 0) + 1)
-                else:
-                    pending['preview'] = actual
-                    pending['preview_stable'] = 1 if actual else 0
+                complete, actual = self._best_of_two_portraits(pending, portraits[slots[index]])
+                if not complete:
+                    time.sleep(0.3)
+                    continue
+                pending['preview'] = actual
+                pending['preview_stable'] = 2 if actual else 0
                 if not pending['clicked']:
                     if actual != pending['name']:
                         pending['failures'] = min(3, pending.get('failures', 0) + 1)
@@ -241,19 +304,18 @@ class DraftDuelDeploymentMixin:
                             logger.info(f"DraftDuel round {index + 1}: select_ensure clicked")
                     else:
                         self._log_deployment_wait(
-                            f"目标={pending['name']}，顶部识别={actual}，连续帧数={pending['preview_stable']}，等待一致再确定")
+                            f"目标={pending['name']}，顶部识别={actual}，两次识别最佳结果={actual}，等待重试")
                 elif actual and actual not in self.draft_fielded:
-                    if actual == pending.get('actual'):
-                        pending['stable'] += 1
-                    else:
-                        pending['actual'], pending['stable'] = actual, 1
+                    pending['actual'], pending['stable'] = actual, 2
                     if pending['stable'] >= 2 and pending['locked']:
                         self._record_deployed_portrait(pending, slots, actual)
+                        completed = pending['index'] + 1
                         next_epoch = pending['epoch'] + 1
                         pending = None
                         recovering = False
                         self._draft_deployment_state = {
-                            'next_epoch': next_epoch, 'slots': slots, 'pending': None}
+                            'next_epoch': next_epoch, 'slots': slots, 'pending': None,
+                            'completed': completed, 'deferred': deferred}
                         self._save_draft_checkpoint('fight')
                         self._sync_draft_state()
                         deadline = time.monotonic() + 120
@@ -269,25 +331,24 @@ class DraftDuelDeploymentMixin:
                 time.sleep(0.3)
                 continue
             try:
-                lineup = self._deployment_plan()
+                reserved = tuple(e['name'] for e in deferred if e['name'] not in self.draft_fielded)
+                lineup = self._deployment_plan(reserved=reserved)
             except ValueError as exc:
                 logger.warning(f'DraftDuel lineup unavailable: {exc}')
                 return False
             remaining_heads = tuple((n, h) for n, h in self.draft_hand_templates
-                                    if n not in self.draft_fielded)
-            name = next((n for n in lineup if n not in self.draft_fielded), None)
+                                    if n not in self.draft_fielded and n not in reserved)
+            name = next((n for n in lineup if n not in self.draft_fielded and n not in reserved), None)
             if name is None:
                 return False
-            index = len(self.draft_fielded)
+            index = completed
             destinations = self.runframe(self.F_FIGHT_SHIKIGAMI_SET)
             if not destinations or len(destinations) != 6:
                 self._log_deployment_wait('未识别到六个上阵目标位置')
                 time.sleep(0.3)
                 continue
             head = next(h for n, h in remaining_heads if n == name)
-            located = locate_portrait(
-                head, self.device.image, self.I_HAND_CARD_AREA.roi_back,
-                scale=1.0, threshold=0.8)
+            located = self._locate_deployment_portrait(head, scale=1.0)
             if located is None:
                 self._log_deployment_wait(f'第{index + 1}次上阵目标={name}，整个手牌back内未匹配到目标')
                 time.sleep(0.3)
