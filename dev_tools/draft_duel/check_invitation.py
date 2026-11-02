@@ -19,6 +19,93 @@ class MatchmakingTests(unittest.TestCase):
         clock.start()
         self.addCleanup(clock.stop)
 
+    def test_final_banner_and_reward_are_dismissed_before_lobby_is_accepted(self):
+        from tasks.GlobalGame.assets import GlobalGameAssets
+        from tasks.GameUi.assets import GameUiAssets
+        for overlay in (DraftDuelAssets.I_FIGHT_RESULT, GlobalGameAssets.I_UI_REWARD):
+            owner = object.__new__(ScriptTask)
+            owner.device = Mock()
+            owner.goto_page = Mock()
+            owner.click = Mock()
+            owner._observe_duel_lobby = Mock()
+            page = [0]
+            frames = [[overlay, GameUiAssets.I_DRAFT_DUEL], [GameUiAssets.I_DRAFT_DUEL],
+                      [GameUiAssets.I_DRAFT_DUEL]]
+            owner.appear = Mock(side_effect=lambda rule: rule in frames[page[0]])
+            owner.screenshot = Mock(side_effect=lambda: page.__setitem__(0, page[0]+1))
+            with patch('tasks.DraftDuel.runtime.invitation.time.sleep'):
+                self.assertTrue(owner._goto_draft_lobby())
+            owner.click.assert_called_once()
+            self.assertEqual(owner.screenshot.call_count, 2)
+            owner._observe_duel_lobby.assert_called_once()
+
+    def test_member_wait_closes_late_banner_before_waiting_for_captain(self):
+        owner = object.__new__(ScriptTask)
+        owner.device = Mock()
+        owner.click = Mock()
+        owner.config = SimpleNamespace(draft_duel=DraftDuel(draft_duel_config={'match_mode': '队员'}))
+        owner._member_match_started = Mock(side_effect=[False, True])
+        owner.appear_accept = Mock(return_value=False)
+        page = [-1]
+        frames = [[DraftDuelAssets.I_FIGHT_RESULT], [DraftDuelAssets.I_LOBBY_TEAMMATE_WAIT], []]
+        owner.screenshot = Mock(side_effect=lambda: page.__setitem__(0, page[0]+1))
+        owner.appear = Mock(side_effect=lambda rule: rule in frames[page[0]])
+        with patch('tasks.DraftDuel.runtime.invitation.time.sleep'):
+            self.assertTrue(owner._wait_member_start())
+        owner.click.assert_called_once()
+        self.assertEqual(owner.screenshot.call_count, 3)
+
+    def invite_owner(self):
+        owner = object.__new__(ScriptTask)
+        owner.device = Mock()
+        owner.config = SimpleNamespace(draft_duel=DraftDuel())
+        owner.screenshot = Mock()
+        owner._clear_draft_lobby_overlays = Mock(return_value=True)
+        owner._dismiss_draft_lobby_overlay = Mock(return_value=False)
+        owner.appear_then_click = Mock(return_value=True)
+        owner.invite_friends = Mock(return_value=True)
+        owner.is_in_room = Mock(return_value=False)
+        return owner
+
+    def test_invite_retries_panel_open_and_sends_only_after_panel_appears(self):
+        owner = self.invite_owner()
+        owner.appear = Mock(side_effect=lambda rule: (
+            owner.appear_then_click.call_count >= 2 if rule is owner.I_INVITE_ENSURE
+            else rule is owner.I_EMPTY_TEAMMATE))
+        with patch('tasks.DraftDuel.runtime.invitation.time.monotonic', side_effect=range(100)), \
+                patch('tasks.DraftDuel.runtime.invitation.time.sleep'):
+            self.assertTrue(owner._invite_teammate())
+        self.assertEqual(owner.appear_then_click.call_count, 2)
+        self.assertEqual(owner._clear_draft_lobby_overlays.call_count, 2)
+        owner.invite_friends.assert_called_once_with(owner.config.draft_duel.invite_config, open_invite=False)
+
+    def test_invite_stops_after_three_failed_panel_attempts(self):
+        owner = self.invite_owner()
+        owner.appear = Mock(side_effect=lambda rule: rule is owner.I_EMPTY_TEAMMATE)
+        with patch('tasks.DraftDuel.runtime.invitation.time.monotonic', side_effect=range(100)), \
+                patch('tasks.DraftDuel.runtime.invitation.time.sleep'):
+            self.assertFalse(owner._invite_teammate())
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+        self.assertEqual(owner._clear_draft_lobby_overlays.call_count, 3)
+        owner.invite_friends.assert_not_called()
+
+    def test_clear_overlays_restarts_confirmation_if_another_page_appears(self):
+        owner = object.__new__(ScriptTask)
+        owner.device = Mock()
+        owner.screenshot = Mock()
+        owner._dismiss_draft_lobby_overlay = Mock(side_effect=[True, False, True, False, False])
+        with patch('tasks.DraftDuel.runtime.invitation.time.sleep'):
+            self.assertTrue(owner._clear_draft_lobby_overlays())
+        self.assertEqual(owner.screenshot.call_count, 4)
+
+    def test_invite_never_clicks_entry_when_overlay_cleanup_fails(self):
+        owner = self.invite_owner()
+        owner._clear_draft_lobby_overlays.return_value = False
+        self.assertFalse(owner._invite_teammate())
+        self.assertEqual(owner._clear_draft_lobby_overlays.call_count, 3)
+        owner.appear_then_click.assert_not_called()
+        owner.invite_friends.assert_not_called()
+
     def owner(self, mode):
         owner = Mock()
         owner.config.draft_duel = DraftDuel(draft_duel_config={'match_mode': mode})
@@ -26,6 +113,7 @@ class MatchmakingTests(unittest.TestCase):
         owner.I_LOBBY_BATTLE = DraftDuelAssets.I_LOBBY_BATTLE
         owner.I_INVITE_ENSURE = GeneralInviteAssets.I_INVITE_ENSURE
         owner._goto_draft_lobby.return_value = True
+        owner._clear_draft_lobby_overlays.return_value = True
         owner._in_draft_lobby.return_value = True
         owner.appear.return_value = True
         owner.appear_accept.return_value = False
@@ -84,6 +172,7 @@ class MatchmakingTests(unittest.TestCase):
                 owner.device = Mock()
                 owner.screenshot = Mock()
                 owner._goto_draft_lobby = Mock(return_value=True)
+                owner._clear_draft_lobby_overlays = Mock(return_value=True)
                 owner.prepare_battle_cooperation = Mock()
                 owner.appear = Mock(return_value=True)
                 owner._invite_teammate = Mock(return_value=True)

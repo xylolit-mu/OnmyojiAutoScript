@@ -4,7 +4,6 @@ import time
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
-from tasks.GameUi.default_pages import page_reward, random_click
 
 
 class DraftDuelMatchmakingMixin:
@@ -32,15 +31,7 @@ class DraftDuelMatchmakingMixin:
             if not leader and self.appear(self.I_LEADER_EXIT):
                 self._leave_draft_team('队长已离队')
                 return False
-            if page_reward.recognizer.evaluate(self):
-                logger.info('DraftDuel reward page detected; dismiss with left/right random click')
-                self.click(random_click(ltrb=(True, False, True, False)))
-                time.sleep(0.3)
-                continue
-            # 结算横幅可能晚于等待匹配页出现；队员也必须主动点掉，不能直接等队长。
-            if self.appear(self.I_FIGHT_RESULT):
-                logger.info('DraftDuel result banner still visible on matching page; dismiss it')
-                self.click(random_click(ltrb=(True, False, True, False)))
+            if self._dismiss_draft_lobby_overlay() is True:
                 time.sleep(0.3)
                 continue
             self._observe_duel_lobby()

@@ -25,6 +25,7 @@ class MemberWaitTests(unittest.TestCase):
         )
         owner.device = Mock()
         owner.screenshot = Mock()
+        owner._dismiss_draft_lobby_overlay = Mock(return_value=False)
         owner.appear = Mock(return_value=False)
         owner.appear_accept = Mock(return_value=False)
         owner._member_match_started = Mock(return_value=False)
