@@ -1,7 +1,7 @@
 """协同对弈：战斗标志防抖与结算。"""
 import time
 from module.logger import logger
-from tasks.GameUi.default_pages import random_click
+from tasks.GameUi.default_pages import page_reward, random_click
 
 
 class DraftDuelBattleMixin:
@@ -56,7 +56,8 @@ class DraftDuelBattleMixin:
                         self._save_draft_checkpoint('settlement')
                 if settling:
                     pages = (self.I_DRAFT_SHARE, self.I_FIGHT_STATISTIC, self.I_FIGHT_RESULT)
-                    if any(self.appear(rule) for rule in pages):
+                    if (page_reward.recognizer.evaluate(self)
+                            or any(self.appear(rule) for rule in pages)):
                         self._confirm_small_game_end()
                         self.click(random_click(ltrb=(True, False, True, False)))
                     elif self.appear(self.I_WAIT_FIGHT_LOBBY):

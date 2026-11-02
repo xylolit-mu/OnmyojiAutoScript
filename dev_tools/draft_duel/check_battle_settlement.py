@@ -8,6 +8,7 @@ from module.exception import TaskEnd, GameTooManyClickError
 from module.device.device import Device
 from tasks.DraftDuel.script_task import ScriptTask
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
+from tasks.GlobalGame.assets import GlobalGameAssets
 
 
 class BattleSettlementTests(unittest.TestCase):
@@ -104,6 +105,29 @@ class BattleSettlementTests(unittest.TestCase):
              patch('tasks.DraftDuel.runtime.battle.time.sleep'):
             self.assertIsNone(owner._battle_and_settlement())
         self.assertFalse(hasattr(owner, 'draft_finished_small_games'))
+
+    def test_reward_page_clicks_then_returns_to_lobby_without_duplicate_end(self):
+        owner, phase = self.play([[GeneralBattleAssets.I_BATTLE_INFO], [], [],
+                                  [GlobalGameAssets.I_UI_REWARD], [GlobalGameAssets.I_UI_REWARD],
+                                  [ScriptTask.I_WAIT_FIGHT_LOBBY]])
+        self.assertEqual(phase, 'lobby')
+        self.assertEqual(owner.click.call_count, 2)
+        self.assertEqual(owner.draft_finished_small_games, 1)
+
+    def test_matching_lobby_transition_reenters_lobby_and_selection(self):
+        owner = Mock()
+        owner.draft_selected = list('abcde')
+        owner._enter_matchmaking.return_value = True
+        owner._select_shikigami.return_value = True
+        owner._match_battle.side_effect = ['lobby', True]
+        owner._deploy_shikigami.return_value = True
+        owner._battle_and_settlement.return_value = None
+        with self.assertRaises(TaskEnd):
+            ScriptTask.run(owner)
+        self.assertEqual(owner._enter_matchmaking.call_count, 2)
+        self.assertEqual(owner._select_shikigami.call_count, 2)
+        owner._deploy_shikigami.assert_called_once()
+        owner._battle_and_settlement.assert_called_once()
 
     def test_next_small_game_reuses_roster_without_reinviting(self):
         owner = Mock()

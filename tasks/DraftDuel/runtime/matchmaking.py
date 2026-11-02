@@ -4,10 +4,11 @@ import time
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
+from tasks.GameUi.default_pages import page_reward, random_click
 
 
 class DraftDuelMatchmakingMixin:
-    def _match_battle(self) -> bool:
+    def _match_battle(self) -> bool | str:
         """交换名单后匹配；取消必须确认回到待匹配页面才能重开。"""
         leader = self.config.draft_duel.draft_duel_config.match_mode != DraftMatchMode.MEMBER
         limit = self.config.draft_duel.draft_duel_config.match_wait_seconds
@@ -26,15 +27,40 @@ class DraftDuelMatchmakingMixin:
                                            click_wall=click_wall, cancelling=cancelling)
             self.device.stuck_record_clear()
             self.screenshot()
-            self._observe_duel_lobby()
             self._save_draft_checkpoint('rank')
             now = time.monotonic()
             if not leader and self.appear(self.I_LEADER_EXIT):
                 self._leave_draft_team('队长已离队')
                 return False
+            if page_reward.recognizer.evaluate(self):
+                logger.info('DraftDuel reward page detected; dismiss with left/right random click')
+                self.click(random_click(ltrb=(True, False, True, False)))
+                time.sleep(0.3)
+                continue
+            # 结算横幅可能晚于等待匹配页出现；队员也必须主动点掉，不能直接等队长。
+            if self.appear(self.I_FIGHT_RESULT):
+                logger.info('DraftDuel result banner still visible on matching page; dismiss it')
+                self.click(random_click(ltrb=(True, False, True, False)))
+                time.sleep(0.3)
+                continue
+            self._observe_duel_lobby()
+            if self.appear(self.I_WAIT_FIGHT_LOBBY):
+                self._draft_match_state = None
+                self._save_draft_checkpoint('lobby')
+                logger.info('DraftDuel returned to team lobby during matching; resume next big round')
+                return 'lobby'
+            # 取消返回页时“匹配中”标志可能仍命中，开始按钮优先证明已回到待匹配页。
+            cancel_returned = leader and cancelling and self.appear(self.I_LOBBY_BATTLE)
+            if cancel_returned:
+                cancelling = False
+                active_since = active_wall = None
+                click_started = click_wall = None
+                last_battle_click = None
+                progress_deadline = now + 600
+                logger.info(f'DraftDuel match cancellation confirmed after attempt {attempts}/3')
             if self.appear(self.I_EXIT_CANCEL):
                 self.appear_then_click(self.I_EXIT_CANCEL, interval=1)
-            elif self.appear(self.I_FIGHT_WAIT):
+            elif not cancel_returned and self.appear(self.I_FIGHT_WAIT):
                 self._begin_small_game()
                 if active_since is None:
                     active_since = now
@@ -49,7 +75,7 @@ class DraftDuelMatchmakingMixin:
                 if leader and now - active_since >= limit:
                     cancelling = True
                     self.appear_then_click(self.I_FIGHT_CANCEL_WAIT_LEADER, interval=1)
-            elif self._is_draft_rank_page():
+            elif cancel_returned or self._is_draft_rank_page():
                 self._observe_victory_count()
                 require_auto = getattr(self, 'draft_finished_small_games', 0) > 0
                 if require_auto:
@@ -76,16 +102,6 @@ class DraftDuelMatchmakingMixin:
                         return False
                     logger.info(f'DraftDuel pre-match lineup: {self.draft_planned_lineup}')
                     self._save_draft_checkpoint('rank')
-                if cancelling:
-                    # lobby_battle 再次可见才算取消完成，不以等待标志漏识别为依据。
-                    if self.appear(self.I_LOBBY_BATTLE):
-                        cancelling = False
-                        active_since = None
-                        active_wall = None
-                        click_started = None
-                        click_wall = None
-                        last_battle_click = None
-                        progress_deadline = now + 600
                 if leader and active_since is None and not cancelling:
                     if attempts >= 3:
                         self._finish_match_timeout()

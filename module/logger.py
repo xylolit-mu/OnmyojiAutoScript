@@ -452,7 +452,7 @@ def rule(title="", *, characters="─", style="rule.line", end="\n", align="cent
 
 
 def hr(title, level=3):
-    title = str(title).upper()
+    title = str(title).capitalize()
     if level == 1:
         logger.rule(title, characters='═')
         logger.info(title)

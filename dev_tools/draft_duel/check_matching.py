@@ -11,6 +11,7 @@ from tasks.DraftDuel.config import DraftDuel
 from tasks.DraftDuel.script_task import ScriptTask
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
 from tasks.GameUi.assets import GameUiAssets
+from tasks.GlobalGame.assets import GlobalGameAssets
 
 
 class RankMatchingTests(unittest.TestCase):
@@ -131,6 +132,84 @@ class RankMatchingTests(unittest.TestCase):
         # 取消动画期间允许受 interval 节流的重试，但不能额外发起匹配。
         self.assertGreaterEqual(buttons.count(a.I_FIGHT_CANCEL_WAIT_LEADER), 3)
         owner._finish_match_timeout.assert_called_once()
+
+    def test_matching_hands_team_lobby_back_to_outer_flow(self):
+        owner, result = self.matching('队长', [[ScriptTask.I_WAIT_FIGHT_LOBBY]])
+        self.assertEqual(result, 'lobby')
+        self.assertIsNone(owner._draft_match_state)
+        owner.appear_then_click.assert_not_called()
+
+    def test_reward_overlay_is_dismissed_before_returning_to_team_lobby(self):
+        owner = self.owner('队员')
+        owner._observe_duel_lobby = Mock()
+        owner._save_draft_checkpoint = Mock()
+        owner.click = Mock()
+        owner.appear_then_click = Mock()
+        frame = [-1]
+        frames = [[GlobalGameAssets.I_UI_REWARD, owner.I_WAIT_FIGHT_LOBBY],
+                  [GlobalGameAssets.I_UI_REWARD], [owner.I_WAIT_FIGHT_LOBBY]]
+        owner.screenshot = Mock(side_effect=lambda: frame.__setitem__(0, frame[0]+1))
+        owner.appear = Mock(side_effect=lambda rule: rule in frames[frame[0]])
+        with patch('tasks.DraftDuel.runtime.matchmaking.time.sleep'):
+            self.assertEqual(owner._match_battle(), 'lobby')
+        self.assertEqual(owner.click.call_count, 2)
+        owner._observe_duel_lobby.assert_called_once()
+        owner.appear_then_click.assert_not_called()
+
+    def test_both_roles_dismiss_result_banner_before_matching_controls(self):
+        for mode in ('队长', '队员'):
+            owner = self.owner(mode)
+            owner.draft_finished_small_games = 1
+            owner.draft_small_game = 1
+            owner._observe_duel_lobby = Mock()
+            owner._save_draft_checkpoint = Mock()
+            owner._sync_draft_state = Mock(return_value=True)
+            owner.click = Mock()
+            owner.appear_then_click = Mock()
+            page = {'index': -1}
+            frames = [[owner.I_FIGHT_RESULT, owner.I_POST_DRAFT_RANK, owner.I_LOBBY_BATTLE],
+                      [owner.I_FIGHT_RESULT],
+                      [owner.I_POST_DRAFT_RANK, owner.I_AUTO_RIGHT, owner.I_LOBBY_BATTLE],
+                      [owner.I_POST_DRAFT_FIGHT]]
+            owner.screenshot = Mock(side_effect=lambda: page.update(index=page['index']+1))
+            owner.appear = Mock(side_effect=lambda rule: rule in frames[page['index']])
+            def dismiss(_):
+                self.assertLess(page['index'], 2)
+                owner.appear_then_click.assert_not_called()
+                owner._sync_draft_state.assert_not_called()
+            owner.click.side_effect = dismiss
+            with patch('tasks.DraftDuel.runtime.matchmaking.time.sleep'):
+                self.assertTrue(owner._match_battle())
+            self.assertEqual(owner.click.call_count, 2)
+            self.assertEqual(owner.draft_finished_small_games, 1)
+            if mode == '队长':
+                owner.appear_then_click.assert_called_once_with(owner.I_LOBBY_BATTLE, interval=3)
+            else:
+                owner.appear_then_click.assert_not_called()
+
+    def test_cancel_return_prioritizes_start_over_stale_wait_indicator(self):
+        a = ScriptTask
+        rank = [a.I_POST_DRAFT_RANK, a.I_LOBBY_BATTLE]
+        wait = [a.I_FIGHT_WAIT, a.I_FIGHT_CANCEL_WAIT_LEADER]
+        # 取消后只有开始按钮重新出现，旧匹配中文字仍然命中，阶段标题漏识别。
+        returned = [a.I_LOBBY_BATTLE, a.I_FIGHT_WAIT]
+        owner, result = self.matching('队长', [rank, wait, wait, wait,
+                                               returned, wait, [a.I_POST_DRAFT_FIGHT]])
+        self.assertTrue(result)
+        buttons = [c.args[0] for c in owner.appear_then_click.call_args_list]
+        self.assertEqual(buttons.count(a.I_LOBBY_BATTLE), 2)
+        self.assertEqual(owner.draft_small_game, 1)
+        owner._finish_match_timeout.assert_not_called()
+
+    def test_cancel_animation_without_start_button_does_not_restart(self):
+        a = ScriptTask
+        rank = [a.I_POST_DRAFT_RANK, a.I_LOBBY_BATTLE]
+        wait = [a.I_FIGHT_WAIT, a.I_FIGHT_CANCEL_WAIT_LEADER]
+        owner, result = self.matching('队长', [rank, wait, wait, wait,
+                                               [], [], [a.I_POST_DRAFT_FIGHT]])
+        self.assertTrue(result)
+        buttons = [c.args[0] for c in owner.appear_then_click.call_args_list]
+        self.assertEqual(buttons.count(a.I_LOBBY_BATTLE), 1)
 
     def test_battle_button_retries_every_three_seconds_for_thirty_seconds(self):
         a = ScriptTask

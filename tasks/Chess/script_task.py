@@ -644,6 +644,10 @@ class ChessLegacyScriptTask(
                 time.sleep(self.CHESS_EXIT_SCREENSHOT_INTERVAL)
                 continue
 
+            if self._close_unknown_chess_result_page():
+                time.sleep(self.CHESS_EXIT_SCREENSHOT_INTERVAL)
+                continue
+
             if not exit_clicked:
                 if self.appear(self.I_CHESS_EXIT_TO_LOBBY):
                     self.appear_then_click(
