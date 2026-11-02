@@ -21,15 +21,19 @@ import time
 from pathlib import Path
 
 STATS_PATH = Path(__file__).resolve().parents[3] / 'data' / 'DraftDuel' / 'duel_stats.json'
+STATS_TEMPLATE_PATH = Path(__file__).resolve().parents[1] / 'duel_stats.template.json'
 MIN_SAMPLES = 3
 MAX_BONUS = 8.0
 
 
 def load() -> dict:
+    # 本地文件存在时始终优先使用；远端模板仅为首次记录提供空结构。
     try:
         return json.loads(STATS_PATH.read_text(encoding='utf-8'))
-    except Exception:
-        return {'battles': []}
+    except FileNotFoundError:
+        return json.loads(STATS_TEMPLATE_PATH.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'battles': [], 'rounds': []}
 
 
 def _write_update(collection, entry, event_id=None):

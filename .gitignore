@@ -306,3 +306,6 @@ oas.bat
 
 # Locks for local lineup editor writes
 /tasks/Chess/strategy/*.lock
+
+# Local DraftDuel battle records, checkpoints and locks; template stays tracked.
+/data/DraftDuel/

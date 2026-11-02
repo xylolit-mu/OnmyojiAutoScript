@@ -51,6 +51,23 @@ class RoundStateTests(unittest.TestCase):
         owner._begin_small_game()
         self.assertEqual(owner.draft_small_game, 2)
 
+    def test_auto_games_keep_confirmed_lineup_and_unresolved_slots_until_new_round(self):
+        owner = self.owner()
+        owner._begin_small_game()
+        owner.draft_fielded = ('莹草', '辉夜姬')
+        owner.draft_deployment_rounds = [{'round': 1, 'slot': 1, 'name': '莹草'},
+                                       {'round': 2, 'slot': 2, 'name': '辉夜姬'}]
+        owner.draft_unresolved_slots = [3]
+        owner._draft_matching_bout_active = False
+        owner._begin_small_game()
+        self.assertEqual(owner.draft_small_game, 2)
+        self.assertEqual(owner.draft_fielded, ('莹草', '辉夜姬'))
+        self.assertEqual(len(owner.draft_deployment_rounds), 2)
+        self.assertEqual(owner.draft_unresolved_slots, [3])
+        owner._initialize_duel_state()
+        self.assertEqual(owner.draft_fielded, ())
+        self.assertEqual(owner.draft_deployment_rounds, [])
+
     def test_portraits_are_captured_once_per_big_round(self):
         owner = self.owner()
         owner.appear.side_effect = lambda r: r is owner.I_WAIT_FIGHT_LOBBY

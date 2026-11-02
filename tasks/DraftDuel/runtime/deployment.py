@@ -3,7 +3,7 @@
 import time
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
-from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup
+from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup, battle_stats
 from tasks.DraftDuel.runtime.portrait_match import (
     HAND_MIDDLE_FIGHT_SCALE, HAND_PORTRAIT_SCALE, HAND_PORTRAIT_THRESHOLDS,
     FIGHT_PORTRAIT_THRESHOLDS,
@@ -110,17 +110,28 @@ class DraftDuelDeploymentMixin:
     def _deployment_plan(self, reserved=()):
         own_locked = tuple(dict.fromkeys((*getattr(self, 'draft_fielded', ()), *reserved)))
         mate = getattr(self, 'draft_peer_picks', ())
+        weights = getattr(self, '_draft_field_weights', None)
+        if weights is None:
+            table = battle_stats._tally('fielded')
+            weights = {name: battle_stats.field_bonus(name, table)
+                       for name in set((*self.draft_selected, *mate))}
+        signature = tuple(sorted(weights.items()))
+        if signature != getattr(self, '_draft_logged_field_weights', None):
+            logger.info(f'DraftDuel field weighting enabled: '
+                        f'{dict((name, value) for name, value in signature if value)} '
+                        '(minimum 3 confirmed samples; unknown outcomes excluded)')
+            self._draft_logged_field_weights = signature
         if not mate:
-            return plan_lineup(self.draft_selected, team_size=3, locked=own_locked)
+            return plan_lineup(self.draft_selected, team_size=3, locked=own_locked, field_weights=weights)
         mate_locked = tuple(r['name'] for r in getattr(self, 'draft_peer_rounds', ()))
         # 两端统一以队长为第一参数，保证相同状态下规划一致。
         if self.config.draft_duel.draft_duel_config.match_mode == DraftMatchMode.CAPTAIN:
             return plan_duel_lineup(self.draft_selected, mate, locked=own_locked,
                                    mate_locked=mate_locked,
-                                   field_weights=getattr(self, '_draft_field_weights', None))[0]
+                                   field_weights=weights)[0]
         return plan_duel_lineup(mate, self.draft_selected, locked=mate_locked,
                                mate_locked=own_locked,
-                               field_weights=getattr(self, '_draft_field_weights', None))[1]
+                               field_weights=weights)[1]
 
     def _record_deployed_portrait(self, pending, slots, actual):
         index = pending['index']

@@ -894,7 +894,8 @@ def plan_lineup(available: Iterable[str], *, team_size: int = 5,
                 locked: Iterable[str] = (), speeds: Mapping[str, int] | None = None,
                 defenses: Mapping[str, int] | None = None,
                 max_fire: int | None = None,
-                catalog: Mapping[str, Entry] = CATALOG) -> tuple[str, ...]:
+                catalog: Mapping[str, Entry] = CATALOG,
+                field_weights: Mapping[str, float] | None = None) -> tuple[str, ...]:
     """给定完整候选池时搜索高分阵容；locked 中的成员必须保留。"""
     required = tuple(locked)
     if not 1 <= team_size <= 8 or len(required) > team_size:
@@ -911,7 +912,7 @@ def plan_lineup(available: Iterable[str], *, team_size: int = 5,
     if len(candidates) + len(required) < team_size:
         raise ValueError('可识别候选不足以组成队伍')
     # 保留多种中途组合，让火机、盾和输出的搭配可以在后几手形成。
-    field_table = battle_stats._tally('fielded') if battle_stats is not None else None
+    field_table = battle_stats._tally('fielded') if battle_stats is not None and field_weights is None else None
     states = [required]
     for _ in range(team_size - len(required)):
         next_states = {}
@@ -930,8 +931,9 @@ def plan_lineup(available: Iterable[str], *, team_size: int = 5,
             raise ValueError('召唤位或打火数量限制后候选不足以组成阵容')
         states = sorted(next_states.values(),
                         key=lambda lineup: (team_score(lineup, catalog, speeds, defenses) +
-                                            (sum(battle_stats.field_bonus(item, field_table)
-                                                 for item in lineup) if battle_stats else 0.0),
+                                            (sum(field_weights.get(item, 0.0) for item in lineup) if field_weights is not None
+                                             else sum(battle_stats.field_bonus(item, field_table)
+                                                      for item in lineup) if battle_stats else 0.0),
                                             lineup),
                         reverse=True)[:128]
     return states[0]

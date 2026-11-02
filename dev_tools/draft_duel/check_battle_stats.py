@@ -22,12 +22,30 @@ class BattleStatsChecks(unittest.TestCase):
                 self.assertEqual(own, ('莹草',))
                 self.assertEqual(mate, (preferred,))
 
+    def test_local_records_survive_template_changes_and_feed_field_planning(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'duel_stats.json'
+            template = Path(folder) / 'empty.json'
+            template.write_text('{"battles": [], "rounds": []}', encoding='utf-8')
+            with patch.object(battle_stats, 'STATS_PATH', path), \
+                    patch.object(battle_stats, 'STATS_TEMPLATE_PATH', template):
+                for i in range(3):
+                    battle_stats.record('win', fielded=['莹草'], event_id=str(i))
+                before = path.read_bytes()
+                template.write_text('{"battles": [], "rounds": [], "version": 2}', encoding='utf-8')
+                self.assertEqual(len(battle_stats.load()['battles']), 3)
+                self.assertEqual(path.read_bytes(), before)
+                weights = {name: battle_stats.field_bonus(name) for name in ('莹草', '辉夜姬')}
+                with patch.object(lineup, 'team_score', return_value=0):
+                    self.assertEqual(lineup.plan_lineup(weights, team_size=1, field_weights=weights), ('莹草',))
+                self.assertEqual(weights['莹草'], 8.0)
+
     def test_record_and_weighted_results_in_separate_data_directory(self):
         self.assertIs(lineup.battle_stats, battle_stats)
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'DraftDuel' / 'duel_stats.json'
             with patch.object(battle_stats, 'STATS_PATH', path):
-                self.assertEqual(battle_stats.load(), {'battles': []})
+                self.assertEqual(battle_stats.load(), {'battles': [], 'rounds': []})
                 for _ in range(3):
                     battle_stats.record('win', ours=['莹草'], fielded=['莹草'])
                 self.assertEqual(len(battle_stats.load()['battles']), 3)

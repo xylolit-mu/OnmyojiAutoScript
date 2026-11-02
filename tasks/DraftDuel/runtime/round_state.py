@@ -88,10 +88,12 @@ class DraftDuelRoundStateMixin:
             self._draft_end_recorded = False
             self.draft_small_game = getattr(self, 'draft_small_game', 0) + 1
             self._draft_matching_bout_active = True
-            self.draft_fielded = ()
-            self.draft_deployment_rounds = []
-            self.draft_peer_rounds = ()
+            # 首局确定的阵容会被后续自动上阵复用，保留实际名单用于胜负加权。
+            if self.draft_small_game == 1:
+                self.draft_fielded = ()
+                self.draft_deployment_rounds = []
+                self.draft_peer_rounds = ()
+                self._draft_field_weights = None
+                self.draft_unresolved_slots = []
             self._draft_deployment_state = None
-            self._draft_field_weights = None
-            self.draft_unresolved_slots = []
             logger.info(f'DraftDuel small game {self.draft_small_game} in current big round')
