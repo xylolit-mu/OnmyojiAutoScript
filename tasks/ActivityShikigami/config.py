@@ -62,18 +62,12 @@ BATTLE_TYPES = ('rich_man', *CLIMB_TYPES, 'pass_hard', 'boss', 'fakegod')
 
 class GeneralConfig(ConfigBase):
     task_sequence: list[ActivityTask] = Field(
-        default=[
-            ActivityTask.RICH_MAN,
-            ActivityTask.CLIMB,
-            ActivityTask.BOSS,
-        ],
+        default=[ActivityTask.CLIMB],
         title='Activity Task Sequence',
-        description='activity_task_sequence_help',
     )
     throw_limit: int = Field(default=0, title='Throw Limit', ge=0)
     climb_task_sequence: list[ClimbTask] = Field(
-        default=[ClimbTask.HARD, ClimbTask.EASY, ClimbTask.AP,
-                 ClimbTask.AP100],
+        default=[ClimbTask.EASY],
         title='Climb Task Sequence',
     )
     ap_limit: int = Field(default=0, title='Ap Limit', ge=0)

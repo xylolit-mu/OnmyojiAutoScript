@@ -16,11 +16,28 @@ class SelectionChecks(unittest.TestCase):
         self.assertEqual(MetaDemonConfig(mode=Mode.AWAKE.value).mode, [Mode.AWAKE])
         self.assertEqual(MetaDemonConfig(mode=[]).mode, [])
 
+    def test_meta_settings_payload_contains_multi_enum_default(self):
+        from module.config.config_model import ConfigModel
+        from tasks.MetaDemon.config import MetaDemon
+        model = SimpleNamespace(meta_demon=MetaDemon())
+        payload = ConfigModel.script_task(model, 'MetaDemon')
+        mode = next(row for row in payload['meta_demon_config'] if row['name'] == 'mode')
+        self.assertEqual(mode['type'], 'multi_enum')
+        self.assertEqual(mode['default'], [Mode.BOSS_BATTLE.value])
+        self.assertEqual(mode['value'], [Mode.BOSS_BATTLE.value])
+        self.assertEqual(set(mode['enumEnum']), {item.value for item in Mode})
+
     def test_meta_ticket_exclusivity_and_priority(self):
         self.assertEqual(MetaDemonConfig(mode=[Mode.BOSS_BATTLE, Mode.EXPLORATION]).mode,
                          [Mode.EXPLORATION, Mode.BOSS_BATTLE])
         with self.assertRaises(ValidationError):
             MetaDemonConfig(mode=[Mode.AWAKE, Mode.EXPLORATION])
+
+    def test_activity_defaults_only_climb_and_easy(self):
+        from tasks.ActivityShikigami.config import ActivityTask, ClimbTask
+        conf = GeneralConfig()
+        self.assertEqual(conf.task_sequence, [ActivityTask.CLIMB])
+        self.assertEqual(conf.climb_task_sequence, [ClimbTask.EASY])
 
     def test_activity_order_and_legacy_exclusivity(self):
         conf = GeneralConfig(task_sequence=['首领', '爬塔', '伪神'],

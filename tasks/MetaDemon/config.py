@@ -28,7 +28,7 @@ class MetaDemonMode(str, Enum):
 
 
 class MetaDemonConfig(ConfigBase):
-    mode: list[MetaDemonMode] = Field(default_factory=lambda: [MetaDemonMode.BOSS_BATTLE], title='运行模式', description='勾选执行；两种门票刷取至多选一种，可与鬼王战斗共存，先刷门票再战斗')
+    mode: list[MetaDemonMode] = Field(default=[MetaDemonMode.BOSS_BATTLE], title='运行模式', description='勾选执行；两种门票刷取至多选一种，可与鬼王战斗共存，先刷门票再战斗')
 
     @field_validator('mode', mode='before')
     @classmethod

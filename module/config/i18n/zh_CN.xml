@@ -434,9 +434,6 @@ window_background >>> DroidCast_raw >  ADB_nc >> DroidCast > uiautomator2 ~= ADB
 	<message><source>GeneralClimb</source><translation>通用爬塔</translation></message>
 	<message><source>GeneralConfig</source><translation>通用设置</translation></message>
 	<message><source>Activity Task Sequence</source><translation>任务启用顺序</translation></message>
-	<message><source>activity_task_sequence_help</source><translation>填写：大富翁,爬塔,伪神降临
-表示先执行大富翁，再执行爬塔，最后执行伪神降临。
-中间必须使用半角英文逗号分隔；对应次数为0的任务会自动跳过。</translation></message>
 	<message><source>Run Config</source><translation>运行设置</translation></message>
 	<message><source>Throw Limit</source><translation>骰子投掷次数限制</translation></message>
 	<message><source>Active Souls Clean</source><translation>运行结束后清理御魂</translation></message>
