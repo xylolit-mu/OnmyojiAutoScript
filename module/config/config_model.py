@@ -394,6 +394,8 @@ class ConfigModel(ConfigBase):
                     item["description"] = value["description"]
                 if 'ui_exclusive_groups' in value:
                     item['ui_exclusive_groups'] = value['ui_exclusive_groups']
+                if 'ui_hidden' in value:
+                    item['ui_hidden'] = value['ui_hidden']
                 item["default"] = value["default"]
                 item["value"] = jsons[key] if key in jsons else value["default"]
                 item["type"] = value["type"] if "type" in value else "enum"

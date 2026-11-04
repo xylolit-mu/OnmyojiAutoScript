@@ -14,6 +14,7 @@ class SettingsLayoutChecks(unittest.TestCase):
             payload = ConfigModel.script_task(SimpleNamespace(**{attr: model}), name)
             control = payload['settings_layout_config'][0]
             self.assertTrue(control['value'])
+            self.assertTrue(control['ui_hidden'])
             self.assertEqual(control['ui_layout']['version'], 1)
             for section in control['ui_layout']['sections']:
                 sources = list(section.get('groups', []))
@@ -27,6 +28,7 @@ class SettingsLayoutChecks(unittest.TestCase):
             restored = type(model).model_validate(model.model_dump())
             disabled = ConfigModel.script_task(SimpleNamespace(**{attr: restored}), name)
             self.assertFalse(disabled['settings_layout_config'][0]['value'])
+            self.assertTrue(disabled['settings_layout_config'][0]['ui_hidden'])
             self.assertEqual(set(payload), set(disabled))
             self.assertEqual(control['ui_layout'], disabled['settings_layout_config'][0]['ui_layout'])
 
