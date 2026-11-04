@@ -2,8 +2,8 @@
   {
     "itemName": "wq_invite_1",
     "imageName": "invite_wq_invite_1.png",
-    "roiFront": "157,401,30,33",
-    "roiBack": "124,354,100,100",
+    "roiFront": "122,400,30,33",
+    "roiBack": "106,354,100,100",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",
@@ -12,8 +12,8 @@
   {
     "itemName": "wq_invite_2",
     "imageName": "invite_wq_invite_2.png",
-    "roiFront": "480,399,30,33",
-    "roiBack": "448,357,100,100",
+    "roiFront": "417,402,30,33",
+    "roiBack": "390,364,100,100",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",
@@ -22,8 +22,8 @@
   {
     "itemName": "wq_invite_3",
     "imageName": "invite_wq_invite_3.png",
-    "roiFront": "764,397,30,33",
-    "roiBack": "728,352,100,100",
+    "roiFront": "683,416,30,33",
+    "roiBack": "661,371,100,100",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",

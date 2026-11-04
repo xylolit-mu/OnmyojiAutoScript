@@ -97,6 +97,61 @@ class DraftCooperationTests(unittest.TestCase):
         b.draft_selected = ['座敷童子', '季', '百目鬼', '白藏主', '山兔']
         return a, b
 
+    def test_partial_rosters_and_abort_are_exchanged_before_final_selection(self):
+        a, b = self.exchange_owners()
+        a.draft_selected = a.draft_selected[:2]
+        b.draft_selected = b.draft_selected[:2]
+        a._sync_draft_state(allow_partial=True)
+        b._sync_draft_state(allow_partial=True)
+        a._sync_draft_state(allow_partial=True)
+        b._sync_draft_state(allow_partial=True)
+        self.assertEqual(a.draft_peer_picks, tuple(b.draft_selected))
+        self.assertEqual(b.draft_peer_picks, tuple(a.draft_selected))
+        self.assertFalse(a._sync_draft_state())
+        a._publish_draft_abort('候选无法满足上阵硬约束')
+        b._leave_draft_team = Mock(side_effect=TaskEnd)
+        with self.assertRaises(TaskEnd):
+            b._sync_draft_state(allow_partial=True)
+        b._leave_draft_team.assert_called_once_with(
+            '协同方已结束本轮：候选无法满足上阵硬约束', success=False)
+
+    def test_captain_selects_both_offers_and_member_never_scores(self):
+        a, b = self.exchange_owners()
+        a.draft_selected = []
+        b.draft_selected = []
+        own = ['化鲸', '稻荷神御馔津', '雪女']
+        mate = ['粉婆婆', '天照', '雪御前']
+        self.assertIsNone(a._captain_selection(1, own))
+        self.assertIsNone(b._captain_selection(1, mate))
+        picked = a._captain_selection(1, own)
+        self.assertIn(picked.name, own)
+        from tasks.DraftDuel.strategy.runtime_policy import choose_pick
+        self.assertEqual(picked.name, choose_pick(a, own, team=[]).name)
+        self.assertEqual(a._draft_pick_decision['member_pick'], choose_pick(a, mate, team=[]).name)
+        # 队长已经确认选择后，队员仍可接收先前下发的本轮指令。
+        a.draft_selected.append(picked.name)
+        a._sync_draft_state(allow_partial=True)
+        with patch('tasks.DraftDuel.strategy.runtime_policy.choose_pick', side_effect=AssertionError('member scored')):
+            result = b._captain_selection(1, mate)
+        self.assertIn(result.name, mate)
+        self.assertEqual(result.name, a._draft_pick_decision['member_pick'])
+        self.assertIsNone(b._captain_selection(1, list(reversed(mate))))
+
+    def test_only_captain_plans_and_member_executes_received_lineup(self):
+        a, b = self.exchange_owners()
+        a._sync_draft_state()
+        b._sync_draft_state()
+        a._sync_draft_state()
+        b._sync_draft_state()
+        self.assertFalse(b._prepare_captain_lineup())
+        self.assertTrue(a._prepare_captain_lineup())
+        b._sync_draft_state()
+        with patch('tasks.DraftDuel.strategy.runtime_policy.plan_duel_lineup', side_effect=AssertionError('member planned')):
+            self.assertTrue(b._prepare_captain_lineup())
+            self.assertEqual(b._deployment_plan(), b.draft_planned_lineup)
+        self.assertEqual(list(b.draft_planned_lineup), a._draft_lineup_plan['member'])
+        self.assertEqual(len(set((*a.draft_planned_lineup, *b.draft_planned_lineup))), 6)
+
     def test_blank_cooperation_skips_roster_even_with_runtime_peer(self):
         a, _ = self.exchange_owners()
         a.config.draft_duel.invite_config.cooperation_script = ''
@@ -111,11 +166,22 @@ class DraftCooperationTests(unittest.TestCase):
         self.assertEqual(a.draft_peer_picks, ())
         self.assertEqual(a.draft_peer_rounds, ())
 
+    def test_solo_ignores_configured_peer_and_only_plans_own_pool(self):
+        a, b = self.exchange_owners()
+        a.config.draft_duel.draft_duel_config.match_mode = DraftMatchMode.SOLO
+        a.draft_peer_picks = tuple(b.draft_selected)
+        with patch.object(self.a, 'peer_battle_state') as read:
+            self.assertTrue(a._sync_draft_state())
+        read.assert_not_called()
+        self.assertEqual(a.draft_peer_picks, ())
+        self.assertTrue(set(a._deployment_plan()).issubset(a.draft_selected))
+
     def test_draft_session_exchanges_rosters_and_actual_rounds(self):
         a, b = self.exchange_owners()
         self.assertFalse(a._sync_draft_state())
-        self.assertTrue(b._sync_draft_state())
+        self.assertFalse(b._sync_draft_state())
         self.assertTrue(a._sync_draft_state())
+        self.assertTrue(b._sync_draft_state())
         self.assertEqual(a._draft_session, b._draft_session)
         self.assertEqual(a.draft_peer_picks, tuple(b.draft_selected))
         b.draft_deployment_rounds.append({'round': 1, 'slot': 4, 'name': '座敷童子'})
@@ -143,24 +209,24 @@ class DraftCooperationTests(unittest.TestCase):
         self.assertNotEqual(fresh._draft_session, old_session)
         self.assertFalse(hasattr(fresh, 'draft_peer_picks'))
 
-    def test_both_clients_use_captains_frozen_small_game_weights(self):
+    def test_both_clients_wait_for_captains_frozen_weights_before_matching(self):
         a, b = self.exchange_owners()
-        a._sync_draft_state()
-        b._sync_draft_state()
-        a._sync_draft_state()
+        self.assertFalse(a._sync_draft_state())
+        self.assertFalse(b._sync_draft_state())
+        self.assertTrue(a._sync_draft_state())
+        self.assertTrue(b._sync_draft_state())
+        self.assertEqual(a._draft_field_weights, b._draft_field_weights)
+        self.assertEqual(getattr(a, 'draft_small_game', 0), 0)
+        own, mate = a._deployment_plan(), b._deployment_plan()
+        with patch('tasks.DraftDuel.strategy.battle_stats._tally', side_effect=AssertionError('live weights')):
+            self.assertEqual(a._deployment_plan(), own)
+            self.assertEqual(b._deployment_plan(), mate)
         a._begin_small_game()
         b._begin_small_game()
-        with patch('tasks.DraftDuel.strategy.battle_stats._tally', return_value={'莹草': (3, 0)}):
-            self.assertFalse(a._sync_draft_state(require_small_game=True))
-            self.assertFalse(b._sync_draft_state(require_small_game=True))
-            self.assertTrue(a._sync_draft_state(require_small_game=True))
-        with patch('tasks.DraftDuel.strategy.battle_stats._tally', side_effect=AssertionError('live stats')):
-            self.assertTrue(b._sync_draft_state(require_small_game=True))
-            self.assertTrue(a._sync_draft_state(require_small_game=True))
-            self.assertEqual(a._draft_field_weights, b._draft_field_weights)
-            self.assertEqual(b._draft_field_weights['莹草'], 8.0)
-            self.assertEqual(len(a._deployment_plan()), 3)
-            self.assertEqual(len(b._deployment_plan()), 3)
+        self.assertFalse(a._sync_draft_state(require_small_game=True))
+        b._sync_draft_state(require_small_game=True)
+        self.assertTrue(a._sync_draft_state(require_small_game=True))
+        self.assertEqual(a._draft_field_weights, b._draft_field_weights)
 
     def test_previous_small_game_rounds_cannot_lock_new_small_game(self):
         a, b = self.exchange_owners()
@@ -173,7 +239,7 @@ class DraftCooperationTests(unittest.TestCase):
         self.assertFalse(a._sync_draft_state(require_small_game=True))
         self.assertEqual(a.draft_peer_rounds, ())
         b._begin_small_game()
-        self.assertFalse(b._sync_draft_state(require_small_game=True))
+        self.assertTrue(b._sync_draft_state(require_small_game=True))
         self.assertTrue(a._sync_draft_state(require_small_game=True))
         self.assertTrue(b._sync_draft_state(require_small_game=True))
         self.assertEqual(a.draft_peer_picks, tuple(b.draft_selected))

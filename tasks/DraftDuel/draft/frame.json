@@ -6,7 +6,7 @@
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",
-    "description": "五张手牌中段，从左到右绑定选人名单，按0.67倍缩放验证顶部",
+    "description": "五张手牌中段，从左到右对应选人名单；黄叉按最近框确定当前选择",
     "roiBadge": "37,634,67,60",
     "badgeSerial": 1,
     "badgeGrayscale": false,
@@ -186,9 +186,9 @@
     "badgeSerial": 3,
     "badgeGrayscale": false,
     "roiRange": [
-      "183,330,67,66",
-      "340,333,67,66",
-      "514,360,67,66",
+      "183,324,67,66",
+      "347,321,67,66",
+      "514,359,67,66",
       "690,369,67,66",
       "858,344,67,66",
       "1022,319,67,66"

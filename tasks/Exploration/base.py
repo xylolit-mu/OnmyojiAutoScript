@@ -264,9 +264,9 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
                                      pages.page_exploration, pages.page_exp_entrance):
             return
         if current_page == pages.page_exp_entrance:
-            cu, res, total = self.O_REALM_RAID_NUMBER1.ocr(self.device.image)
+            cu, res, total = self.O_REALM_RAID_NUMBER1_META.ocr_digit_counter(self.device.image)
         else:
-            cu, res, total = self.O_REALM_RAID_NUMBER.ocr(self.device.image)
+            cu, res, total = self.O_REALM_RAID_NUMBER_META.ocr_digit_counter(self.device.image)
         # 判断突破票数量
         if cu < con_scrolls.scrolls_threshold:
             return

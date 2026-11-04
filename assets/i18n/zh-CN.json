@@ -293,7 +293,7 @@
   "scheduler": "任务调度",
   "general_config": "通用设置",
   "task_sequence": "任务启用项",
-  "activity_task_sequence_help": "勾选执行，顺序：探索 → 大富翁 → 伪神 → 爬塔。",
+  "activity_task_sequence_help": "探索、大富翁、伪神至多选一，可与爬塔、首领共存；先执行所选活动，再爬塔，最后首领。",
   "enable_switch_exp_encounter": "遭遇战切换御魂",
   "exp_encounter_group_team": "遭遇战御魂预设组号,队伍号",
   "enable_switch_exp_encounter_by_name": "遭遇战按名称切换御魂",

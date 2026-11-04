@@ -53,7 +53,7 @@
     "itemName": "g_ignore",
     "imageName": "gg_g_ignore.png",
     "roiFront": "792,86,21,21",
-    "roiBack": "777,65,48,48",
+    "roiBack": "777,49,154,64",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",

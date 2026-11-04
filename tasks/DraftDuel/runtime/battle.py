@@ -1,19 +1,60 @@
 """协同对弈：战斗标志防抖与结算。"""
 import time
+
 from module.logger import logger
+from tasks.DraftDuel.config import DraftMatchMode
+from tasks.DraftDuel.strategy import battle_stats
+from tasks.Component.GeneralInvite.general_invite import CONTINUE_INVITE_RETRY_SECONDS
 from tasks.GameUi.default_pages import page_reward, random_click
 
 
 class DraftDuelBattleMixin:
     BATTLE_END_ABSENCE = 2.0
 
+    def _click_draft_settlement_continue(self):
+        """Only captain sends the next invitation; member dismisses and waits."""
+        settings = getattr(getattr(self, 'config', None), 'draft_duel', None)
+        mode = settings.draft_duel_config.match_mode if settings else None
+        if mode == DraftMatchMode.CAPTAIN and self.appear(self.I_INVITE_CONTINUE):
+            last = getattr(self, '_draft_last_invite_at', None)
+            if isinstance(last, (int, float)) and time.time() - last < CONTINUE_INVITE_RETRY_SECONDS:
+                return
+            if self.appear_then_click(self.I_INVITE_CONTINUE, interval=CONTINUE_INVITE_RETRY_SECONDS):
+                self._draft_last_invite_at = time.time()
+                self._draft_invite_retry_seconds = CONTINUE_INVITE_RETRY_SECONDS
+            return
+        self.click(random_click(ltrb=(True, False, True, False)))
+
+    def _read_statistic_result(self):
+        """Called only after statistic is recognized; ambiguous templates wait."""
+        win = bool(self.appear(self.I_FIGHT_WIN))
+        lose = bool(self.appear(self.I_FIGHT_LOSE))
+        if win == lose:
+            return None
+        result = 'win' if win else 'loss'
+        if result != getattr(self, '_draft_small_game_result', None):
+            logger.info(f'DraftDuel statistic result: {result}')
+        self._draft_small_game_result = result
+        return result
+
+    def _resolve_statistic_result(self):
+        result = getattr(self, '_draft_small_game_result', None)
+        pending = getattr(self, '_pending_battle_stats', None)
+        if result and pending and self._can_record_stats():
+            from tasks.DraftDuel.strategy import battle_stats
+            battle_stats.resolve_result(pending['event_id'], result, None)
+            self._pending_battle_stats = None
+            self._save_draft_checkpoint('settlement')
+
     def _confirm_small_game_end(self):
         if getattr(self, '_draft_end_recorded', False):
+            self._resolve_statistic_result()
             return
         self.device.click_record_clear()
         self.draft_finished_small_games = getattr(self, 'draft_finished_small_games', 0) + 1
         self._draft_round_had_battle = True
         self._record_small_game_stats()
+        self._resolve_statistic_result()
         self._draft_end_recorded = True
         self._save_draft_checkpoint('settlement')
         logger.info(f'DraftDuel small game ended: {self.draft_finished_small_games}')
@@ -55,11 +96,15 @@ class DraftDuelBattleMixin:
                         deadline = now + 120
                         self._save_draft_checkpoint('settlement')
                 if settling:
-                    pages = (self.I_DRAFT_SHARE, self.I_FIGHT_STATISTIC, self.I_FIGHT_RESULT)
-                    if (page_reward.recognizer.evaluate(self)
+                    pages = (self.I_DRAFT_SHARE, self.I_FIGHT_RESULT)
+                    if self.appear(self.I_FIGHT_STATISTIC):
+                        if self._read_statistic_result() is not None:
+                            self._confirm_small_game_end()
+                            self._click_draft_settlement_continue()
+                    elif (page_reward.recognizer.evaluate(self)
                             or any(self.appear(rule) for rule in pages)):
                         self._confirm_small_game_end()
-                        self.click(random_click(ltrb=(True, False, True, False)))
+                        self._click_draft_settlement_continue()
                     elif self.appear(self.I_WAIT_FIGHT_LOBBY):
                         self._confirm_small_game_end()
                         self._observe_duel_lobby()

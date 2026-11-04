@@ -18,6 +18,10 @@ from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
 from module.logger import logger
 
 
+FIRST_INVITE_RETRY_SECONDS = 20
+CONTINUE_INVITE_RETRY_SECONDS = 30
+
+
 class FriendList(str, Enum):
     RECENT_FRIEND = 'recent_friend'
     GUILD_FRIEND = 'guild_friend'
@@ -96,12 +100,12 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
             return False
         if is_first:
             _ = self.room_type
-            self.timer_invite = Timer(20)
+            self.timer_invite = Timer(FIRST_INVITE_RETRY_SECONDS)
             self.timer_invite.start()
             self.ensure_room_type(len(config.friend_list.split('\n')))
             self.invite_friends(config)
         else:
-            self.timer_invite = Timer(30)
+            self.timer_invite = Timer(CONTINUE_INVITE_RETRY_SECONDS)
             self.timer_invite.start()
             self.timer_emoji = Timer(20)
             self.timer_emoji.start()

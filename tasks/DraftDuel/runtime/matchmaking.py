@@ -87,9 +87,16 @@ class DraftDuelMatchmakingMixin:
                 if (not getattr(self, 'draft_planned_lineup', ())
                         and getattr(self, 'draft_small_game', 0) == 0):
                     try:
-                        self.draft_planned_lineup = tuple(self._deployment_plan())
+                        if self._selection_cooperation_enabled():
+                            if not self._prepare_captain_lineup():
+                                self._log_sync_wait('等待队长下发首次上阵名单')
+                                time.sleep(0.3)
+                                continue
+                        else:
+                            self.draft_planned_lineup = tuple(self._deployment_plan())
                     except ValueError as exc:
                         logger.warning(f'DraftDuel pre-match lineup unavailable: {exc}')
+                        self._leave_draft_team('无法规划上阵名单', success=False)
                         return False
                     logger.info(f'DraftDuel pre-match lineup: {self.draft_planned_lineup}')
                     self._save_draft_checkpoint('rank')

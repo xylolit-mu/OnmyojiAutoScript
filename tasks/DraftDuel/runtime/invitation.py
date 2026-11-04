@@ -4,6 +4,9 @@ import time
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
+from tasks.Component.GeneralInvite.general_invite import (
+    FIRST_INVITE_RETRY_SECONDS, CONTINUE_INVITE_RETRY_SECONDS,
+)
 from tasks.GameUi.assets import GameUiAssets
 from tasks.GameUi.page import page_draft_duel
 from tasks.GameUi.default_pages import page_reward, random_click
@@ -12,17 +15,21 @@ from tasks.GameUi.default_pages import page_reward, random_click
 class DraftDuelInvitationMixin:
     def _dismiss_draft_lobby_overlay(self):
         """大厅背景可透过最终番胜或奖励页，优先点掉遮罩再处理大厅。"""
+        if self.appear(self.I_FIGHT_STATISTIC):
+            if self._read_statistic_result() is None:
+                return True
+            self._resolve_statistic_result()
         if not (any(self.appear(rule) for rule in
                     (self.I_FIGHT_RESULT, self.I_DRAFT_SHARE, self.I_FIGHT_STATISTIC))
                 or page_reward.recognizer.evaluate(self)):
             return False
         logger.info('DraftDuel lobby result/reward overlay detected; dismiss before lobby actions')
-        self.click(random_click(ltrb=(True, False, True, False)))
+        self._click_draft_settlement_continue()
         return True
 
     def _clear_draft_lobby_overlays(self):
         """有界清理连续遮罩；两张新截图均无结算附页后才允许大厅动作。"""
-        deadline = time.monotonic() + 15
+        deadline = time.monotonic() + CONTINUE_INVITE_RETRY_SECONDS + 15
         clear_frames = 0
         while time.monotonic() < deadline:
             if self._dismiss_draft_lobby_overlay() is True:
@@ -34,7 +41,7 @@ class DraftDuelInvitationMixin:
             self.device.stuck_record_clear()
             time.sleep(0.3)
             self.screenshot()
-        logger.warning('DraftDuel lobby result/reward overlays did not clear within 15s')
+        logger.warning('DraftDuel lobby result/reward overlays did not clear within bounded wait')
         return False
 
     def _invite_teammate(self):
@@ -44,8 +51,14 @@ class DraftDuelInvitationMixin:
             if not self._clear_draft_lobby_overlays():
                 logger.warning(f'DraftDuel invite attempt {attempt}/3 blocked by result overlay')
                 continue
+            if (self.config.draft_duel.draft_duel_config.match_mode == DraftMatchMode.CAPTAIN
+                    and self.appear(self.I_INVITE_CONTINUE)):
+                self._click_draft_settlement_continue()
+                return True
             if self.appear(self.I_INVITE_ENSURE):
                 if self.invite_friends(self.config.draft_duel.invite_config, open_invite=False):
+                    self._draft_last_invite_at = time.time()
+                    self._draft_invite_retry_seconds = FIRST_INVITE_RETRY_SECONDS
                     return True
                 continue
             if not self.appear(self.I_EMPTY_TEAMMATE) and self.is_in_room(False):
@@ -62,6 +75,8 @@ class DraftDuelInvitationMixin:
                     continue
                 if self.appear(self.I_INVITE_ENSURE):
                     if self.invite_friends(self.config.draft_duel.invite_config, open_invite=False):
+                        self._draft_last_invite_at = time.time()
+                        self._draft_invite_retry_seconds = FIRST_INVITE_RETRY_SECONDS
                         return True
                     break
                 if not self.appear(self.I_EMPTY_TEAMMATE) and self.is_in_room(False):
@@ -114,23 +129,32 @@ class DraftDuelInvitationMixin:
             if time.monotonic() >= deadline:
                 logger.warning('DraftDuel teammate wait timed out; do not start matching')
                 return False
+            last = getattr(self, '_draft_last_invite_at', None)
+            retry = getattr(self, '_draft_invite_retry_seconds', FIRST_INVITE_RETRY_SECONDS)
+            if isinstance(last, (int, float)) and time.time() - last >= retry:
+                # Continue button is gone: retry through the original friend invitation UI.
+                self._draft_last_invite_at = time.time()
+                self._invite_teammate()
             time.sleep(0.3)
 
     def _enter_matchmaking(self) -> bool:
-        """到达大厅后按匹配模式邀请队友或直接开始匹配。"""
-        if not self._goto_draft_lobby():
-            return False
+        """队员在当前页面等邀请；队长和单人仍先进入大厅。"""
         mode = self.config.draft_duel.draft_duel_config.match_mode
         if mode == DraftMatchMode.MEMBER:
             self.prepare_battle_cooperation('DraftDuel')
             return self._wait_member_start()
+        if not self._goto_draft_lobby():
+            return False
         if mode == DraftMatchMode.CAPTAIN:
             self.prepare_battle_cooperation('DraftDuel')
             self.screenshot()
             if not self._clear_draft_lobby_overlays():
                 return False
             if self.appear(self.I_EMPTY_TEAMMATE):
-                if not self._invite_teammate():
+                last = getattr(self, '_draft_last_invite_at', None)
+                retry = getattr(self, '_draft_invite_retry_seconds', FIRST_INVITE_RETRY_SECONDS)
+                recent = isinstance(last, (int, float)) and time.time() - last < retry
+                if not recent and not self._invite_teammate():
                     return False
                 if not self._wait_for_teammate():
                     self._finish_invite_wait_timeout()
@@ -161,7 +185,7 @@ class DraftDuelInvitationMixin:
         ))
 
     def _wait_member_start(self) -> bool:
-        """在大厅接收通用邀请，入队后最多等待队长开战 600 秒。"""
+        """在当前页面接收通用邀请，入队后最多等待队长开战 600 秒。"""
         deadline = time.monotonic() + self.MEMBER_START_TIMEOUT
         waiting_seen = False
         while True:

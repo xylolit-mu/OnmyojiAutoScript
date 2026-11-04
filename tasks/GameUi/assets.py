@@ -361,7 +361,7 @@ class GameUiAssets:
 	# 鬼王页面标志 
 	I_PAGE_METADEMON_CHECK_BOSS_PAGE = RuleImage(roi_front=(1064,19,43,40), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_metademon_check_boss_page.png")
 	# 超鬼王主界面 
-	I_PAGE_METADEMON_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(464,231,39,213), roi_back=(449,220,72,244), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_metademon_md_check_main_page.png")
+	I_PAGE_METADEMON_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(907,60,76,208), roi_back=(869,14,171,288), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_metademon_md_check_main_page.png")
 
 
 	# Image Rule Assets

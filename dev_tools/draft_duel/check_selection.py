@@ -18,6 +18,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_unknown_candidates_require_two_consecutive_reads_per_slot_and_round(self):
         owner = object.__new__(ScriptTask)
+        owner._capture_selection_details = Mock(return_value=True)
         unknown = ['未知甲', '莹草', '未知乙']
         names, ready = owner._normalize_selection_candidates(1, unknown)
         self.assertEqual(names, [None, '莹草', None])
@@ -32,6 +33,7 @@ class SelectionTests(unittest.TestCase):
     def test_recheck_then_select_known_candidate_at_original_button_position(self):
         for second_read in ('未知甲', '兵俑'):
             owner = object.__new__(ScriptTask)
+            owner._capture_selection_details = Mock(return_value=True)
             owner.device = Mock()
             owner._observe_duel_lobby = Mock()
             owner._save_draft_checkpoint = Mock()
@@ -47,13 +49,18 @@ class SelectionTests(unittest.TestCase):
             clicks = []
             owner.appear_then_click = Mock(side_effect=lambda button, **kw: clicks.append((frame[0], button)) or True)
             with patch('tasks.DraftDuel.runtime.selection.time.sleep'), patch(
-                    'tasks.DraftDuel.runtime.selection.choose_pick',
-                    return_value=SimpleNamespace(name='莹草', score=40)) as choose:
+                    'tasks.DraftDuel.strategy.runtime_policy.choose_pick',
+                    return_value=SimpleNamespace(name='莹草', score=40, reasons=())) as choose:
                 self.assertTrue(owner._select_shikigami())
             self.assertEqual(clicks, [(1, owner.I_SELECT_3)])
             choose.assert_called_once_with(
-                ['兵俑', '莹草'] if second_read == '兵俑' else ['莹草'], team=owner.draft_selected)
+                owner, ['兵俑', '莹草'] if second_read == '兵俑' else ['莹草'], team=owner.draft_selected)
             self.assertEqual(owner.draft_selected, ['莹草'])
+            recorded = owner._draft_transcript[1]
+            self.assertEqual(recorded['offers'],
+                             ['兵俑' if second_read == '兵俑' else None, None, '莹草'])
+            self.assertEqual(recorded['pick_slot'], 3)
+            self.assertEqual(recorded['raw_offers'], [second_read, '未知乙', '莹草'])
 
     def test_observed_mumu1_candidate_typo_resolves_to_catalog_entry(self):
         names = [normalize_name(n) for n in ['紧那罗', '天刀姬·绯夜猎', '樱花妖']]
@@ -69,6 +76,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_fifth_name_is_recorded_when_last_click_switches_to_rank(self):
         owner = object.__new__(ScriptTask)
+        owner._capture_selection_details = Mock(return_value=True)
         owner.device = Mock()
         frame = [-1]
         states = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 'rank']
@@ -91,14 +99,15 @@ class SelectionTests(unittest.TestCase):
             setattr(owner, f'O_SHIKIGAMI_NAME_{i}', rule)
         owner.appear_then_click = Mock(return_value=True)
         with patch('tasks.DraftDuel.runtime.selection.time.sleep'), patch(
-                'tasks.DraftDuel.runtime.selection.choose_pick',
-                side_effect=[SimpleNamespace(name=n, score=40) for n in names]):
+                'tasks.DraftDuel.strategy.runtime_policy.choose_pick',
+                side_effect=[SimpleNamespace(name=n, score=40, reasons=()) for n in names]):
             self.assertTrue(owner._select_shikigami())
         self.assertEqual(owner.draft_selected, names)
         self.assertEqual(owner.appear_then_click.call_count, 5)
 
     def test_confirm_wait_and_next_round(self):
         owner = object.__new__(ScriptTask)
+        owner._capture_selection_details = Mock(return_value=True)
         owner.device = Mock()
         frame = [-1]
         states = [1, 1, 1, 1, 2, 2, 2, 'rank']
@@ -121,9 +130,9 @@ class SelectionTests(unittest.TestCase):
             setattr(owner, f'O_SHIKIGAMI_NAME_{i}', Mock(ocr=Mock(return_value=name)))
         owner.appear_then_click = Mock(return_value=True)
         with patch('tasks.DraftDuel.runtime.selection.time.sleep'), patch(
-                'tasks.DraftDuel.runtime.selection.choose_pick',
-                side_effect=[SimpleNamespace(name='莹草', score=40),
-                             SimpleNamespace(name='鬼童丸', score=40)]) as choose:
+                'tasks.DraftDuel.strategy.runtime_policy.choose_pick',
+                side_effect=[SimpleNamespace(name='莹草', score=40, reasons=()),
+                             SimpleNamespace(name='鬼童丸', score=40, reasons=())]) as choose:
             self.assertTrue(owner._select_shikigami())
         self.assertEqual(owner.draft_selected, ['莹草', '鬼童丸'])
         self.assertEqual(owner.appear_then_click.call_count, 2)

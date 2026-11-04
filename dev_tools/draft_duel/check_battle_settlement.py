@@ -73,13 +73,55 @@ class BattleSettlementTests(unittest.TestCase):
     def test_marker_must_appear_and_disappear_then_click_three_pages(self):
         a, battle = ScriptTask, GeneralBattleAssets.I_BATTLE_INFO
         owner, phase = self.play([[], [battle], [], [battle], [], [],
-                                  [a.I_DRAFT_SHARE], [a.I_FIGHT_STATISTIC],
+                                  [a.I_DRAFT_SHARE], [a.I_FIGHT_STATISTIC, a.I_FIGHT_WIN],
                                   [a.I_FIGHT_RESULT], [a.I_POST_DRAFT_RANK]])
         self.assertEqual(phase, 'rank')
         self.assertEqual(owner.draft_finished_small_games, 1)
         self.assertEqual(owner.click.call_count, 3)
         self.assertEqual(owner.screenshot.call_count, 10)
         owner._observe_duel_lobby.assert_not_called()
+
+    def test_statistic_waits_for_unambiguous_outcome_before_click(self):
+        a, battle = ScriptTask, GeneralBattleAssets.I_BATTLE_INFO
+        owner, phase = self.play([[battle], [], [],
+                                  [a.I_FIGHT_STATISTIC],
+                                  [a.I_FIGHT_STATISTIC, a.I_FIGHT_WIN, a.I_FIGHT_LOSE],
+                                  [a.I_FIGHT_STATISTIC, a.I_FIGHT_LOSE],
+                                  [a.I_POST_DRAFT_RANK]])
+        self.assertEqual(phase, 'rank')
+        self.assertEqual(owner.click.call_count, 1)
+        self.assertEqual(owner._draft_small_game_result, 'loss')
+        self.assertEqual(owner.draft_finished_small_games, 1)
+
+    def test_result_recognition_does_not_capture_statistic(self):
+        a, battle = ScriptTask, GeneralBattleAssets.I_BATTLE_INFO
+        with patch.object(ScriptTask, '_capture_fight_statistic', create=True) as capture:
+            owner, phase = self.play([[battle], [], [], [a.I_FIGHT_STATISTIC],
+                                      [a.I_FIGHT_STATISTIC, a.I_FIGHT_WIN],
+                                      [a.I_POST_DRAFT_RANK]])
+        capture.assert_not_called()
+        self.assertEqual(owner._draft_small_game_result, 'win')
+        self.assertEqual(owner.click.call_count, 1)
+        self.assertEqual(phase, 'rank')
+
+    def test_outcome_template_without_statistic_does_not_set_result(self):
+        a, battle = ScriptTask, GeneralBattleAssets.I_BATTLE_INFO
+        owner, phase = self.play([[battle], [], [], [a.I_FIGHT_WIN], [a.I_POST_DRAFT_RANK]])
+        self.assertEqual(phase, 'rank')
+        owner.click.assert_not_called()
+        self.assertFalse(hasattr(owner, '_draft_small_game_result'))
+
+    def test_statistic_result_resolves_pending_once_without_victory_ocr(self):
+        owner = object.__new__(ScriptTask)
+        owner._draft_small_game_result = 'loss'
+        owner._pending_battle_stats = dict(event_id='game1', before=2)
+        owner._can_record_stats = Mock(return_value=True)
+        owner._save_draft_checkpoint = Mock()
+        with patch('tasks.DraftDuel.strategy.battle_stats.resolve_result') as resolve:
+            owner._resolve_statistic_result()
+            owner._resolve_statistic_result()
+        resolve.assert_called_once_with('game1', 'loss', None)
+        self.assertIsNone(owner._pending_battle_stats)
 
     def test_unknown_page_does_not_trigger_random_click(self):
         owner, phase = self.play([[GeneralBattleAssets.I_BATTLE_INFO], [], [], [],

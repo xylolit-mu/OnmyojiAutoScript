@@ -31,6 +31,7 @@ from tasks.DailyTrifles.assets import DailyTriflesAssets
 from tasks.GlobalGame.assets import GlobalGameAssets
 from tasks.GameUi.assets import GameUiAssets
 from tasks.GameUi.activity_handlers import handle_activity_close
+from tasks.GameUi.draft_duel_navigation import handle_draft_duel_exit
 from tasks.GameUi.matcher import all_of, any_of, not_
 from tasks.GameUi.page_definition import Page
 from tasks.KekkaiUtilize.assets import KekkaiUtilizeAssets
@@ -404,7 +405,7 @@ page_hunt_kirin.connect(page_town, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_
 page_town.connect(page_hunt_kirin, GameUiAssets.I_TOWN_GOTO_HUNT, key="page_town->page_hunt_kirin")
 
 page_draft_duel = Page(GameUiAssets.I_DRAFT_DUEL, category="global")
-page_draft_duel.connect(page_town, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_draft_duel->page_town")
+page_draft_duel.connect(page_town, handle_draft_duel_exit, key="page_draft_duel->page_town")
 page_town.connect(page_draft_duel, GameUiAssets.I_TOWN_GOTO_DRAFT_DUEL, key="page_town->page_draft_duel")
 
 page_hyakkiyakou = Page(GameUiAssets.I_CHECK_KYAKKIYAKOU, category="global")

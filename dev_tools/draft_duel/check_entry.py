@@ -64,11 +64,12 @@ class DraftDuelMigrationTests(unittest.TestCase):
         self.assertTrue(GameUiAssets.I_DRAFT_DUEL.file.endswith('page_checks_draft_duel.png'))
 
     def test_original_navigation_edges_and_yellow_back(self):
+        from tasks.GameUi.draft_duel_navigation import handle_draft_duel_exit
         self.assertTrue(any(t.destination is page_town for t in page_main.transitions))
         into = next(t for t in page_town.transitions if t.destination is page_draft_duel)
         self.assertIs(into.action, GameUiAssets.I_TOWN_GOTO_DRAFT_DUEL)
         back = next(t for t in page_draft_duel.transitions if t.destination is page_town)
-        self.assertIs(back.action, GlobalGameAssets.I_UI_BACK_YELLOW)
+        self.assertIs(back.action, handle_draft_duel_exit)
 
     def test_task_entry_delegates_to_public_navigation(self):
         owner = Mock()

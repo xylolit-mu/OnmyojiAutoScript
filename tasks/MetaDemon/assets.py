@@ -1,5 +1,7 @@
 from module.atom.image import RuleImage
+from module.atom.frame import RuleFrame, Image, Ocr, Click
 from module.atom.click import RuleClick
+from module.atom.scatter import RuleScatter
 from module.atom.long_click import RuleLongClick
 from module.atom.swipe import RuleSwipe
 from module.atom.ocr import RuleOcr
@@ -18,72 +20,79 @@ class MetaDemonAssets:
 
 	# Image Rule Assets
 	# 挑战鬼王 
-	I_MD_FIRE = RuleImage(profile="High", roi_front=(1132,577,99,53), roi_back=(1104,546,154,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_fire.png")
+	I_MD_FIRE = RuleImage(roi_front=(1132,577,99,53), roi_back=(1104,546,154,147), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_fire.png")
 	# 式神录 
-	I_MD_SHIKIGAMI = RuleImage(profile="High", roi_front=(1039,628,40,38), roi_back=(1018,617,81,77), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_shikigami.png")
+	I_MD_SHIKIGAMI = RuleImage(roi_front=(1039,628,40,38), roi_back=(1018,617,81,77), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_shikigami.png")
 	# 鬼王结算中 
-	I_MD_SETTLING = RuleImage(profile="High", roi_front=(723,441,82,32), roi_back=(714,431,100,51), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_settling.png")
-	# 鬼王合成 
-	I_MD_SYNTHESIZE = RuleImage(profile="High", roi_front=(0,0,100,100), roi_back=(0,0,100,100), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesize.png")
-	# 鬼王页面标志 
-	# 超鬼王主界面 
+	I_MD_SETTLING = RuleImage(roi_front=(723,441,82,32), roi_back=(714,431,100,51), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_settling.png")
 	# 领取昨日奖励 
-	I_MD_GET_YESTERDAY_REWARD = RuleImage(profile="High", roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
+	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
 	# 一星鬼王召唤票 
-	I_MD_ONE_STAR = RuleImage(profile="High", roi_front=(361,312,68,69), roi_back=(261,299,754,133), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_one_star.png")
+	I_MD_ONE_STAR = RuleImage(roi_front=(361,312,68,69), roi_back=(261,299,754,133), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_one_star.png")
 	# 二星鬼王召唤票 
-	I_MD_TWO_STARS = RuleImage(profile="High", roi_front=(460,314,66,67), roi_back=(266,303,751,134), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_two_stars.png")
+	I_MD_TWO_STARS = RuleImage(roi_front=(460,314,66,67), roi_back=(266,303,751,134), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_two_stars.png")
 	# 三星鬼王召唤票 
-	I_MD_THREE_STARS = RuleImage(profile="High", roi_front=(557,315,67,67), roi_back=(266,302,749,129), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_three_stars.png")
+	I_MD_THREE_STARS = RuleImage(roi_front=(557,315,67,67), roi_back=(266,302,749,129), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_three_stars.png")
 	# 四星鬼王召唤票 
-	I_MD_FOUR_STARS = RuleImage(profile="High", roi_front=(656,314,71,68), roi_back=(261,299,754,132), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_four_stars.png")
+	I_MD_FOUR_STARS = RuleImage(roi_front=(656,314,71,68), roi_back=(261,299,754,132), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_four_stars.png")
 	# 五星鬼王召唤票 
-	I_MD_FIVE_STARS = RuleImage(profile="High", roi_front=(754,313,71,69), roi_back=(267,303,749,129), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_five_stars.png")
+	I_MD_FIVE_STARS = RuleImage(roi_front=(754,313,71,69), roi_back=(267,303,749,129), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_five_stars.png")
 	# 六星鬼王召唤票 
-	I_MD_SIX_STARS = RuleImage(profile="High", roi_front=(854,314,66,69), roi_back=(265,299,754,133), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_six_stars.png")
+	I_MD_SIX_STARS = RuleImage(roi_front=(856,316,66,69), roi_back=(265,299,754,133), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_six_stars.png")
 	# 立即召唤鬼王 
-	I_MD_GET_BOSS = RuleImage(profile="High", roi_front=(559,446,161,49), roi_back=(514,421,242,101), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_get_boss.png")
+	I_MD_GET_BOSS = RuleImage(roi_front=(576,454,135,34), roi_back=(514,421,242,101), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_get_boss.png")
 	# 检查是否选中对应鬼王票 
-	I_MD_CHECK_SELECTED = RuleImage(profile="High", roi_front=(666,285,50,22), roi_back=(264,275,751,39), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_selected.png")
+	I_MD_CHECK_SELECTED = RuleImage(roi_front=(666,285,50,22), roi_back=(264,275,751,39), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_check_selected.png")
 	# 关闭超鬼王内弹窗 
-	I_MD_CLOSE_POPUP = RuleImage(profile="High", roi_front=(1003,160,41,37), roi_back=(895,39,345,209), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_close_popup.png")
+	I_MD_CLOSE_POPUP = RuleImage(roi_front=(1003,160,41,37), roi_back=(895,39,345,209), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_close_popup.png")
 	# 喝茶 
-	I_MD_DRINK_TEA = RuleImage(profile="High", roi_front=(555,467,168,58), roi_back=(527,455,235,80), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_drink_tea.png")
-	# 活动列表页超鬼王活动标志 
+	I_MD_DRINK_TEA = RuleImage(roi_front=(555,467,168,58), roi_back=(527,455,235,80), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_drink_tea.png")
 	# 禁用强力追击 
-	I_MD_DISABLE_POWERFUL_FIRE = RuleImage(profile="High", roi_front=(1113,513,24,24), roi_back=(1108,508,36,36), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_disable_powerful_fire.png")
+	I_MD_DISABLE_POWERFUL_FIRE = RuleImage(roi_front=(1113,513,24,24), roi_back=(1108,508,36,36), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_disable_powerful_fire.png")
 	# 开启强力追击 
-	I_MD_ENABLE_POWERFUL_FIRE = RuleImage(profile="High", roi_front=(1114,513,25,26), roi_back=(1111,507,31,34), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_enable_powerful_fire.png")
+	I_MD_ENABLE_POWERFUL_FIRE = RuleImage(roi_front=(1114,513,25,26), roi_back=(1111,507,31,34), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_enable_powerful_fire.png")
 	# 切换鬼王门票 
-	I_MD_SWITCH_TICKET = RuleImage(profile="High", roi_front=(1114,496,144,38), roi_back=(1112,480,148,68), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_switch_ticket.png")
+	I_MD_SWITCH_TICKET = RuleImage(roi_front=(1114,496,144,38), roi_back=(1112,480,148,68), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_switch_ticket.png")
 	# 召唤鬼王 
-	I_MD_SUMMON_BOSS = RuleImage(profile="High", roi_front=(1142,581,76,83), roi_back=(1105,546,157,154), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_summon_boss.png")
+	I_MD_SUMMON_BOSS = RuleImage(roi_front=(1142,581,76,83), roi_back=(1105,546,157,154), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_summon_boss.png")
 	# 合成一星 
-	I_MD_SYNTHESIS_ONE_STAR = RuleImage(profile="High", roi_front=(228,178,60,65), roi_back=(209,150,100,501), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_one_star.png")
+	I_MD_SYNTHESIS_ONE_STAR = RuleImage(roi_front=(228,175,60,65), roi_back=(209,150,100,501), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_one_star.png")
 	# 合成二星 
-	I_MD_SYNTHESIS_TWO_STAR = RuleImage(profile="High", roi_front=(226,276,61,66), roi_back=(207,152,99,500), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_two_star.png")
+	I_MD_SYNTHESIS_TWO_STAR = RuleImage(roi_front=(226,274,61,66), roi_back=(207,152,99,500), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_two_star.png")
 	# 合成三星 
-	I_MD_SYNTHESIS_THREE_STAR = RuleImage(profile="High", roi_front=(226,377,61,66), roi_back=(208,152,97,498), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_three_star.png")
+	I_MD_SYNTHESIS_THREE_STAR = RuleImage(roi_front=(225,375,61,66), roi_back=(208,152,97,498), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_three_star.png")
 	# 合成四星 
-	I_MD_SYNTHESIS_FOUR_STAR = RuleImage(profile="High", roi_front=(226,477,61,68), roi_back=(208,148,96,500), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_four_star.png")
+	I_MD_SYNTHESIS_FOUR_STAR = RuleImage(roi_front=(227,473,61,68), roi_back=(208,148,96,500), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_four_star.png")
 	# 合成五星 
-	I_MD_SYNTHESIS_FIVE_STAR = RuleImage(profile="High", roi_front=(225,570,63,71), roi_back=(206,149,103,503), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_five_star.png")
+	I_MD_SYNTHESIS_FIVE_STAR = RuleImage(roi_front=(225,570,63,71), roi_back=(206,149,103,503), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_five_star.png")
 	# 开始合成 
-	I_MD_START_SYNTHESIS = RuleImage(profile="High", roi_front=(906,562,108,39), roi_back=(884,548,155,62), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_start_synthesis.png")
+	I_MD_START_SYNTHESIS = RuleImage(roi_front=(906,562,108,39), roi_back=(884,548,155,62), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_start_synthesis.png")
 	# 合成花钱标志 
-	I_MD_SYNTHESIS_NEED_MONEY = RuleImage(profile="High", roi_front=(1055,545,68,54), roi_back=(1004,521,178,109), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_need_money.png")
+	I_MD_SYNTHESIS_NEED_MONEY = RuleImage(roi_front=(1055,545,68,54), roi_back=(1004,521,178,109), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_need_money.png")
 	# 邀请好友 
-	I_MD_INVITE_FRIENDS = RuleImage(profile="High", roi_front=(713,545,125,60), roi_back=(693,529,161,95), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_invite_friends.png")
+	I_MD_INVITE_FRIENDS = RuleImage(roi_front=(713,545,125,60), roi_back=(693,529,161,95), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_invite_friends.png")
 	# 鬼王集结 
-	I_MD_INVITE = RuleImage(profile="High", roi_front=(252,162,40,39), roi_back=(239,143,70,74), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_invite.png")
+	I_MD_INVITE = RuleImage(roi_front=(252,162,40,39), roi_back=(239,143,70,74), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_invite.png")
 	# 合成标志 
-	I_MD_SYNTHESIS = RuleImage(profile="High", roi_front=(1200,224,40,41), roi_back=(1172,199,100,100), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis.png")
+	I_MD_SYNTHESIS = RuleImage(roi_front=(1200,224,40,41), roi_back=(1172,199,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis.png")
 	# 合成鬼王空位 
-	I_MD_SYNTHESIS_EMPTY = RuleImage(profile="High", roi_front=(800,158,72,66), roi_back=(622,144,420,407), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesis_empty.png")
+	I_MD_SYNTHESIS_EMPTY = RuleImage(roi_front=(800,158,72,66), roi_back=(622,144,420,407), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_synthesis_empty.png")
 	# 好友选中标志 
-	I_MD_FRIEND_SELECTED = RuleImage(profile="High", roi_front=(600,178,32,38), roi_back=(351,174,578,357), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_friend_selected.png")
+	I_MD_FRIEND_SELECTED = RuleImage(roi_front=(600,178,32,38), roi_back=(351,174,578,357), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_friend_selected.png")
 	# 无鬼王门票标志 
-	I_MD_TICKET_EMPTY = RuleImage(profile="High", roi_front=(591,305,100,100), roi_back=(447,295,368,154), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_ticket_empty.png")
+	I_MD_TICKET_EMPTY = RuleImage(roi_front=(591,305,100,100), roi_back=(447,295,368,154), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_ticket_empty.png")
+	# 快速召唤序列一星
+	I_SUMMON_QUICK_ONE_STAR = RuleImage(roi_front=(1061,526,53,32), roi_back=(1028,465,117,97), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_one_star.png")
+	# 快速召唤序列二星
+	I_SUMMON_QUICK_TWO_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_two_star.png")
+	# 快速召唤序列三星
+	I_SUMMON_QUICK_THREE_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_three_star.png")
+	# 快速召唤序列四星
+	I_SUMMON_QUICK_FOUR_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_four_star.png")
+	# 快速召唤序列五星
+	I_SUMMON_QUICK_FIVE_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_five_star.png")
+	# 快速召唤序列六星
+	I_SUMMON_QUICK_SIX_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_six_star.png")
 
 
 	# Ocr Rule Assets
@@ -91,6 +100,8 @@ class MetaDemonAssets:
 	O_MD_FATIGUE = RuleOcr(roi=(1109,22,114,34), area=(1106,17,124,41), mode="DigitCounter", method="Default", keyword="", name="md_fatigue")
 	# 好友列表 
 	O_MD_FRIENDS = RuleOcr(roi=(435,179,486,351), area=(435,178,489,352), mode="Full", method="Default", keyword="", name="md_friends")
+	# 合成目标星级
+	O_SYNTHESIS_LEVEL = RuleOcr(roi=(747,424,181,34), area=(747,424,181,34), mode="Single", method="Default", keyword="", name="synthesis_level")
 
 
 	# Swipe Rule Assets

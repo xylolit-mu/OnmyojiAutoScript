@@ -64,7 +64,6 @@ class GeneralConfig(ConfigBase):
     task_sequence: list[ActivityTask] = Field(
         default=[
             ActivityTask.RICH_MAN,
-            ActivityTask.FAKE_GOD,
             ActivityTask.CLIMB,
             ActivityTask.BOSS,
         ],
@@ -156,16 +155,18 @@ class GeneralConfig(ConfigBase):
             for item in self.task_sequence
         ]
         return [
-            name for name in selected if self.activity_enabled(name)
+            name for name in ACTIVITY_EXECUTION_ORDER if name in selected and self.activity_enabled(name)
         ]
 
     @property
     def climb_sequence_v(self) -> list[str]:
-        """按保存顺序执行已启用分支，并跳过次数为零的项。"""
+        """困难、简单、体力、百体固定优先级，跳过次数为零的项。"""
         actions = {'体力': 'ap', '简单': 'pass_easy', '困难': 'pass_hard',
                    '百体': 'ap100'}
         result = []
-        for item in self.climb_task_sequence:
+        for item in (ClimbTask.HARD, ClimbTask.EASY, ClimbTask.AP, ClimbTask.AP100):
+            if item not in self.climb_task_sequence:
+                continue
             name = actions[item.value if isinstance(item, ClimbTask) else item]
             limit = (self.pass_limit_for(name[5:]) if name.startswith('pass_')
                      else self.limit_for(name))
@@ -249,7 +250,10 @@ class GeneralConfig(ConfigBase):
                 )
             if name not in selected:
                 selected.append(name)
-        return selected
+        # 旧配置可能同时启用互斥活动，按固定优先级保留一个。
+        exclusive = next((name for name in ACTIVITY_EXECUTION_ORDER[:3] if name in selected), None)
+        return [name for name in ACTIVITY_EXECUTION_ORDER
+                if name in selected and (name not in ACTIVITY_EXECUTION_ORDER[:3] or name == exclusive)]
 
     @validator('limit_time', pre=True, always=True)
     def parse_limit_time(cls, value):

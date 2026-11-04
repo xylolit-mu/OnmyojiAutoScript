@@ -18,7 +18,8 @@ class VictoryStatsChecks(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.owner = object.__new__(ScriptTask)
-        self.owner.config = SimpleNamespace(config_name='MUMU')
+        self.owner.config = SimpleNamespace(config_name='MUMU', draft_duel=SimpleNamespace(
+            draft_duel_config=SimpleNamespace(match_mode='队长')))
         self.owner.draft_selected = ['莹草', '鬼童丸', '茨木童子', '椒图', '辉夜姬']
         self.owner.draft_fielded = ('莹草', '鬼童丸', '辉夜姬')
         self.owner.draft_small_game = 1

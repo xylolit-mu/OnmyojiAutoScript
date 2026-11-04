@@ -16,5 +16,14 @@
     "method": "Default",
     "keyword": "",
     "description": "好友列表"
+  },
+  {
+    "itemName": "synthesis_level",
+    "roiFront": "747,424,181,34",
+    "roiBack": "747,424,181,34",
+    "mode": "Single",
+    "method": "Default",
+    "keyword": "",
+    "description": "合成目标星级"
   }
 ]

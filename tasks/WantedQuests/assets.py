@@ -21,11 +21,11 @@ class WantedQuestsAssets:
 
 	# Image Rule Assets
 	# description
-	I_WQ_INVITE_1 = RuleImage(roi_front=(157,401,30,33), roi_back=(124,354,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_invite_1.png")
+	I_WQ_INVITE_1 = RuleImage(roi_front=(122,400,30,33), roi_back=(106,354,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_invite_1.png")
 	# description
-	I_WQ_INVITE_2 = RuleImage(roi_front=(480,399,30,33), roi_back=(448,357,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_invite_2.png")
+	I_WQ_INVITE_2 = RuleImage(roi_front=(417,402,30,33), roi_back=(390,364,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_invite_2.png")
 	# description
-	I_WQ_INVITE_3 = RuleImage(roi_front=(764,397,30,33), roi_back=(728,352,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_invite_3.png")
+	I_WQ_INVITE_3 = RuleImage(roi_front=(683,416,30,33), roi_back=(661,371,100,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_invite_3.png")
 	# description
 	I_WQ_FRIEND_1 = RuleImage(roi_front=(240,185,180,80), roi_back=(240,185,180,80), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/invite/invite_wq_friend_1.png")
 	# description
@@ -104,9 +104,9 @@ class WantedQuestsAssets:
 	# 勾号
 	I_WQ_DONE = RuleImage(roi_front=(248,183,37,39), roi_back=(25,147,652,461), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/wq/wq_wq_done.png")
 	# 一键追踪
-	I_TRACE_ENABLE = RuleImage(roi_front=(1141,597,84,88), roi_back=(1136,526,128,164), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/wq/wq_trace_enable.png")
+	I_TRACE_ENABLE = RuleImage(roi_front=(1141,597,84,88), roi_back=(1126,526,138,184), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/wq/wq_trace_enable.png")
 	# 取消追踪
-	I_TRACE_DISABLE = RuleImage(roi_front=(1141,597,84,88), roi_back=(1123,526,130,158), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/wq/wq_trace_disable.png")
+	I_TRACE_DISABLE = RuleImage(roi_front=(1141,597,84,88), roi_back=(1127,526,126,193), threshold=0.8, method="Template matching", profile="High", file="./tasks/WantedQuests/wq/wq_trace_disable.png")
 	# 奖励宝箱
 	I_WQ_BOX = RuleImage(roi_front=(48,187,43,38), roi_back=(0,72,118,552), threshold=0.7, method="Template matching", profile="High", file="./tasks/WantedQuests/wq/wq_wq_box.png")
 	# description

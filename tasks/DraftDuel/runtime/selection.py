@@ -2,11 +2,54 @@
 
 import re
 import time
+from pathlib import Path
 from module.logger import logger
-from tasks.DraftDuel.strategy import choose_pick, normalize_name
+from tasks.DraftDuel.strategy import normalize_name
+from tasks.DraftDuel.config import DraftMatchMode
 
 
 class DraftDuelSelectionMixin:
+    SHIKIGAMI_DETAILS_DIR = Path(__file__).resolve().parents[1] / 'fight_result'
+
+    def _capture_selection_details(self, number) -> bool:
+        """每次选人展开所有详情，图标消失后保存一张；不关闭详情。"""
+        captured = getattr(self, '_draft_detail_capture_rounds', None)
+        if captured is None:
+            captured = self._draft_detail_capture_rounds = set()
+        if number in captured:
+            return True
+        deadline = time.monotonic() + 10
+        while True:
+            self.device.stuck_record_clear()
+            self.screenshot()
+            # 阶段或选人次数变化时，不能把下一阶段的画面当作本次详情。
+            if (not self._is_draft_selection_page() or
+                    self._parse_select_number(self.O_SELECT_NUMBER.ocr(self.device.image)) != number):
+                return False
+            if not self.appear(self.I_SHIKIGAMI_DETAILS):
+                instance = re.sub(r'[^\w-]', '_', str(getattr(self.config, 'config_name', 'draft')))
+                folder = self.SHIKIGAMI_DETAILS_DIR
+                try:
+                    folder.mkdir(parents=True, exist_ok=True)
+                    path = folder / f'{instance}_{time.time_ns()}_pick{number}_details.png'
+                    self.device.image_save(str(path))
+                except OSError as exc:
+                    logger.warning(f'DraftDuel cannot save selection details: {exc}')
+                    return False
+                captured.add(number)
+                logger.info(f'DraftDuel pick {number} details screenshot saved: {path}')
+                return True
+            if time.monotonic() >= deadline:
+                logger.warning(f'DraftDuel pick {number} details icons remain after 10s')
+                return False
+            self.appear_then_click(self.I_SHIKIGAMI_DETAILS, interval=0.3)
+            time.sleep(0.3)
+
+    def _selection_cooperation_enabled(self):
+        settings = getattr(getattr(self, 'config', None), 'draft_duel', None)
+        return bool(settings and settings.draft_duel_config.match_mode != DraftMatchMode.SOLO and
+                    settings.invite_config.cooperation_script.strip())
+
     @staticmethod
     def _parse_select_number(text):
         text = re.sub(r'\s+', '', text or '')
@@ -48,6 +91,13 @@ class DraftDuelSelectionMixin:
             self.device.stuck_record_clear()
             self.screenshot()
             self._observe_duel_lobby()
+            cooperating = self._selection_cooperation_enabled()
+            if cooperating:
+                self._sync_draft_state(allow_partial=True)
+                if (self.config.draft_duel.draft_duel_config.match_mode == DraftMatchMode.MEMBER and
+                        self.appear(self.I_LEADER_EXIT)):
+                    self._leave_draft_team('队长已离队', success=False)
+                    return False
             self._save_draft_checkpoint('select')
             if self._is_draft_rank_page():
                 # 最后一选可能直接切页，来不及在选人页观察两帧空位消失。
@@ -109,6 +159,9 @@ class DraftDuelSelectionMixin:
                 self._log_selection_wait(f'第{number}名空位 select_none_{number} 未识别')
                 time.sleep(0.3)
                 continue
+            if not self._capture_selection_details(number):
+                time.sleep(0.3)
+                continue
             raw_names = [getattr(self, f'O_SHIKIGAMI_NAME_{i}').ocr(self.device.image) for i in (1, 2, 3)]
             names, ready = self._normalize_selection_candidates(number, raw_names)
             if not ready or not any(names):
@@ -120,17 +173,37 @@ class DraftDuelSelectionMixin:
                 logger.info(f'DraftDuel exclude twice-unrecognized candidates: '
                             f'OCR={raw_names!r}, normalized={names!r}')
             try:
-                pick = choose_pick([name for name in names if name], team=self.draft_selected)
+                if cooperating:
+                    pick = self._captain_selection(number, names)
+                    if pick is None:
+                        self._log_selection_wait('等待双方本轮候选及队长选卡指令')
+                        time.sleep(0.3)
+                        continue
+                else:
+                    from tasks.DraftDuel.strategy.runtime_policy import choose_pick as runtime_pick
+                    pick = runtime_pick(self, [name for name in names if name], team=self.draft_selected)
             except ValueError as exc:
                 logger.warning(f'DraftDuel candidates cannot be selected: {exc}')
                 time.sleep(0.3)
                 continue
             button = getattr(self, f'I_SELECT_{names.index(pick.name) + 1}')
             logger.info(f'DraftDuel pick {number}: {names} -> {pick.name}, score={pick.score}')
+            logger.info(f'DraftDuel pick reasons: {"; ".join(pick.reasons)}')
             if self.appear_then_click(button, interval=1):
                 self._draft_selection_wait_reason = None
                 pending = (number, pick.name, button)
                 self._draft_selection_pending = (number, pick.name, names.index(pick.name) + 1)
+                # 记下这一轮的三选一，供真实对局训练使用（重试会覆盖同一轮，不会重复）
+                if not hasattr(self, '_draft_transcript'):
+                    self._draft_transcript = {}
+                self._draft_transcript[number] = {
+                    'round': number,
+                    'offers': list(names),
+                    'raw_offers': list(raw_names),
+                    'pick': pick.name,
+                    'pick_slot': names.index(pick.name) + 1,
+                    'team': list(self.draft_selected),
+                }
                 self._save_draft_checkpoint('select')
                 absent_frames = 0
                 last_click = time.monotonic()

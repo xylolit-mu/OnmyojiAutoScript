@@ -6,15 +6,17 @@ from module.logger import logger
 from tasks.GameUi.assets import GameUiAssets
 from tasks.GameUi.page import page_town
 from tasks.GlobalGame.assets import GlobalGameAssets
+from tasks.GameUi.draft_duel_navigation import handle_draft_duel_exit
 
 
 class DraftDuelCleanupMixin:
     def _finish_match_timeout(self):
         self._leave_draft_team('三次匹配超时')
 
-    def _leave_draft_team(self, reason: str):
+    def _leave_draft_team(self, reason: str, *, success=True):
         """明确选择离队，确认返回町中后完成任务。"""
         logger.info(f'DraftDuel {reason}，离队返回町中')
+        self._publish_draft_abort(reason)
         self._finalize_round_stats(completed=False, reason=reason)
         deadline = time.monotonic() + 30
         while True:
@@ -24,11 +26,9 @@ class DraftDuelCleanupMixin:
                 break
             if time.monotonic() >= deadline:
                 raise TaskEnd(f'协同对弈{reason}，离队返回町中未确认')
-            if not self.appear_then_click(self.I_EXIT, interval=1):
-                if not self.appear(self.I_EXIT_MOMENT) and not self.appear(self.I_EXIT_CANCEL):
-                    self.appear_then_click(GlobalGameAssets.I_UI_BACK_YELLOW, interval=1)
+            handle_draft_duel_exit(self)
             time.sleep(0.3)
-        self.set_next_run(task='DraftDuel', finish=True, success=True)
+        self.set_next_run(task='DraftDuel', finish=success, success=success)
         self._clear_draft_checkpoint()
         self.config.notifier.push(title='协同对弈', content=f'{reason}，已离队返回町中并结束任务。')
         raise TaskEnd(f'协同对弈{reason}，已离队返回町中')

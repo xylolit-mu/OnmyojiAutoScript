@@ -2,51 +2,51 @@
   {
     "itemName": "check_main_17",
     "imageName": "main17_check_main_17.png",
-    "profile": "High",
     "roiFront": "836,148,71,48",
     "roiBack": "707,110,254,113",
     "method": "Template matching",
     "threshold": 0.75,
+    "profile": "High",
     "description": "庭院"
   },
   {
     "itemName": "main_goto_exploration_17",
     "imageName": "main17_main_goto_exploration_17.png",
-    "profile": "High",
     "roiFront": "729,231,28,46",
     "roiBack": "672,162,190,180",
     "method": "Template matching",
     "threshold": 0.55,
+    "profile": "High",
     "description": "探索"
   },
   {
     "itemName": "main_goto_summon_17",
     "imageName": "main17_main_goto_summon_17.png",
-    "profile": "High",
     "roiFront": "983,218,23,40",
     "roiBack": "908,117,200,180",
     "method": "Template matching",
     "threshold": 0.55,
+    "profile": "High",
     "description": "召唤屋"
   },
   {
     "itemName": "main_goto_town_17",
     "imageName": "main17_main_goto_town_17.png",
-    "profile": "High",
-    "roiFront": "1011,339,23,43",
+    "roiFront": "1013,339,21,49",
     "roiBack": "941,262,200,190",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "町中"
   },
   {
     "itemName": "pet_house_17",
     "imageName": "main17_pet_house_17.png",
-    "profile": "High",
     "roiFront": "1246,414,28,39",
     "roiBack": "1093,357,187,164",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "宠物屋"
   }
 ]

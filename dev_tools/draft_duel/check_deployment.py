@@ -10,6 +10,31 @@ from tasks.DraftDuel.runtime.portrait_match import identify_portrait, locate_por
 
 
 class DeploymentTests(unittest.TestCase):
+    def test_confirmed_different_card_updates_roster_and_keeps_next_planned_card(self):
+        for mode, side, slots in [('队长', 'captain', (0, 1, 2)),
+                                  ('队员', 'member', (3, 4, 5))]:
+            with self.subTest(mode=mode):
+                owner = self.owner(mode)
+                owner.draft_selected = list('abcde')
+                owner._draft_lineup_plan = {side: list('abc')}
+                owner.draft_deployment_rounds = []
+                owner.draft_fielded = ()
+                owner._record_deployed_portrait(dict(index=0, name='a'), slots, 'a')
+                owner._record_deployed_portrait(dict(index=1, name='b'), slots, 'd')
+                self.assertEqual(owner.draft_fielded, ('a', 'd'))
+                self.assertEqual(owner._deployment_plan(), ('a', 'd', 'c'))
+                self.assertEqual(owner._draft_lineup_plan[side], list('abc'))
+                owner._record_deployed_portrait(dict(index=2, name='c'), slots, 'c')
+                self.assertEqual(owner.draft_fielded, ('a', 'd', 'c'))
+
+    def test_actual_card_already_planned_later_does_not_create_duplicate_or_end_early(self):
+        owner = self.owner('队长')
+        owner.draft_selected = list('abcde')
+        owner._draft_lineup_plan = dict(captain=list('abc'))
+        owner.draft_deployment_rounds = [dict(round=1, slot=1, name='c')]
+        owner.draft_fielded = ('c',)
+        self.assertEqual(owner._deployment_plan(), ('c', 'b', 'a'))
+
     def capture_owner(self):
         owner = self.owner('队长')
         owner.draft_selected = list('abcde')
@@ -241,7 +266,8 @@ class DeploymentTests(unittest.TestCase):
         self.assertNotEqual(captain._battle_info_rule().file, member._battle_info_rule().file)
 
     def deployment(self, fail_first=False, ready=True, reset_clock=True, expected=True,
-                   missing_top=False, recover_after=None, defer_first=False):
+                   missing_top=False, recover_after=None, defer_first=False, recover_on_redrag=False,
+                   prefilled=False):
         owner = self.owner('队员')
         owner.draft_named_heads = [(n, n) for n in 'abcde']
         owner.draft_selected = list('abcde')
@@ -280,11 +306,22 @@ class DeploymentTests(unittest.TestCase):
             state['checks'] = 0
             state['after_ticks'] = 0
         def click(*args, **kw):
+            if prefilled:
+                state['after_ticks'] = 0
             state.setdefault('confirm_checks', []).append(state['checks'])
             state['clicked'] = True
             return True
         owner.device.press_and_drag.side_effect = drag
         owner.appear_then_click = Mock(side_effect=click)
+        if prefilled:
+            def prefilled_clock():
+                count = owner.appear_then_click.call_count
+                if count > getattr(owner, '_draft_deploy_epoch', 0):
+                    state['after_ticks'] = state.get('after_ticks', 0) + 1
+                    if state['after_ticks'] >= 3:
+                        owner._draft_deploy_epoch = count
+                return 29
+            owner._update_deployment_clock = Mock(side_effect=prefilled_clock)
         def locate(head, image, area, **kw):
             self.assertNotIn(head.removeprefix('middle_'), owner.draft_fielded)
             self.assertEqual(kw['scale'], 1.0)
@@ -303,6 +340,8 @@ class DeploymentTests(unittest.TestCase):
                     return None
                 return 'abc'[index]
             if fail_first and not owner.draft_fielded:
+                if recover_on_redrag and owner.device.press_and_drag.call_count >= 2:
+                    return 'a'
                 state['checks'] += 1
                 if recover_after is not None and state['checks'] > recover_after:
                     return 'a'
@@ -313,12 +352,27 @@ class DeploymentTests(unittest.TestCase):
         ticks = iter(range(10000))
         with patch('tasks.DraftDuel.runtime.deployment.time.sleep'), \
              patch('tasks.DraftDuel.runtime.deployment.time.monotonic', side_effect=lambda: next(ticks)), \
-             patch('tasks.DraftDuel.runtime.deployment.plan_lineup', return_value=('a', 'b', 'c')), \
+             patch.object(owner, '_deployment_top_matches', return_value=(prefilled, .9)), \
+             patch('tasks.DraftDuel.strategy.runtime_policy.plan_lineup', return_value=('a', 'b', 'c')), \
              patch('tasks.DraftDuel.runtime.deployment.identify_portrait',
                    side_effect=lambda *a, **kw: (identify(*a, **kw), .9)), \
              patch('tasks.DraftDuel.runtime.deployment.locate_portrait', side_effect=locate):
-            self.assertEqual(owner._deploy_shikigami(), expected)
+            self.assertEqual(owner._deploy_shikigami_top_legacy(), expected)
         return owner, candidates, state
+
+    def test_prefilled_top_confirms_all_three_without_locating_or_dragging_hand(self):
+        owner, candidates, _ = self.deployment(prefilled=True)
+        owner.device.press_and_drag.assert_not_called()
+        self.assertEqual(candidates, [])
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+        self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
+
+    def test_prefilled_top_still_waits_for_next_countdown_epoch(self):
+        owner, candidates, _ = self.deployment(prefilled=True, ready=False)
+        owner.device.press_and_drag.assert_not_called()
+        self.assertEqual(candidates, [])
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+        self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
 
     def test_unknown_first_slot_advances_and_back_verifies_during_second_pick(self):
         owner, _, _ = self.deployment(ready=False, defer_first=True)
@@ -395,6 +449,37 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(owner.device.press_and_drag.call_count, 1)
         self.assertEqual(owner.appear_then_click.call_count, 1)
         self.assertEqual(owner.draft_fielded, ())
+
+    def test_wrong_known_card_is_redragged_once_and_target_is_verified(self):
+        owner, _, _ = self.deployment(fail_first='wrong', recover_on_redrag=True)
+        self.assertEqual(owner.device.press_and_drag.call_count, 4)
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+        self.assertEqual(owner.draft_fielded, ('a', 'b', 'c'))
+        drags = owner.device.press_and_drag.call_args_list
+        self.assertEqual(drags[1].kwargs['name'], 'DraftDuel_redrag_a')
+
+    def test_persistently_wrong_known_card_is_redragged_only_once(self):
+        owner, _, _ = self.deployment(fail_first='wrong')
+        self.assertEqual(sum(c.kwargs['name'].startswith('DraftDuel_redrag_')
+                             for c in owner.device.press_and_drag.call_args_list), 1)
+        self.assertEqual(owner.appear_then_click.call_count, 3)
+
+    def test_unknown_card_never_triggers_redrag(self):
+        owner, _, _ = self.deployment(fail_first=True)
+        self.assertEqual(owner.device.press_and_drag.call_count, 3)
+        self.assertFalse(any(c.kwargs['name'].startswith('DraftDuel_redrag_')
+                             for c in owner.device.press_and_drag.call_args_list))
+
+    def test_retry_is_blocked_after_confirm_lock_epoch_change_or_prior_attempt(self):
+        for overrides in ({'clicked': True}, {'locked': True}, {'redrag_attempted': True}, {'epoch': 1}):
+            owner = self.owner('队长')
+            owner._draft_deploy_epoch = 0
+            pending = dict(clicked=False, locked=False, epoch=0, index=0, name='a')
+            pending.update(overrides)
+            owner._locate_deployment_portrait = Mock()
+            self.assertFalse(owner._retry_deployment_drag(pending, (0, 1, 2)))
+            owner._locate_deployment_portrait.assert_not_called()
+            owner.device.press_and_drag.assert_not_called()
 
     def test_confirms_only_after_wrong_top_recovers_to_target(self):
         owner, _, state = self.deployment(fail_first='wrong', recover_after=2)

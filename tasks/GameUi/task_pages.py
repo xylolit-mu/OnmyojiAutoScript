@@ -714,13 +714,14 @@ from tasks.GlobalGame.assets import GlobalGameAssets
 from tasks.MetaDemon.assets import MetaDemonAssets
 
 page_act_list_meta_demon = Page(GameUiAssets.I_PAGE_METADEMON_CHECK_ACT_LIST_METADEMON_ACT, key='page_act_list_meta_demon', name='page_act_list_meta_demon', category='meta_demon')
-page_act_list.connect(page_act_list_meta_demon, MetaDemonAssets.L_GOTO_METADEMON_LIST, key="page_act_list->page_act_list_meta_demon")
 page_act_list_meta_demon.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_act_list_meta_demon->page_main")
 
 page_meta_demon = Page(GameUiAssets.I_PAGE_METADEMON_MD_CHECK_MAIN_PAGE, key='page_meta_demon', name='page_meta_demon', category='meta_demon')
 page_meta_demon.add_enter_success_hooks(MetaDemonAssets.I_MD_GET_YESTERDAY_REWARD, MetaDemonAssets.I_MD_CLOSE_POPUP)
-page_meta_demon.connect(page_act_list_meta_demon, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon->page_act_list_meta_demon")
-page_act_list_meta_demon.connect(page_meta_demon, GameUiAssets.I_ACT_LIST_GOTO_ACT, key="page_act_list_meta_demon->page_meta_demon")
+page_meta_demon.add_enter_failure_hooks(find_activity_entry, handle_activity_reward, handle_activity_close)
+# 与式神活动共用庭院侧栏入口及栏目切换恢复逻辑，直接进入超鬼王主页。
+page_main.connect(page_meta_demon, GameUiAssets.I_MAIN_GOTO_ACTIVITY, key="page_main->page_meta_demon")
+page_meta_demon.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon->page_main")
 
 page_meta_demon_boss = Page(GameUiAssets.I_PAGE_METADEMON_CHECK_BOSS_PAGE, key='page_meta_demon_boss', name='page_meta_demon_boss', category='meta_demon')
 page_meta_demon_boss.add_enter_success_hooks(MetaDemonAssets.I_MD_CLOSE_POPUP)

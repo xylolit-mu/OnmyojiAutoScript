@@ -22,8 +22,8 @@
   {
     "itemName": "page_metademon_md_check_main_page",
     "imageName": "page_check_metademon_md_check_main_page.png",
-    "roiFront": "464,231,39,213",
-    "roiBack": "449,220,72,244",
+    "roiFront": "907,60,76,208",
+    "roiBack": "869,14,171,288",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",

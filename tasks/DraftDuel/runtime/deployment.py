@@ -1,9 +1,10 @@
 """协同对弈：deployment。"""
 
 import time
+from module.atom.click import RuleClick
 from module.logger import logger
 from tasks.DraftDuel.config import DraftMatchMode
-from tasks.DraftDuel.strategy import plan_lineup, plan_duel_lineup, battle_stats
+from tasks.DraftDuel.strategy import battle_stats
 from tasks.DraftDuel.runtime.portrait_match import (
     HAND_MIDDLE_FIGHT_SCALE, HAND_PORTRAIT_SCALE, HAND_PORTRAIT_THRESHOLDS,
     FIGHT_PORTRAIT_THRESHOLDS,
@@ -12,6 +13,10 @@ from tasks.DraftDuel.runtime.portrait_match import (
 
 
 class DraftDuelDeploymentMixin:
+    DEPLOYMENT_DRAG_LIMIT = 3
+    C_DEPLOYMENT_CLEAR_DRAG = RuleClick(roi_front=(555, 145, 55, 30),
+                                       roi_back=(555, 145, 55, 30), name='draft_clear_floating_card')
+
     def _locate_deployment_portrait(self, head, *, scale=HAND_PORTRAIT_SCALE):
         """先以0.8阈值定位手牌，未命中时以0.7补测。"""
         for threshold in HAND_PORTRAIT_THRESHOLDS:
@@ -109,7 +114,32 @@ class DraftDuelDeploymentMixin:
 
     def _deployment_plan(self, reserved=()):
         own_locked = tuple(dict.fromkeys((*getattr(self, 'draft_fielded', ()), *reserved)))
-        mate = getattr(self, 'draft_peer_picks', ())
+        assigned = getattr(self, '_draft_lineup_plan', None)
+        if assigned and self.config.draft_duel.draft_duel_config.match_mode != DraftMatchMode.SOLO:
+            side = ('captain' if self.config.draft_duel.draft_duel_config.match_mode ==
+                    DraftMatchMode.CAPTAIN else 'member')
+            planned = tuple(assigned[side])
+            # 已锁定的实际头像优先，计划只决定尚未上阵的位置。
+            # 保留原计划供复盘；实际上阵名单仍由头像确认结果登记。
+            rounds = getattr(self, 'draft_deployment_rounds', ())
+            actual = {row['round'] - 1: row['name'] for row in rounds}
+            if not rounds:
+                actual = dict(enumerate(getattr(self, 'draft_fielded', ())))
+            used = set(actual.values()) | set(reserved)
+            lineup = []
+            for index, target in enumerate(planned):
+                if index in actual:
+                    lineup.append(actual[index])
+                    continue
+                if target in used:
+                    target = next((name for name in (*planned, *self.draft_selected)
+                                   if name not in used), None)
+                if target is not None:
+                    lineup.append(target)
+                    used.add(target)
+            return tuple(lineup)
+        mate = (() if self.config.draft_duel.draft_duel_config.match_mode == DraftMatchMode.SOLO
+                else getattr(self, 'draft_peer_picks', ()))
         weights = getattr(self, '_draft_field_weights', None)
         if weights is None:
             table = battle_stats._tally('fielded')
@@ -122,14 +152,16 @@ class DraftDuelDeploymentMixin:
                         '(minimum 3 confirmed samples; unknown outcomes excluded)')
             self._draft_logged_field_weights = signature
         if not mate:
-            return plan_lineup(self.draft_selected, team_size=3, locked=own_locked, field_weights=weights)
+            from tasks.DraftDuel.strategy.runtime_policy import plan_lineup as runtime_plan
+            return runtime_plan(self, self.draft_selected, team_size=3, locked=own_locked, field_weights=weights)
         mate_locked = tuple(r['name'] for r in getattr(self, 'draft_peer_rounds', ()))
+        from tasks.DraftDuel.strategy.runtime_policy import plan_duel_lineup
         # 两端统一以队长为第一参数，保证相同状态下规划一致。
         if self.config.draft_duel.draft_duel_config.match_mode == DraftMatchMode.CAPTAIN:
-            return plan_duel_lineup(self.draft_selected, mate, locked=own_locked,
+            return plan_duel_lineup(self, self.draft_selected, mate, locked=own_locked,
                                    mate_locked=mate_locked,
                                    field_weights=weights)[0]
-        return plan_duel_lineup(mate, self.draft_selected, locked=mate_locked,
+        return plan_duel_lineup(self, mate, self.draft_selected, locked=mate_locked,
                                mate_locked=own_locked,
                                field_weights=weights)[1]
 
@@ -144,6 +176,39 @@ class DraftDuelDeploymentMixin:
         self.draft_unresolved_slots = [slot for slot in getattr(self, 'draft_unresolved_slots', ())
                                        if slot != slots[index] + 1]
         logger.info(f'DraftDuel round {index + 1} actual fielded: {actual}')
+        if actual != pending['name']:
+            logger.info(f"DraftDuel deployment record updated: planned={pending['name']}, "
+                        f'actual={actual}; continue with actual roster')
+
+    def _retry_deployment_drag(self, pending, slots):
+        """顶部明确为其他式神时，重新定位目标手牌并至多补拖一次。"""
+        if (pending['clicked'] or pending.get('locked') or pending.get('redrag_attempted')
+                or self._draft_deploy_epoch != pending['epoch']):
+            return False
+        if not self.appear(self.I_SELECT_ENSURE):
+            return False
+        pending['redrag_attempted'] = True
+        self._save_draft_checkpoint('fight')
+        head = next((image for name, image in self.draft_hand_templates
+                     if name == pending['name']), None)
+        if head is None:
+            return False
+        located = self._locate_deployment_portrait(head, scale=1.0)
+        destinations = self.runframe(self.F_FIGHT_SHIKIGAMI_SET)
+        if located is None or not destinations or len(destinations) != 6:
+            logger.warning(f"DraftDuel cannot re-drag {pending['name']}: hand or destination unavailable")
+            return False
+        source, score = located
+        destination = destinations[slots[pending['index']]]
+        center = lambda area: (int(area[0] + area[2]/2), int(area[1] + area[3]/2))
+        logger.warning(f"DraftDuel top shows {pending.get('preview')} instead of {pending['name']}; "
+                       f're-located hand score={score:.3f}, re-drag once')
+        self.device.press_and_drag(center(source), center(destination), hold_duration=0.2,
+                                   swipe_duration=0.45, name=f"DraftDuel_redrag_{pending['name']}")
+        pending.update(failures=0, preview=None, preview_stable=0, actual=None, stable=0)
+        pending.pop('portrait_sample', None)
+        self._save_draft_checkpoint('fight')
+        return True
 
     def _recognize_deployment_portrait(self, region):
         for threshold in FIGHT_PORTRAIT_THRESHOLDS:
@@ -156,6 +221,10 @@ class DraftDuelDeploymentMixin:
                                 f'threshold={threshold:.2f}, score={score:.3f}')
                 return actual, score
         return None, score
+
+    def _deployment_top_matches(self, region, target):
+        actual, score = self._recognize_deployment_portrait(region)
+        return actual == target, score
 
     def _best_of_two_portraits(self, entry, region):
         """两次识别后，取满足阈值和候选分差要求的最高分结果。"""
@@ -195,7 +264,164 @@ class DraftDuelDeploymentMixin:
         self._draft_deployment_state = None
         self._save_draft_checkpoint('battle')
 
+    def _selected_deployment_card(self, areas):
+        """The yellow cross selects the nearest anchored hand rectangle."""
+        if len(areas) != 5 or not self.appear(self.I_HAND_SELECTED_CROSS):
+            return None
+        x, y = self.I_HAND_SELECTED_CROSS.front_center()
+        def distance(area):
+            ax, ay, w, h = area
+            dx = max(ax-x, 0, x-(ax+w))
+            dy = max(ay-y, 0, y-(ay+h))
+            return dx*dx + dy*dy
+        order = sorted(range(5), key=lambda i: distance(areas[i]))
+        if distance(areas[order[0]]) == distance(areas[order[1]]):
+            return None
+        return order[0]
+
+    def _set_theoretical_deployment(self, lineup, slots):
+        self._draft_theoretical_lineup = tuple(lineup)
+        overrides = getattr(self, '_draft_deployment_overrides', {})
+        self.draft_fielded = tuple(overrides.get(str(i), name) for i, name in enumerate(lineup))
+        self.draft_deployment_rounds = [dict(round=i+1, slot=slots[i]+1, name=name,
+            source='yellow_cross_fallback' if str(i) in overrides else 'planned')
+            for i, name in enumerate(self.draft_fielded)]
+        self.draft_unresolved_slots = []
+
     def _deploy_shikigami(self) -> bool:
+        """Hand-cross confirmation only; record the planned roster, never top portraits."""
+        if getattr(self, 'draft_small_game', 0) > 1:
+            return self._auto_deploy_shikigami()
+        if len(getattr(self, 'draft_fielded', ())) == 3:
+            return True
+        state = getattr(self, '_draft_deployment_state', None)
+        if not state or state.get('mode') != 'yellow_cross':
+            state = dict(mode='yellow_cross', completed=0, next_epoch=0, slots=None,
+                         pending=None, lineup=[])
+            self._draft_deploy_epoch = 0
+            self._draft_deploy_time = None
+            self._draft_deploy_clock_wall = None
+            self.draft_fielded = ()
+            self.draft_deployment_rounds = []
+        self._draft_deployment_state = state
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            self._save_draft_checkpoint('fight')
+            self.device.stuck_record_clear()
+            self.screenshot()
+            if self.appear(self._battle_info_rule()):
+                if state['lineup'] and state['slots']:
+                    self._set_theoretical_deployment(state['lineup'], state['slots'])
+                self._draft_battle_seen = self._draft_round_had_battle = True
+                self._draft_deployment_state = None
+                self._save_draft_checkpoint('battle')
+                return True
+            self._observe_duel_lobby()
+            if not self._sync_draft_state(require_small_game=True):
+                time.sleep(.3)
+                continue
+            self._update_deployment_clock()
+            pending = state['pending']
+            if pending and pending['clicked']:
+                if (self.appear(self.I_SELECT_ENSURE_READY) or
+                        self._draft_deploy_epoch > pending['epoch']):
+                    state['completed'] += 1
+                    state['next_epoch'] = pending['epoch'] + 1
+                    state['pending'] = None
+                    logger.info(f"DraftDuel round {state['completed']} fielded record: "
+                                f"{pending.get('fallback_name', pending['name'])}")
+                    deadline = time.monotonic() + 120
+                    if state['completed'] == 3:
+                        self._set_theoretical_deployment(state['lineup'], state['slots'])
+                        self._draft_deployment_state = None
+                        self._save_draft_checkpoint('battle')
+                        self._sync_draft_state()
+                        return True
+                time.sleep(.3)
+                continue
+            if self._draft_deploy_epoch < state['next_epoch']:
+                time.sleep(.3)
+                continue
+            if not self.appear(self.I_POST_DRAFT_FIGHT):
+                time.sleep(.3)
+                continue
+            if state['slots'] is None:
+                mode = self.config.draft_duel.draft_duel_config.match_mode
+                if mode == DraftMatchMode.CAPTAIN:
+                    state['slots'] = (0, 1, 2)
+                elif mode == DraftMatchMode.MEMBER:
+                    state['slots'] = (3, 4, 5)
+                else:
+                    # Solo uses the teammate badge only to determine which side is ours.
+                    portraits = self.runframe(self.F_FIGHT_SHIKIGAMI)
+                    state['slots'] = self._deployment_slots(portraits) if portraits and len(portraits) == 6 else None
+                if state['slots'] is None:
+                    time.sleep(.3)
+                    continue
+            if not state['lineup']:
+                try:
+                    planned = tuple(getattr(self, 'draft_planned_lineup', ())) or self._deployment_plan()
+                    if len(planned) != 3 or not set(planned).issubset(self.draft_selected):
+                        raise ValueError('Invalid theoretical lineup')
+                    state['lineup'] = list(planned)
+                    self._draft_theoretical_lineup = tuple(planned)
+                    logger.info(f'DraftDuel theoretical lineup (no top verification): {planned}')
+                except ValueError as exc:
+                    logger.warning(f'DraftDuel lineup unavailable: {exc}')
+                    return False
+            index = state['completed']
+            name = state['lineup'][index]
+            target = self.draft_selected.index(name)
+            if pending is None:
+                pending = state['pending'] = dict(index=index, name=name, epoch=self._draft_deploy_epoch,
+                    clicked=False, locked=False, preview=name, preview_stable=2, stable=0,
+                    last_drag=None, drag_attempts=0, cleared_after_drag=False)
+            cards = self.runframe(self.F_HAND_CARD)
+            areas = self.F_HAND_CARD.matched_ranges if cards and len(cards) == 5 else ()
+            selected = self._selected_deployment_card(areas) if areas else None
+            last_drag = pending.get('last_drag')
+            attempts = pending.get('drag_attempts', int(last_drag is not None))
+            if selected == target:
+                if self.appear(self.I_SELECT_ENSURE):
+                    pending['clicked'] = bool(self.appear_then_click(self.I_SELECT_ENSURE, interval=1))
+                    logger.info(f'DraftDuel yellow cross selects hand {target+1} ({name}); confirm={pending["clicked"]}')
+                    self._save_draft_checkpoint('fight')
+            elif last_drag is not None and not pending.get('cleared_after_drag'):
+                if time.time() - last_drag >= 2 and self.appear(self.I_SELECT_ENSURE):
+                    self.click(self.C_DEPLOYMENT_CLEAR_DRAG)
+                    pending['cleared_after_drag'] = True
+                    logger.info(f'DraftDuel drag {attempts}/{self.DEPLOYMENT_DRAG_LIMIT} for {name}: '
+                                f'cross={selected}; clear floating card and refresh hand')
+                    self._save_draft_checkpoint('fight')
+            elif attempts >= self.DEPLOYMENT_DRAG_LIMIT:
+                if self.appear(self.I_SELECT_ENSURE):
+                    fallback = self.draft_selected[selected] if selected is not None else name
+                    if selected is not None:
+                        if not hasattr(self, '_draft_deployment_overrides'):
+                            self._draft_deployment_overrides = {}
+                        self._draft_deployment_overrides[str(index)] = fallback
+                    pending['fallback_name'] = fallback
+                    pending['clicked'] = bool(self.appear_then_click(self.I_SELECT_ENSURE, interval=1))
+                    logger.warning(f'DraftDuel drag limit reached for {name}; '
+                                   f'cross={selected}, fielded record={fallback}, '
+                                   f'confirmed={pending["clicked"]}')
+                    self._save_draft_checkpoint('fight')
+            elif areas and attempts < self.DEPLOYMENT_DRAG_LIMIT and self.appear(self.I_SELECT_ENSURE):
+                destinations = self.runframe(self.F_FIGHT_SHIKIGAMI_SET)
+                if destinations and len(destinations) == 6:
+                    center = lambda a: (int(a[0]+a[2]/2), int(a[1]+a[3]/2))
+                    self.device.press_and_drag(center(areas[target]),
+                        center(destinations[state['slots'][index]]), hold_duration=.28 if attempts else .2,
+                        swipe_duration=.65 if attempts else .45, name=f'DraftDuel_deploy_{name}')
+                    pending['last_drag'] = time.time()
+                    pending['drag_attempts'] = attempts + 1
+                    pending['cleared_after_drag'] = False
+                    self._save_draft_checkpoint('fight')
+            time.sleep(.3)
+        logger.warning('DraftDuel yellow-cross deployment timed out')
+        return False
+
+    def _deploy_shikigami_top_legacy(self) -> bool:
         """首局手动上阵，当前大轮后续小局启用自动上阵。"""
         if getattr(self, 'draft_small_game', 0) > 1:
             return self._auto_deploy_shikigami()
@@ -303,6 +529,9 @@ class DraftDuelDeploymentMixin:
                 pending['preview'] = actual
                 pending['preview_stable'] = 2 if actual else 0
                 if not pending['clicked']:
+                    if actual and actual != pending['name'] and self._retry_deployment_drag(pending, slots):
+                        time.sleep(0.3)
+                        continue
                     if actual != pending['name']:
                         pending['failures'] = min(3, pending.get('failures', 0) + 1)
                     if (actual == pending['name'] and pending['preview_stable'] >= 2) or pending.get('failures', 0) >= 3:
@@ -353,6 +582,26 @@ class DraftDuelDeploymentMixin:
             if name is None:
                 return False
             index = completed
+            matches, score = self._deployment_top_matches(portraits[slots[index]], name)
+            if matches:
+                if not self.appear(self.I_SELECT_ENSURE):
+                    self._log_deployment_wait(f'顶部已是{name}，等待 select_ensure')
+                    time.sleep(0.3)
+                    continue
+                pending = {'index': index, 'name': name, 'failures': 0, 'clicked': False,
+                           'stable': 0, 'locked': False, 'epoch': self._draft_deploy_epoch,
+                           'preview': name, 'preview_stable': 2}
+                self._draft_deployment_state = {
+                    'next_epoch': next_epoch, 'slots': slots, 'pending': pending,
+                    'completed': completed, 'deferred': deferred}
+                self._save_draft_checkpoint('fight')
+                pending['clicked'] = bool(self.appear_then_click(self.I_SELECT_ENSURE, interval=1))
+                self._save_draft_checkpoint('fight')
+                logger.info(f'DraftDuel round {index + 1}: top already shows {name}, '
+                            f'score={score:.3f}; skip drag, confirm={pending["clicked"]}')
+                recovering = False
+                time.sleep(0.3)
+                continue
             destinations = self.runframe(self.F_FIGHT_SHIKIGAMI_SET)
             if not destinations or len(destinations) != 6:
                 self._log_deployment_wait('未识别到六个上阵目标位置')

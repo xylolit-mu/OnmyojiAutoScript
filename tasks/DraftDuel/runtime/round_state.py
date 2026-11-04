@@ -32,12 +32,25 @@ class DraftDuelRoundStateMixin:
         self._draft_hand_capture_clock = None
         self.draft_planned_lineup = ()
         self.draft_selected = []
+        self._draft_transcript = {}
+        self._draft_detail_capture_rounds = set()
+        self._draft_theoretical_lineup = ()
+        self._draft_deployment_overrides = {}
+        self._draft_peer_transcript = []
+        self._draft_policy_snapshot = None
+        self._draft_latent_cache = None
         self.draft_fielded = ()
         self.draft_deployment_rounds = []
         self.draft_peer_picks = ()
         self.draft_peer_rounds = ()
         self._draft_session = ''
         self._draft_published_state = None
+        self._draft_offer = None
+        self._draft_pick_decision = None
+        self._draft_lineup_plan = None
+        self._draft_peer_offer = None
+        self._draft_peer_decision = None
+        self._draft_peer_lineup_plan = None
         self._draft_exchange_since = time.time()
         self._draft_auto_ready_after = None
         self.draft_finished_small_games = 0
@@ -53,6 +66,7 @@ class DraftDuelRoundStateMixin:
         self._draft_selection_pending = None
         self._draft_field_weights = None
         self.draft_unresolved_slots = []
+        self._draft_small_game_result = None
         self._initialize_round_statistics()
 
     def _observe_duel_lobby(self):
@@ -86,6 +100,7 @@ class DraftDuelRoundStateMixin:
         if not getattr(self, '_draft_matching_bout_active', False):
             self._draft_battle_seen = False
             self._draft_end_recorded = False
+            self._draft_small_game_result = None
             self.draft_small_game = getattr(self, 'draft_small_game', 0) + 1
             self._draft_matching_bout_active = True
             # 首局确定的阵容会被后续自动上阵复用，保留实际名单用于胜负加权。
@@ -93,7 +108,6 @@ class DraftDuelRoundStateMixin:
                 self.draft_fielded = ()
                 self.draft_deployment_rounds = []
                 self.draft_peer_rounds = ()
-                self._draft_field_weights = None
                 self.draft_unresolved_slots = []
             self._draft_deployment_state = None
             logger.info(f'DraftDuel small game {self.draft_small_game} in current big round')

@@ -16,7 +16,7 @@ class DraftDuelAssets:
 	F_HAND_CARD = RuleFrame(name='hand_card', roi_badge=(37, 634, 67, 60), roi_range=[(283, 554, 56, 41), (397, 554, 56, 41), (511, 554, 56, 41), (625, 554, 56, 41), (739, 554, 56, 41)], roi_back=(17, 501, 832, 203), threshold=0.8, method='Template matching', profile='High', badgefile=['./tasks/DraftDuel/draft/hand_card_badge_1.png'], range=[Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8)])
 	F_SHIKIGAMI_HEAD = RuleFrame(name='shikigami_head', roi_badge=(422, 14, 32, 84), roi_range=[(478, 45, 35, 31), (563, 46, 35, 31), (646, 44, 35, 31), (733, 46, 35, 31), (820, 44, 35, 31)], roi_back=(410, 5, 512, 103), threshold=0.8, method='Template matching', profile='High', badgefile=['./tasks/DraftDuel/draft/shikigami_head_badge_1.png'], range=[Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8)])
 	F_FIGHT_SHIKIGAMI = RuleFrame(name='fight_shikigami', roi_badge=(559, 32, 33, 60), roi_range=[(86, 34, 67, 66), (158, 34, 67, 66), (229, 34, 67, 66), (302, 34, 67, 66), (374, 35, 67, 66), (445, 34, 67, 66)], roi_back=(73, 14, 536, 94), threshold=0.8, method='Template matching', profile='High', badgefile=['./tasks/DraftDuel/draft/fight_shikigami_badge_1.png'], range=[Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8)])
-	F_FIGHT_SHIKIGAMI_SET = RuleFrame(name='fight_shikigami_set', roi_badge=(28, 369, 54, 44), roi_range=[(183, 330, 67, 66), (340, 333, 67, 66), (514, 360, 67, 66), (690, 369, 67, 66), (858, 344, 67, 66), (1022, 319, 67, 66)], roi_back=(0, 220, 1147, 276), threshold=0.8, method='Template matching', profile='High', badgefile=['./tasks/DraftDuel/draft/fight_shikigami_set_badge_1.png'], range=[Click(), Click(), Click(), Click(), Click(), Click()])
+	F_FIGHT_SHIKIGAMI_SET = RuleFrame(name='fight_shikigami_set', roi_badge=(28, 369, 54, 44), roi_range=[(183, 324, 67, 66), (347, 321, 67, 66), (514, 359, 67, 66), (690, 369, 67, 66), (858, 344, 67, 66), (1022, 319, 67, 66)], roi_back=(0, 220, 1147, 276), threshold=0.8, method='Template matching', profile='High', badgefile=['./tasks/DraftDuel/draft/fight_shikigami_set_badge_1.png'], range=[Click(), Click(), Click(), Click(), Click(), Click()])
 
 
 	# Image Rule Assets
@@ -81,6 +81,16 @@ class DraftDuelAssets:
 	I_AUTO_RIGHT = RuleImage(roi_front=(1000,619,58,71), roi_back=(957,579,142,138), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_auto_right.png")
 	# 自动上阵 
 	I_AUTO_DOWN = RuleImage(roi_front=(999,619,58,71), roi_back=(956,574,142,138), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_auto_down.png")
+	# 胜利
+	I_FIGHT_WIN = RuleImage(roi_front=(422,71,122,113), roi_back=(389,21,191,206), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_fight_win.png")
+	# 失败
+	I_FIGHT_LOSE = RuleImage(roi_front=(410,51,122,113), roi_back=(389,21,191,206), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_fight_lose.png")
+	# 继续邀请
+	I_INVITE_CONTINUE = RuleImage(roi_front=(1142,440,51,56), roi_back=(1101,396,130,142), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_invite_continue.png")
+	# 用户提供 fork.png 黄叉模板，定位最近手牌框
+	I_HAND_SELECTED_CROSS = RuleImage(roi_front=(419,511,29,27), roi_back=(250,490,600,70), threshold=0.8, method="Masked template matching", profile="High", file="./tasks/DraftDuel/draft/draft_hand_selected_cross.png")
+	# 属性详情
+	I_SHIKIGAMI_DETAILS = RuleImage(roi_front=(732,539,37,33), roi_back=(334,524,819,63), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_shikigami_details.png")
 
 
 	# Ocr Rule Assets

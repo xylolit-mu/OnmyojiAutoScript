@@ -298,5 +298,55 @@
     "threshold": 0.8,
     "profile": "High",
     "description": "自动上阵"
+  },
+  {
+    "itemName": "fight_win",
+    "imageName": "draft_fight_win.png",
+    "roiFront": "422,71,122,113",
+    "roiBack": "389,21,191,206",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "胜利"
+  },
+  {
+    "itemName": "fight_lose",
+    "imageName": "draft_fight_lose.png",
+    "roiFront": "410,51,122,113",
+    "roiBack": "389,21,191,206",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "失败"
+  },
+  {
+    "itemName": "invite_continue",
+    "imageName": "draft_invite_continue.png",
+    "roiFront": "1142,440,51,56",
+    "roiBack": "1101,396,130,142",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "继续邀请"
+  },
+  {
+    "itemName": "hand_selected_cross",
+    "imageName": "draft_hand_selected_cross.png",
+    "roiFront": "419,511,29,27",
+    "roiBack": "250,490,600,70",
+    "method": "Masked template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "用户提供 fork.png 黄叉模板，定位最近手牌框"
+  },
+  {
+    "itemName": "shikigami_details",
+    "imageName": "draft_shikigami_details.png",
+    "roiFront": "732,539,37,33",
+    "roiBack": "334,524,819,63",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "属性详情"
   }
 ]
