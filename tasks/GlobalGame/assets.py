@@ -18,11 +18,11 @@ class GlobalGameAssets:
 	# 拒绝 
 	I_G_REJECT = RuleImage(roi_front=(846,562,53,51), roi_back=(819,536,108,101), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_reject.png")
 	# 勾玉 
-	I_G_JADE = RuleImage(roi_front=(676,512,43,46), roi_back=(650,489,94,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_jade.png")
+	I_G_JADE = RuleImage(roi_front=(676,480,43,46), roi_back=(646,457,94,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_jade.png")
 	# 猫粮 
-	I_G_CAT_FOOD = RuleImage(roi_front=(666,499,59,65), roi_back=(543,421,205,176), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_cat_food.png")
+	I_G_CAT_FOOD = RuleImage(roi_front=(664,475,59,65), roi_back=(543,421,205,176), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_cat_food.png")
 	# 狗粮 
-	I_G_DOG_FOOD = RuleImage(roi_front=(575,510,63,54), roi_back=(543,421,205,176), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_dog_food.png")
+	I_G_DOG_FOOD = RuleImage(roi_front=(585,494,63,54), roi_back=(543,421,205,176), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_dog_food.png")
 	# 忽略 
 	I_G_IGNORE = RuleImage(roi_front=(792,86,21,21), roi_back=(777,49,154,64), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/gg/gg_g_ignore.png")
 	# 网络异常 
@@ -43,7 +43,7 @@ class GlobalGameAssets:
 	# Image Rule Assets
 	# 通用确认 
 	I_UI_CONFIRM = RuleImage(roi_front=(692,419,124,39), roi_back=(547,368,322,122), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/ui/ui_confirm.png")
-	# 备用确认
+	# 备用确认 
 	I_UI_CONFIRM_BACKUP = RuleImage(roi_front=(700,419,109,41), roi_back=(640,362,255,128), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/ui/ui_confirm_backup.png")
 	# 长一点的取消 
 	I_UI_CANCEL = RuleImage(roi_front=(472,417,111,42), roi_back=(424,371,212,116), threshold=0.8, method="Template matching", profile="High", file="./tasks/GlobalGame/ui/ui_ui_cancel.png")

@@ -92,9 +92,8 @@ class FrameExtractor(ImageExtractor):
         handlers = []
         for spec in operations:
             if spec['type'] == 'image':
-                # Templates are positional runframe arguments; saved crops are preview samples only.
+                # imageName remains a runframe preview; an explicit file embeds a runtime template.
                 spec.pop('imageName', None)
-                spec.pop('file', None)
             kind = spec.pop('type')
             cls = {'image':'Image', 'ocr':'Ocr', 'click':'Click'}[kind]
             handlers.append(cls + '(' + ', '.join(f'{k}={v!r}' for k,v in spec.items()) + ')')

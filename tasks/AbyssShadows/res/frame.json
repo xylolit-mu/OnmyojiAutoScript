@@ -1,0 +1,34 @@
+[
+  {
+    "itemName": "abyss_quick_loadout_frame",
+    "imageName": "res_open_quick_loadout.png",
+    "roiBadge": "897,625,45,46",
+    "roiBack": "892,620,55,56",
+    "roiRange": [
+      "548,209,551,386",
+      "811,540,119,42"
+    ],
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "badgeSerial": 1,
+    "badges": [
+      {
+        "imageName": "res_open_quick_loadout.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "type": "click"
+      },
+      {
+        "type": "image",
+        "imageName": "res_abyss_quick_loadout_fight.png",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "file": "./tasks/AbyssShadows/res/res_abyss_quick_loadout_fight.png"
+      }
+    ],
+    "description": "快捷配置：range1 面板，range2 出战"
+  }
+]

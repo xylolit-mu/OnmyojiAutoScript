@@ -12,10 +12,8 @@ from module.atom.list import RuleList
 class MetaDemonAssets: 
 
 
-	# List Rule Assets
-	# 前往超鬼王活动 
-	L_GOTO_METADEMON_LIST = RuleList(folder="./tasks/MetaDemon/md", direction="vertical", mode="ocr", roi_back=(53,121,48,557), size=(43, 68), 
-					 array=["版本"])
+	# Image Rule Assets
+	F_QUICK_LOADOUT_FRAME = RuleFrame(name='quick_loadout_frame', roi_badge=(1217, 429, 44, 39), roi_range=[(496, 224, 553, 387), (762, 557, 108, 36)], roi_back=(474, 177, 800, 450), threshold=0.8, method='Template matching', profile='High', badgefile=['./tasks/MetaDemon/md/quick_loadout_frame_badge_1.png'], range=[Image(method='Template matching', threshold=0.8), Image(method='Template matching', threshold=0.8, file='./tasks/MetaDemon/md/md_quick_loadout_frame_fight.png')])
 
 
 	# Image Rule Assets
@@ -81,17 +79,17 @@ class MetaDemonAssets:
 	I_MD_FRIEND_SELECTED = RuleImage(roi_front=(600,178,32,38), roi_back=(351,174,578,357), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_friend_selected.png")
 	# 无鬼王门票标志 
 	I_MD_TICKET_EMPTY = RuleImage(roi_front=(591,305,100,100), roi_back=(447,295,368,154), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_ticket_empty.png")
-	# 快速召唤序列一星
+	# 快速召唤序列一星 
 	I_SUMMON_QUICK_ONE_STAR = RuleImage(roi_front=(1061,526,53,32), roi_back=(1028,465,117,97), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_one_star.png")
-	# 快速召唤序列二星
+	# 快速召唤序列二星 
 	I_SUMMON_QUICK_TWO_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_two_star.png")
-	# 快速召唤序列三星
+	# 快速召唤序列三星 
 	I_SUMMON_QUICK_THREE_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_three_star.png")
-	# 快速召唤序列四星
+	# 快速召唤序列四星 
 	I_SUMMON_QUICK_FOUR_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_four_star.png")
-	# 快速召唤序列五星
+	# 快速召唤序列五星 
 	I_SUMMON_QUICK_FIVE_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_five_star.png")
-	# 快速召唤序列六星
+	# 快速召唤序列六星 
 	I_SUMMON_QUICK_SIX_STAR = RuleImage(roi_front=(1060,527,53,19), roi_back=(1029,466,117,98), threshold=0.96, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_summon_quick_six_star.png")
 
 
@@ -100,8 +98,10 @@ class MetaDemonAssets:
 	O_MD_FATIGUE = RuleOcr(roi=(1109,22,114,34), area=(1106,17,124,41), mode="DigitCounter", method="Default", keyword="", name="md_fatigue")
 	# 好友列表 
 	O_MD_FRIENDS = RuleOcr(roi=(435,179,486,351), area=(435,178,489,352), mode="Full", method="Default", keyword="", name="md_friends")
-	# 合成目标星级
+	# 合成目标星级 
 	O_SYNTHESIS_LEVEL = RuleOcr(roi=(747,424,181,34), area=(747,424,181,34), mode="Single", method="Default", keyword="", name="synthesis_level")
+	#  
+	O_BOSS_NAME = RuleOcr(roi=(515,132,33,203), area=(515,132,33,203), mode="Single", method="Default", keyword="", name="boss_name")
 
 
 	# Swipe Rule Assets

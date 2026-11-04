@@ -479,9 +479,7 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, QuickLoadout, BaseActivity, 
                 soul_switched = True
             if quick_loadout_conf.enable and not self.run_quick_loadout(
                 quick_loadout_conf,
-                entry=self.I_MR_BOSS_GOTO_QUICK_LOADOUT,
-                fight_anchor=self.I_MR_BOSS_QUICK_LOADOUT_FIGHT,
-                dismiss=self.C_MR_QUICK_LOADOUT_CLOSE,
+                frame=self.F_MR_BOSS_QUICK_LOADOUT_FRAME,
                 name_ocr=self.O_BOSS_NAME,
             ):
                 logger.warning('MartialArts boss quick loadout failed, stop boss battles')

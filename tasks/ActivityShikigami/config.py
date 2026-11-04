@@ -1,3 +1,5 @@
+from typing import ClassVar
+from tasks.Component.config_settings_layout import SettingsLayoutConfig, settings_section
 # This Python file uses the following encoding: utf-8
 """式神活动统一配置。"""
 
@@ -63,12 +65,12 @@ BATTLE_TYPES = ('rich_man', *CLIMB_TYPES, 'pass_hard', 'boss', 'fakegod')
 class GeneralConfig(ConfigBase):
     task_sequence: list[ActivityTask] = Field(
         default=[ActivityTask.CLIMB],
-        title='Activity Task Sequence',
+        title='活动启用', json_schema_extra={'ui_exclusive_groups': [['探索', '大富翁', '伪神']]},
     )
     throw_limit: int = Field(default=0, title='Throw Limit', ge=0)
     climb_task_sequence: list[ClimbTask] = Field(
         default=[ClimbTask.EASY],
-        title='Climb Task Sequence',
+        title='爬塔启用',
     )
     ap_limit: int = Field(default=0, title='Ap Limit', ge=0)
     pass_limit: str = Field(
@@ -350,6 +352,34 @@ class SwitchSoulConfig(BaseModel):
 
 
 class ActivityShikigami(ConfigBase):
+    settings_forms: ClassVar[dict] = {'general_config': [
+        {'type': 'selection', 'field': 'task_sequence'},
+        {'type': 'selection', 'field': 'climb_task_sequence'},
+        {'type': 'mode', 'label': '大富翁', 'children': [{'type': 'field', 'field': 'throw_limit', 'label': '投掷次数'}]},
+        {'type': 'mode', 'label': '爬塔', 'children': [
+            {'type': 'row', 'children': [{'type': 'field', 'field': 'ap_limit', 'label': '体力'}, {'type': 'field', 'field': 'ap100_limit', 'label': '百体'}]},
+            {'type': 'row', 'children': [
+                {'type': 'csv', 'field': 'pass_limit', 'index': 0, 'length': 2, 'separator': ',', 'label': '简单'},
+                {'type': 'csv', 'field': 'pass_limit', 'index': 1, 'length': 2, 'separator': ',', 'label': '困难'}]}]},
+        {'type': 'mode', 'label': '伪神', 'children': [{'type': 'field', 'field': 'fakegod_limit', 'label': '行动次数'}]},
+        {'type': 'mode', 'label': '首领', 'children': [{'type': 'field', 'field': 'boss_limit', 'label': '挑战次数'}]},
+        {'type': 'remaining', 'columns': 2},
+    ]}
+    settings_layout_config: SettingsLayoutConfig = Field(default_factory=SettingsLayoutConfig)
+    settings_layout: ClassVar[list[dict]] = [
+        settings_section('scheduler', '任务调度', groups=[{'name': 'scheduler'}]),
+        settings_section('general_config', '通用设置', groups=[{'name': 'general_config'}]),
+        settings_section('switch_soul_config', '切换御魂', variants=[
+            {'id': key, 'label': label, 'groups': [{'name': 'switch_soul_config', 'fields': [
+                f'enable_switch_{key}', f'{key}_group_team', f'enable_switch_{key}_by_name', f'{key}_group_team_name']} ]}
+            for key, label in (('rich_man', '大富翁'), ('exp_encounter', '遭遇战'), ('ap', '体力'),
+                               ('pass', '门票简单'), ('pass_hard', '门票困难'), ('ap100', '百体'), ('boss', '首领'), ('fakegod', '伪神'))]),
+        settings_section('battle_config', '战斗配置', variants=[
+            {'id': key, 'label': label, 'groups': [{'name': f'{key}_battle_conf'}]}
+            for key, label in (('rich_man', '大富翁'), ('ap', '体力'), ('pass', '门票简单'),
+                               ('pass_hard', '门票困难'), ('ap100', '百体'), ('boss', '首领'), ('fakegod', '伪神'))]),
+    ]
+
     # OASX 按字段顺序排版：任务调度、通用设置、切换御魂、六种战斗配置。
     scheduler: Scheduler = Field(default_factory=Scheduler)
     general_config: GeneralConfig = Field(default_factory=GeneralConfig)

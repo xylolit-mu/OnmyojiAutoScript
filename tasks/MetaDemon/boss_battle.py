@@ -9,8 +9,9 @@ from module.atom.image import RuleImage
 
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
+from tasks.Component.QuickLoadout.quick_loadout import QuickLoadout
 from tasks.GameUi.game_ui import GameUi
-from tasks.MetaDemon.config import MetaDemon, BossType
+from tasks.MetaDemon.config import MetaDemon, BossType, loadout_group
 from tasks.MetaDemon.assets import MetaDemonAssets
 from tasks.MetaDemon.synthesis import parse_synthesis_material_level
 import tasks.GameUi.task_pages as ipages
@@ -19,7 +20,7 @@ from module.logger import logger
 from module.exception import TaskEnd
 
 
-class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
+class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAssets):
     """超鬼王"""
 
     class State:
@@ -36,7 +37,7 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
 
         if self.cur_boss_type is None:
             return "meta_demon_default"
-        return f"meta_demon_{self.cur_boss_type.name.lower()}"
+        return f"meta_demon_{loadout_group(self.cur_boss_type)}"
 
     @property
     def enable_powerful_fire(self):
@@ -45,6 +46,11 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
 
     def before_run(self):
         self.navigator.add_unknown_closer(self.I_MD_GET_YESTERDAY_REWARD)
+        self.State = BossBattle.State()
+        self._active_loadout_group = None
+        self._boss_generation = 0
+        self.cur_boss_type = None
+        self.total_count = 0
         self.conf = self.config.meta_demon
         self.limit_time = self.conf.meta_demon_config.limit_time_v
         self.limit_count = self.conf.meta_demon_config.limit_count
@@ -84,7 +90,7 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
                     if self.check_and_prepare_battle():
                         self.start_battle()
                 case ipages.page_battle:
-                    self.battle_wait(self.conf.general_battle.random_click_swipt_enable)
+                    self.battle_wait(False)
                 case ipages.page_reward:
                     self.click(ipages.reward_random_click(), interval=0.6)
                 case ipages.page_battle_result:
@@ -101,7 +107,7 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
             if self.is_in_battle(False):
                 self.total_count += 1
                 self.run_general_battle(
-                    self.conf.switch_soul.get_general_battle_conf(self.cur_boss_type),
+                    self.conf.battle_config(loadout_group(self.cur_boss_type)),
                     battle_key=self._meta_demon_battle_key(),
                 )
                 break
@@ -279,10 +285,7 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
             logger.info('There is no boss that needs to be attacked, exit')
             self.ui_click_until_disappear(self.I_MD_CLOSE_POPUP, interval=0.6)
             return False
-        # 第一次进来或上次一鬼王类型与这一次不同, 则需要切换御魂和预设
-        if self.cur_boss_type is None or self.cur_boss_type != need_fire_list[0]:
-            if not self.conf.switch_soul.switch_once:
-                self.State.switch_soul_done = False
+        if self.cur_boss_type is None or loadout_group(self.cur_boss_type) != loadout_group(need_fire_list[0]):
             self.current_count = 0
         self.cur_boss_type = need_fire_list[0]  # 更新当前鬼王级别
         target_ticket_rule_image = type_ticket_dict[self.cur_boss_type]
@@ -291,6 +294,7 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
         while True:
             self.screenshot()
             if self.appear(self.I_MD_FIRE):  # 可以挑战鬼王则退出
+                self._boss_generation = getattr(self, "_boss_generation", 0) + 1
                 return True
             if selected and self.appear(self.I_MD_CHECK_SELECTED, interval=0.6):
                 selected_x, selected_y = self.I_MD_CHECK_SELECTED.coord()
@@ -321,40 +325,62 @@ class BossBattle(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
         return True
 
     def check_and_switch_soul(self) -> bool:
-        """切换御魂"""
-        if not self.conf.switch_soul.enable:
-            return True
-        if self.State.switch_soul_done:
-            return True
-        logger.hr('Switch soul')
-        self.State.switch_soul_done = True
-        self.goto_page(ipages.page_shikigami_records)
-        if self.conf.switch_soul.switch_once:  # 只切换一次则将配置的鬼王御魂全部切换
-            for boss_type in self.conf.meta_demon_config.fire_sequence_v:
-                switch_type, (group, team) = self.conf.switch_soul.get_switch_by_enum(boss_type)
-                if switch_type is None:
-                    continue
-                if switch_type == 'int':
-                    self.run_switch_soul((group, team))
-                if switch_type == 'str':
-                    self.run_switch_soul_by_name(group, team)
-            self.goto_page(ipages.page_meta_demon_boss)
-            return True
-        # 当前鬼王类型未知, 无法切换御魂
+        """按鬼王分类应用御魂；显式开启快速上阵时通过 frame 装魂并上阵。"""
         if self.cur_boss_type is None:
-            logger.error(f'cur_boss_type is None')
-            self.goto_page(ipages.page_meta_demon_boss)
-            return False
-        switch_type, (group, team) = self.conf.switch_soul.get_switch_by_enum(self.cur_boss_type)
-        if switch_type is None:
-            logger.error(f'Switch soul format is invalid on {self.cur_boss_type.name.lower()}')
-            self.goto_page(ipages.page_meta_demon_boss)
-            return False
-        if switch_type == 'int':
-            self.run_switch_soul((group, team))
-        if switch_type == 'str':
-            self.run_switch_soul_by_name(group, team)
-        self.goto_page(ipages.page_meta_demon_boss)
+            enabled = any(self.conf.switch_soul_config.switch_for(group).enable or
+                          self.conf.switch_soul_config.switch_for(group).enable_switch_by_name or
+                          self.conf.battle_config(group).preset_enable or
+                          self.conf.general_config.high_star_quick_loadout_enable
+                          for group in ('low_star', 'high_star'))
+            return not enabled
+        category = loadout_group(self.cur_boss_type)
+        custom = self.conf.quick_preset_config
+        custom_enabled = (category == 'high_star' and
+                          self.conf.general_config.high_star_quick_loadout_enable and
+                          custom.high_star_custom_preset_enable)
+        loadout_key = (category, getattr(self, '_boss_generation', 0)) if custom_enabled else category
+        if getattr(self, '_active_loadout_group', None) == loadout_key:
+            return True
+        if category == 'high_star' and self.conf.general_config.high_star_quick_loadout_enable:
+            from tasks.Component.QuickLoadout.config import QuickLoadoutConfig
+            soul = self.conf.switch_soul_config.switch_for(category)
+            quick = QuickLoadoutConfig(enable=True, group_name=soul.group_name, preset_name=soul.team_name)
+            if custom_enabled:
+                # Invalid numeric targets must never silently fall back to another preset.
+                try:
+                    presets = self._parse_custom_presets(custom.high_star_custom_preset)
+                except ValueError as exc:
+                    logger.error(f'高星快速预设格式错误，仅支持名称: {exc}')
+                    return False
+                name_ocr = getattr(self, 'O_BOSS_NAME', None)
+                if name_ocr is None:
+                    logger.error('缺少超鬼王首领名称 OCR 资源 O_BOSS_NAME')
+                    return False
+                boss_name = self._read_quick_loadout_stage_name(name_ocr)
+                if not self._normalize_name(boss_name):
+                    logger.warning('未识别到首领名称，暂不上阵')
+                    return False
+                _, target, _ = self._match_custom_preset(boss_name, presets)
+                if target is None:
+                    logger.error(f'首领 {boss_name} 无匹配预设，请配置对应名称或 ALL')
+                    return False
+                quick.group_name, quick.preset_name = target
+            if not self.run_quick_loadout(quick, frame=self.F_QUICK_LOADOUT_FRAME):
+                return False
+        else:
+            soul = self.conf.switch_soul_config.switch_for(category)
+            if soul.enable or soul.enable_switch_by_name:
+                self.goto_page(ipages.page_shikigami_records)
+                if soul.enable_switch_by_name:
+                    self.run_switch_soul_by_name(soul.group_name, soul.team_name)
+                else:
+                    self.run_switch_soul(soul.switch_group_team)
+                self.goto_page(ipages.page_meta_demon_boss)
+        # 其他分类可能已改变阵容，切回时必须重新应用该分类的战斗预设。
+        shared = getattr(self, '_battle_shared_state', None)
+        if shared is not None:
+            shared.pop(f'meta_demon_{category}', None)
+        self._active_loadout_group = loadout_key
         return True
 
     def finish_task(self):

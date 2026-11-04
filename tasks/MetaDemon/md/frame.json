@@ -1,0 +1,38 @@
+[
+  {
+    "itemName": "quick_loadout_frame",
+    "imageName": "quick_loadout_frame_badge_1.png",
+    "roiBack": "474,177,800,450",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "",
+    "roiBadge": "1217,429,44,39",
+    "badgeSerial": 1,
+    "badgeGrayscale": false,
+    "roiRange": [
+      "496,224,553,387",
+      "762,557,108,36"
+    ],
+    "badges": [
+      {
+        "imageName": "quick_loadout_frame_badge_1.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      },
+      {
+        "imageName": "md_quick_loadout_frame_fight.png",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image",
+        "file": "./tasks/MetaDemon/md/md_quick_loadout_frame_fight.png"
+      }
+    ]
+  }
+]

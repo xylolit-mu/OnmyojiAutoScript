@@ -392,6 +392,8 @@ class ConfigModel(ConfigBase):
                 item["title"] = value["title"] if "title" in value else inflection.underscore(key)
                 if "description" in value:
                     item["description"] = value["description"]
+                if 'ui_exclusive_groups' in value:
+                    item['ui_exclusive_groups'] = value['ui_exclusive_groups']
                 item["default"] = value["default"]
                 item["value"] = jsons[key] if key in jsons else value["default"]
                 item["type"] = value["type"] if "type" in value else "enum"
@@ -424,10 +426,17 @@ class ConfigModel(ConfigBase):
                         groups_value[key] = groups[group_name]
             result[key] = merge_value(groups_value[key], value, schema["$defs"])
 
+        layout = getattr(task, 'settings_layout', None)
+        if layout and 'settings_layout_config' in result:
+            for item in result['settings_layout_config']:
+                if item['name'] == 'merged_settings_enable':
+                    item['ui_layout'] = {'version': 1, 'sections': layout}
+
         if isinstance(task, Chess):
             result = task.oasx_args(result)
 
-        return result
+        from module.config.settings_presentation import present_settings
+        return present_settings(task, result)
 
     def script_set_arg(self, task: str, group: str, argument: str, value) -> bool:
         # 验证参数

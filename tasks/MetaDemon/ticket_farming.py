@@ -7,11 +7,11 @@ from module.logger import logger
 from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
 from tasks.EvoZone.config import Layer, UserStatus as AwakeUserStatus
 from tasks.EvoZone.script_task import ScriptTask as AwakeTask
-from tasks.Exploration.config import UserStatus as ExplorationUserStatus
+from tasks.Exploration.config import AutoRotate, UpType, UserStatus as ExplorationUserStatus
 from tasks.Exploration.script_task import ScriptTask as ExplorationTask
 from tasks.GameUi.default_pages import page_reward
 import tasks.GameUi.task_pages as pages
-from tasks.MetaDemon.config import MetaDemonMode
+from tasks.MetaDemon.config import MetaDemonMode, ExplorationTarget
 
 
 class TicketsFull(Exception):
@@ -30,6 +30,8 @@ def metademon_tickets_full(task) -> bool:
 
 class TicketRewardMixin:
     def check_ticket_reward(self):
+        if getattr(self, '_ticket_farming_complete', False):
+            return
         if metademon_tickets_full(self):
             logger.info('门票已满')
             raise TicketsFull
@@ -66,39 +68,34 @@ class ExplorationTicketTask(TicketRewardMixin, ExplorationTask):
         return handlers
 
     def activate_realm_raid(self, con_scrolls, con, current_page):
-        if not con_scrolls.scrolls_enable or current_page not in (
-            pages.page_mainline, pages.page_gameplay,
-            pages.page_exploration, pages.page_exp_entrance,
-        ):
-            return
-        rule = (self.O_REALM_RAID_NUMBER1_META if current_page == pages.page_exp_entrance
-                else self.O_REALM_RAID_NUMBER_META)
-        current, _, total = rule.ocr_digit_counter(self.device.image)
-        if total <= 0 or current < con_scrolls.scrolls_threshold:
-            return
-        if con.buff_gold_50_click or con.buff_gold_100_click or con.buff_exp_50_click or con.buff_exp_100_click:
-            self.goto_page(pages.page_main)
-            self.open_buff()
-            self.gold_50(is_open=False)
-            self.gold_100(is_open=False)
-            self.exp_50(is_open=False)
-            self.exp_100(is_open=False)
-            self.close_buff()
-        self.goto_page(pages.page_mainline)
-        # 通过原任务配置写调度，防止刷票用的配置副本被保存。
-        owner = self.ticket_farming_owner
-        owner.set_next_run(task='MetaDemon', server=False,
-                           target=datetime.now() + con_scrolls.scrolls_cd)
-        owner.set_next_run(task='RealmRaid', server=False, target=datetime.now())
-        logger.info('突破票达到阈值，唤醒个人突破；超鬼王探索刷票等待下一次调度')
-        raise TaskEnd
+        """门票刷取不检测结界票，也不触发个人突破调度。"""
+        return
+
+
+
+def configure_ticket_farming(meta, awake, exploration):
+    """将超鬼王刷票设置映射到独立的觉醒、探索配置副本。"""
+    common = meta.general_config
+    target = {ExplorationTarget.ALL: UpType.ALL, ExplorationTarget.COIN: UpType.COIN,
+              ExplorationTarget.EXP: UpType.EXP, ExplorationTarget.DARUMA: UpType.DARUMAA}
+    exploration.exploration_config.auto_rotate = AutoRotate.yes if common.exploration_rotate else AutoRotate.no
+    exploration.exploration_config.up_type = target[common.exploration_target]
+    exploration.scrolls.scrolls_enable = False
+    awake.evo_zone_config.soul_buff_enable = common.awake_buff_enable
+    soul = meta.switch_soul_config.switch_for('ticket_farming')
+    preset = meta.battle_config('ticket_farming')
+    for config in (awake, exploration):
+        config.switch_soul_config = soul.model_copy(deep=True)
+        config.general_battle_config = config.general_battle_config.model_copy(
+            update=preset.model_dump())
 
 
 def run_ticket_farming(owner, mode) -> bool:
-    """使用内存配置副本；突破衔接通过原任务写入调度。"""
+    """使用内存配置副本执行门票刷取。"""
     config = copy(owner.config)
     config.model = owner.config.model.model_copy(deep=True)
     limit_time = config.meta_demon.meta_demon_config.limit_time_v
+    configure_ticket_farming(config.meta_demon, config.evo_zone, config.exploration)
     if mode == MetaDemonMode.AWAKE:
         settings = config.evo_zone.evo_zone_config
         settings.user_status = AwakeUserStatus.ALONE
@@ -108,17 +105,29 @@ def run_ticket_farming(owner, mode) -> bool:
         settings = config.exploration.exploration_config
         settings.user_status = ExplorationUserStatus.ALONE
         settings.minions_cnt = 2 ** 31 - 1
-        config.exploration.scrolls.scrolls_enable = True
         runner = ExplorationTicketTask(config, owner.device)
-        runner.ticket_farming_owner = owner
     else:
         raise ValueError(f'未知门票刷取模式: {mode}')
     runner.start_time = datetime.now()
     runner.current_count = 0
     runner.limit_count = 2 ** 31 - 1
     runner.install_ticket_reward_hook()
+    buff_opened = False
     try:
         if mode == MetaDemonMode.AWAKE:
+            soul = config.evo_zone.switch_soul_config
+            if soul.enable or soul.enable_switch_by_name:
+                runner.goto_page(pages.page_shikigami_records)
+                if soul.enable_switch_by_name:
+                    runner.run_switch_soul_by_name(soul.group_name, soul.team_name)
+                else:
+                    runner.run_switch_soul(soul.switch_group_team)
+            if config.meta_demon.general_config.awake_buff_enable:
+                runner.goto_page(pages.page_main)
+                runner.open_buff()
+                runner.awake(is_open=True)
+                buff_opened = True
+                runner.close_buff()
             runner.limit_time = limit_time
             runner.run_alone()
         else:
@@ -127,4 +136,11 @@ def run_ticket_farming(owner, mode) -> bool:
             runner.exec_exp_page()
     except TicketsFull:
         return True
+    finally:
+        runner._ticket_farming_complete = True
+        if buff_opened:
+            runner.goto_page(pages.page_main)
+            runner.open_buff()
+            runner.awake(is_open=False)
+            runner.close_buff()
     return False

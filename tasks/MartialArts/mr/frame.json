@@ -1,0 +1,34 @@
+[
+  {
+    "itemName": "mr_boss_quick_loadout_frame",
+    "imageName": "mr_mr_boss_goto_quick_loadout.png",
+    "roiBadge": "910,597,32,36",
+    "roiBack": "900,586,52,56",
+    "roiRange": [
+      "546,187,551,386",
+      "809,518,119,42"
+    ],
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "badgeSerial": 1,
+    "badges": [
+      {
+        "imageName": "mr_mr_boss_goto_quick_loadout.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "type": "click"
+      },
+      {
+        "type": "image",
+        "imageName": "mr_mr_boss_quick_loadout_fight.png",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "file": "./tasks/MartialArts/mr/mr_mr_boss_quick_loadout_fight.png"
+      }
+    ],
+    "description": "快捷配置：range1 面板，range2 出战"
+  }
+]

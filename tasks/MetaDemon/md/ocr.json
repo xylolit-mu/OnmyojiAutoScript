@@ -25,5 +25,14 @@
     "method": "Default",
     "keyword": "",
     "description": "合成目标星级"
+  },
+  {
+    "itemName": "boss_name",
+    "roiFront": "515,132,33,203",
+    "roiBack": "515,132,33,203",
+    "mode": "Single",
+    "method": "Default",
+    "keyword": "",
+    "description": ""
   }
 ]

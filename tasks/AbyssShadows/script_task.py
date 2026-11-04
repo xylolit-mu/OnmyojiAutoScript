@@ -759,18 +759,13 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, QuickLoadout, AbyssShadowsAs
             return
 
         try:
-            group, preset = (int(part.strip()) for part in preset_str.split(','))
-            config = QuickLoadoutConfig(enable=True, group_number=group, preset_number=preset)
-            dismiss = RuleClick(
-                roi_front=self.I_OPEN_QUICK_LOADOUT.roi_front,
-                roi_back=self.I_OPEN_QUICK_LOADOUT.roi_front,
-                name='abyss_quick_loadout_close',
-            )
+            group, preset = (part.strip() for part in preset_str.split(','))
+            if group.isdigit() or preset.isdigit():
+                raise ValueError('Quick loadout requires group and preset names, not numbered positions')
+            config = QuickLoadoutConfig(enable=True, group_name=group, preset_name=preset)
             if not self.run_quick_loadout(
                     config,
-                    entry=self.I_OPEN_QUICK_LOADOUT,
-                    fight_anchor=self.I_ABYSS_QUICK_LOADOUT_FIGHT,
-                    dismiss=dismiss):
+                    frame=self.F_ABYSS_QUICK_LOADOUT_FRAME):
                 raise RuntimeError('Abyss quick loadout failed')
         except Exception as e:
             logger.error(f"狭间 quick loadout 失败: {e}")

@@ -22,8 +22,8 @@
   {
     "itemName": "g_jade",
     "imageName": "gg_g_jade.png",
-    "roiFront": "676,512,43,46",
-    "roiBack": "650,489,94,100",
+    "roiFront": "676,480,43,46",
+    "roiBack": "646,457,94,100",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",
@@ -32,7 +32,7 @@
   {
     "itemName": "g_cat_food",
     "imageName": "gg_g_cat_food.png",
-    "roiFront": "666,499,59,65",
+    "roiFront": "664,475,59,65",
     "roiBack": "543,421,205,176",
     "method": "Template matching",
     "threshold": 0.8,
@@ -42,7 +42,7 @@
   {
     "itemName": "g_dog_food",
     "imageName": "gg_g_dog_food.png",
-    "roiFront": "575,510,63,54",
+    "roiFront": "585,494,63,54",
     "roiBack": "543,421,205,176",
     "method": "Template matching",
     "threshold": 0.8,

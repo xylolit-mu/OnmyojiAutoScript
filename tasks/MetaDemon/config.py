@@ -1,3 +1,5 @@
+from typing import ClassVar
+from tasks.Component.config_settings_layout import SettingsLayoutConfig, settings_section
 # This Python file uses the following encoding: utf-8
 # @author runhey
 # github https://github.com/runhey
@@ -5,7 +7,7 @@ from datetime import timedelta, time
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 
 from tasks.Component.config_base import ConfigBase, TimeDelta, Time, dynamic_hide
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from module.config.multi_select import normalize_multi_select
 from enum import IntEnum, Enum
 from tasks.Component.config_scheduler import Scheduler
@@ -24,16 +26,17 @@ class BossType(IntEnum):
 class MetaDemonMode(str, Enum):
     BOSS_BATTLE = '鬼王战斗'
     AWAKE = '门票刷取：觉醒七层'
-    EXPLORATION = '门票刷取：探索绘卷'
+    EXPLORATION = '门票刷取：探索'
 
 
 class MetaDemonConfig(ConfigBase):
-    mode: list[MetaDemonMode] = Field(default=[MetaDemonMode.BOSS_BATTLE], title='运行模式', description='勾选执行；两种门票刷取至多选一种，可与鬼王战斗共存，先刷门票再战斗')
+    mode: list[MetaDemonMode] = Field(default=[MetaDemonMode.BOSS_BATTLE], title='运行模式', json_schema_extra={'ui_exclusive_groups': [['门票刷取：觉醒七层', '门票刷取：探索']]}, description='勾选执行；两种门票刷取至多选一种，可与鬼王战斗共存，先刷门票再战斗')
 
     @field_validator('mode', mode='before')
     @classmethod
     def parse_modes(cls, value):
-        selected = [MetaDemonMode(item) for item in normalize_multi_select(value)]
+        selected = [MetaDemonMode('门票刷取：探索' if item == '门票刷取：探索绘卷' else item)
+                    for item in normalize_multi_select(value)]
         tickets = [item for item in (MetaDemonMode.AWAKE, MetaDemonMode.EXPLORATION) if item in selected]
         if len(tickets) > 1:
             raise ValueError('觉醒和探索门票刷取至多选择一种')
@@ -80,51 +83,57 @@ class MetaDemonConfig(ConfigBase):
         return synthesis_boss_type_list
 
 
+def loadout_group(boss_type: BossType | None) -> str:
+    if boss_type is None:
+        return 'low_star'
+    return 'low_star' if int(boss_type) <= 4 else 'high_star'
+
+
+class ExplorationTarget(str, Enum):
+    ALL = '全部'
+    COIN = '金币'
+    EXP = '经验'
+    DARUMA = '达摩'
+
+
+class MetaDemonGeneralConfig(ConfigBase):
+    high_star_quick_loadout_enable: bool = Field(default=False, title="高星鬼王启用快速上阵", description="仅五星、六星鬼王战斗生效；使用对应御魂配置中的分组名、预设名快速上阵，跳过式神录切魂与战斗准备预设。门票刷取仍按原配置执行。")
+    exploration_rotate: bool = Field(default=False, title='探索自动添加候补式神', description='与探索任务的自动添加候补式神一致：启用轮换并自动补充候补式神；关闭时关闭轮换。')
+    awake_buff_enable: bool = Field(default=False, title='觉醒启用加成')
+    exploration_target: ExplorationTarget = Field(default=ExplorationTarget.ALL, title='探索目标')
+
+
 class MetaDemonSwitchSoulConfig(ConfigBase):
-    enable: bool = Field(default=False, description='是否启用自动切换御魂,清空则不会切换对应御魂\n若是数字,则以编号方式切换御魂(组号,队伍号),组1-7,队伍1-4\n若非数字,则以ocr方式切换御魂(组名,队伍名)')
-    switch_once: bool = Field(default=False, description='启用该项会一次性切换所有需要攻击的鬼王御魂(建议全部独立御魂再启用), 否则当鬼王级别变更时会自动切换对应级别御魂')
-    one_star: str = Field(default='', description='一星鬼王切换御魂配置')
-    enable_one_star_preset: bool = Field(default=False, description='是否战斗内切换一星鬼王预设,仅限数字切换御魂可用,否则无效,下面同理')
-    two_stars: str = Field(default='', description='二星鬼王切换御魂配置')
-    enable_two_stars_preset: bool = Field(default=False, description='是否战斗内切换二星鬼王预设')
-    three_stars: str = Field(default='', description='三星鬼王切换御魂配置')
-    enable_three_stars_preset: bool = Field(default=False, description='是否战斗内切换三星鬼王预设')
-    four_stars: str = Field(default='', description='四星鬼王切换御魂配置')
-    enable_four_stars_preset: bool = Field(default=False, description='是否战斗内切换四星鬼王预设')
-    five_stars: str = Field(default='', description='五星鬼王切换御魂配置')
-    enable_five_stars_preset: bool = Field(default=False, description='是否战斗内切换五星鬼王预设')
-    six_stars: str = Field(default='', description='六星鬼王切换御魂配置')
-    enable_six_stars_preset: bool = Field(default=False, description='是否战斗内切换六星鬼王预设')
-    # money: str = Field(default='', description='氪金鬼王切换御魂配置')
-    # enable_money_preset: bool = Field(default=False, description='是否切换氪金鬼王预设')
+    low_star_enable: bool = Field(default=False, title='按编号切换')
+    low_star_group_team: str = Field(default='-1,-1', title='分组、队号', description='switch_group_team_help')
+    low_star_by_name: bool = Field(default=False, title='按名称切换', description='enable_switch_by_name_help')
+    low_star_group_team_name: str = Field(default='', title='分组名、预设名')
+    high_star_enable: bool = Field(default=False, title='按编号切换')
+    high_star_group_team: str = Field(default='-1,-1', title='分组、队号', description='switch_group_team_help')
+    high_star_by_name: bool = Field(default=False, title='按名称切换', description='enable_switch_by_name_help')
+    high_star_group_team_name: str = Field(default='', title='分组名、预设名')
+    ticket_farming_enable: bool = Field(default=False, title='按编号切换')
+    ticket_farming_group_team: str = Field(default='-1,-1', title='分组、队号', description='switch_group_team_help')
+    ticket_farming_by_name: bool = Field(default=False, title='按名称切换', description='enable_switch_by_name_help')
+    ticket_farming_group_team_name: str = Field(default='', title='分组名、预设名')
 
-    def get_switch_by_enum(self, boss_type: BossType) -> tuple[str, tuple[str | int, str | int]]:
-        """根据枚举获取对应的 切换类型, (group,team)"""
-        return self.get_switch_by_name(boss_type.name.lower())
+    def switch_for(self, category: str):
+        from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
+        names = getattr(self, f'{category}_group_team_name').split(',')
+        by_name = getattr(self, f'{category}_by_name')
+        group_name, team_name = (part.strip() for part in names) if len(names) == 2 else ('', '')
+        return SwitchSoulConfig(
+            enable=getattr(self, f'{category}_enable') and not by_name,
+            switch_group_team=getattr(self, f'{category}_group_team'),
+            enable_switch_by_name=by_name, group_name=group_name, team_name=team_name,
+        )
 
-    def get_switch_by_name(self, switch_name: str) -> tuple[str, tuple[str | int, str | int]]:
-        """根据名称获取对应的御魂预设"""
-        group_team = getattr(self, switch_name, None)
-        if group_team is None or group_team.strip() == '' or ',' not in group_team or len(group_team.split(',')) != 2:
-            return None, (None, None)
-        group, team = group_team.split(',')
-        if group.isdigit() and team.isdigit():
-            return 'int', (int(group), int(team))
-        return 'str', (group, team)
 
-    def get_general_battle_conf(self, boss_type: BossType) -> GeneralBattleConfig:
-        """获取通用战斗配置"""
-        if boss_type is None:
-            return GeneralBattleConfig()
-        enable_preset = getattr(self, f'enable_{boss_type.name.lower()}_preset', False)
-        if not enable_preset:
-            return GeneralBattleConfig()
-        switch_type, (group, team) = self.get_switch_by_enum(boss_type)
-        if switch_type is None or switch_type == 'str':
-            return GeneralBattleConfig()
-        if switch_type == 'int':
-            return GeneralBattleConfig(lock_team_enable=False, preset_enable=True, preset_group=group, preset_team=team)
-        return GeneralBattleConfig()
+class MetaDemonQuickPresetConfig(ConfigBase):
+    high_star_custom_preset_enable: bool = Field(default=False, title='指定高星切换预设',
+        description='每次挑战新首领时上阵对应预设并装配一次御魂')
+    high_star_custom_preset: str = Field(default='ALL:(1,1)', title='自定义配置上阵预设',
+        description='示例：boss_name:("预设组","预设名"); 多项以分号分隔；ALL 表示其他怪物。')
 
 
 class MetaDemonScheduler(Scheduler):
@@ -134,6 +143,82 @@ class MetaDemonScheduler(Scheduler):
 
 
 class MetaDemon(ConfigBase):
+    settings_layout_config: SettingsLayoutConfig = Field(default_factory=SettingsLayoutConfig)
+    settings_layout: ClassVar[list[dict]] = [
+        settings_section('scheduler', '任务调度', groups=[{'name': 'scheduler'}]),
+        settings_section('general_config', '通用设置', groups=[{'name': 'meta_demon_config'}, {'name': 'general_config'}]),
+        settings_section('switch_soul_config', '执行任务前切换御魂', variants=[
+            {'id': key, 'label': label, 'groups': [{'name': 'switch_soul_config',
+                'fields': [f'{key}_{suffix}' for suffix in ('enable', 'group_team', 'by_name', 'group_team_name')],
+                'labels': {f'{key}_enable': '启用', f'{key}_group_team': '御魂装配分组设置',
+                           f'{key}_by_name': '通过OCR来切换御魂预设', f'{key}_group_team_name': '分组名、预设名'}}]}
+            for key, label in (('low_star', '低星鬼王'), ('high_star', '高星鬼王'), ('ticket_farming', '门票刷取'))]),
+        settings_section('battle_config', '战斗配置', variants=[
+            {'id': key, 'label': label, 'groups': [{'name': f'{key}_battle_conf'}]}
+            for key, label in (('low_star', '低星鬼王'), ('high_star', '高星鬼王'), ('ticket_farming', '门票刷取'))]),
+        settings_section('quick_preset_config', '快速预设详情', groups=[{'name': 'quick_preset_config'}]),
+    ]
+
     scheduler: MetaDemonScheduler = Field(default_factory=MetaDemonScheduler)
     meta_demon_config: MetaDemonConfig = Field(default_factory=MetaDemonConfig)
-    switch_soul: MetaDemonSwitchSoulConfig = Field(default_factory=MetaDemonSwitchSoulConfig)
+    general_config: MetaDemonGeneralConfig = Field(default_factory=MetaDemonGeneralConfig)
+    switch_soul_config: MetaDemonSwitchSoulConfig = Field(default_factory=MetaDemonSwitchSoulConfig)
+    quick_preset_config: MetaDemonQuickPresetConfig = Field(default_factory=MetaDemonQuickPresetConfig)
+    low_star_battle_conf: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
+    high_star_battle_conf: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
+    ticket_farming_battle_conf: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
+
+    def battle_config(self, category: str) -> GeneralBattleConfig:
+        config = getattr(self, f'{category}_battle_conf')
+        if category == 'high_star' and self.general_config.high_star_quick_loadout_enable:
+            return config.model_copy(update={'preset_enable': False})
+        return config
+
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_flat_presets(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        old = data.pop('preset_config', None)
+        if isinstance(old, dict):
+            for category in ('low_star', 'high_star', 'ticket_farming'):
+                data.setdefault(f'{category}_battle_conf', {
+                    'preset_enable': old.get(f'{category}_enable', False) if category != 'high_star' else False,
+                    'preset_group': old.get(f'{category}_group', 1),
+                    'preset_team': old.get(f'{category}_team', 1),
+                })
+            # Preserve the previously entered OCR target without enabling quick loadout implicitly.
+            souls = dict(data.get('switch_soul_config', {}))
+            if old.get('high_star_group_name') and old.get('high_star_preset_name'):
+                souls.setdefault('high_star_group_team_name', f"{old['high_star_group_name']},{old['high_star_preset_name']}")
+            data['switch_soul_config'] = souls
+        return data
+
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_legacy_loadouts(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        old = data.pop('switch_soul', None)
+        if not isinstance(old, dict) or 'switch_soul_config' in data:
+            return data
+        souls, presets = {}, {}
+        for category, stars in (('low_star', ('one_star','two_stars','three_stars','four_stars')),
+                                ('high_star', ('five_stars','six_stars'))):
+            star = next((key for key in stars if str(old.get(key, '')).strip()), stars[0])
+            text = str(old.get(star, '')).strip()
+            if text == '-1,-1':
+                text = ''
+            parts = [part.strip() for part in text.split(',')]
+            numbered = len(parts) == 2 and all(part.isdigit() for part in parts)
+            souls[f'{category}_enable'] = bool(old.get('enable') and text and numbered)
+            souls[f'{category}_by_name'] = bool(old.get('enable') and text and not numbered)
+            souls[f'{category}_group_team' if numbered else f'{category}_group_team_name'] = text
+            if category == 'low_star' and numbered:
+                presets.update(low_star_enable=bool(old.get(f'enable_{star}_preset')),
+                               low_star_group=int(parts[0]), low_star_team=int(parts[1]))
+        data['switch_soul_config'] = souls
+        data.setdefault('preset_config', presets)
+        return data
