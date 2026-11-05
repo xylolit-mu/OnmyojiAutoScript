@@ -37,8 +37,6 @@ class DraftDuelRoundStateMixin:
         self._draft_theoretical_lineup = ()
         self._draft_deployment_overrides = {}
         self._draft_peer_transcript = []
-        self._draft_policy_snapshot = None
-        self._draft_latent_cache = None
         self.draft_fielded = ()
         self.draft_deployment_rounds = []
         self.draft_peer_picks = ()

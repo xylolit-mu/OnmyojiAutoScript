@@ -25,7 +25,7 @@ class DraftDuelRecoveryMixin:
         '_draft_field_weights', 'draft_unresolved_slots',
         '_draft_offer', '_draft_pick_decision', '_draft_lineup_plan',
         '_draft_small_game_result', '_draft_end_recorded', '_draft_transcript', '_draft_peer_transcript',
-        '_draft_deployment_overrides', '_draft_theoretical_lineup', '_draft_policy_snapshot',
+        '_draft_deployment_overrides', '_draft_theoretical_lineup',
         '_draft_match_state',
         '_draft_deploy_clock_wall', 'draft_planned_lineup',
     )
@@ -128,19 +128,12 @@ class DraftDuelRecoveryMixin:
                                        for i, name in enumerate(hand_names))
                 if any(h.ndim != 3 or not h.size for _, h in hand_templates):
                     raise ValueError('invalid hand template images')
-            # 旧矩阵检查点中尚未执行的决策应按恢复后的策略重算。
-            if '_draft_matrix_model' in data:
-                data['_draft_pick_decision'] = None
-                if data.get('phase') in ('select', 'rank'):
-                    data['_draft_lineup_plan'] = None
-                    data['draft_planned_lineup'] = []
             for key in self._CHECKPOINT_FIELDS:
                 if key in data:
                     value = data[key]
                     if key in ('draft_fielded', 'draft_peer_picks', 'draft_peer_rounds', 'draft_planned_lineup'):
                         value = tuple(value)
                     setattr(self, key, value)
-            self._draft_latent_cache = None
             self._draft_transcript = {int(key): value for key, value in
                                       getattr(self, '_draft_transcript', {}).items()}
             self.draft_hand_templates = hand_templates

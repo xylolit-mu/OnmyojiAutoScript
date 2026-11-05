@@ -46,12 +46,12 @@ class RoundRecordChecks(unittest.TestCase):
 
     def test_live_calls_only_legacy_without_loading_or_updating_matrix(self):
         owner = SimpleNamespace()
-        with patch.object(runtime, 'models', side_effect=AssertionError('latent loaded')):
-            self.assertEqual(runtime.choose_pick(owner, OWN[:3]), lineup.choose_pick(OWN[:3]))
-            self.assertEqual(runtime.plan_lineup(owner, OWN, field_weights={}),
-                             lineup.plan_lineup(OWN, team_size=3, field_weights={}))
-            self.assertEqual(runtime.plan_duel_lineup(owner, OWN, MATE, field_weights={}),
-                             lineup.plan_duel_lineup(OWN, MATE, field_weights={}))
+        self.assertFalse(hasattr(runtime, 'models'))
+        self.assertEqual(runtime.choose_pick(owner, OWN[:3]), lineup.choose_pick(OWN[:3]))
+        self.assertEqual(runtime.plan_lineup(owner, OWN, field_weights={}),
+                         lineup.plan_lineup(OWN, team_size=3, field_weights={}))
+        self.assertEqual(runtime.plan_duel_lineup(owner, OWN, MATE, field_weights={}),
+                         lineup.plan_duel_lineup(OWN, MATE, field_weights={}))
 
     def write_games(self):
         for i, result in enumerate(('win','loss','win')):
