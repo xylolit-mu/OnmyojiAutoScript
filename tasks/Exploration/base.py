@@ -65,7 +65,7 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
             self.run_switch_soul_by_name(self._config.switch_soul_config.group_name,
                                          self._config.switch_soul_config.team_name)
         # 开启加成
-        con = self.config.exploration.exploration_config
+        con = self._config.exploration_config
         if con.buff_gold_50_click or con.buff_gold_100_click or con.buff_exp_50_click or con.buff_exp_100_click:
             self.goto_page(pages.page_main)
             self.open_buff()
@@ -98,7 +98,7 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
     # 打开指定的章节：
     def open_expect_level(self):
         swipeCount = 0
-        config_exploration_level = self.config.exploration.exploration_config.exploration_level
+        config_exploration_level = self._config.exploration_config.exploration_level
         while True:
             # 判断有无目标章节
             self.screenshot()
@@ -314,9 +314,8 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
         while max_tries > 0 and not timeout_timer.reached():
             self.screenshot()
             cur_page = self.get_current_page()
-            # 退出动画期间可能再次识别到怪物开始攻击, 因此取消退出
+            # 保留主动退出标记；未请求退出的误触弹窗仍由页面处理器取消。
             if cur_page == pages.page_exp_exit:
-                self.need_exit = False
                 return True
             if cur_page in (pages.page_battle_prepare, pages.page_battle):
                 return True

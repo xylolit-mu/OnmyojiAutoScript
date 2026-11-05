@@ -89,6 +89,11 @@ class ScriptTask(BaseExploration):
         return False
 
     def run_on_exp_main(self):
+        # Returning to the scene for one delayed frame must not restart combat
+        # and revoke an exit already requested after exhausting target monsters.
+        if self.need_exit:
+            self.quit_exp_main()
+            return
         if self.pre_page and self.pre_page != pages.page_exp_main:
             # 防止因延迟过大, 一直在主界面和奖励页面切换导致too many click
             self.device.click_record_clear()
