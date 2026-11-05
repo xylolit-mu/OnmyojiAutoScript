@@ -12,6 +12,10 @@ class ScriptTask(BossBattle):
         modes = self.config.meta_demon.meta_demon_config.mode
         full = True
         for mode in modes:
+            if mode == MetaDemonMode.BOSS_ASSIST:
+                from tasks.MetaDemon.assistance import run_assistance
+                self.start_time = datetime.now()
+                return run_assistance(self)
             if mode == MetaDemonMode.BOSS_BATTLE:
                 self.start_time = datetime.now()
                 return super().run()

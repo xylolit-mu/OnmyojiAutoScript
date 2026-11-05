@@ -24,7 +24,7 @@ class MetaDemonAssets:
 	# 鬼王结算中 
 	I_MD_SETTLING = RuleImage(roi_front=(723,441,82,32), roi_back=(714,431,100,51), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_settling.png")
 	# 领取昨日奖励 
-	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
+	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(709,544,183,56), roi_back=(628,487,327,163), threshold=0.8, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
 	# 一星鬼王召唤票 
 	I_MD_ONE_STAR = RuleImage(roi_front=(361,312,68,69), roi_back=(261,299,754,133), threshold=0.85, method="Template matching", profile="High", file="./tasks/MetaDemon/md/md_md_one_star.png")
 	# 二星鬼王召唤票 
@@ -102,6 +102,8 @@ class MetaDemonAssets:
 	O_SYNTHESIS_LEVEL = RuleOcr(roi=(747,424,181,34), area=(747,424,181,34), mode="Single", method="Default", keyword="", name="synthesis_level")
 	#  
 	O_BOSS_NAME = RuleOcr(roi=(515,132,33,203), area=(515,132,33,203), mode="Single", method="Default", keyword="", name="boss_name")
+	# 探索页面超鬼王门票获得数量
+	O_METADEMON_PASS_EXP = RuleOcr(roi=(919,16,114,34), area=(919,16,114,34), mode="DigitCounter", method="Default", keyword="", name="metademon_pass_exp")
 
 
 	# Swipe Rule Assets

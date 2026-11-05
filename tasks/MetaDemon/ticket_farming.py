@@ -12,6 +12,8 @@ from tasks.Exploration.script_task import ScriptTask as ExplorationTask
 from tasks.GameUi.default_pages import page_reward
 import tasks.GameUi.task_pages as pages
 from tasks.MetaDemon.config import MetaDemonMode, ExplorationTarget
+from tasks.MetaDemon.assets import MetaDemonAssets
+from tasks.GameUi.assets import GameUiAssets
 
 
 class TicketsFull(Exception):
@@ -108,8 +110,28 @@ def ticket_farming_config(meta, mode):
     raise ValueError(f'未知门票刷取模式: {mode}')
 
 
+def tickets_full_before_farming(owner) -> bool:
+    """Check the courtyard's exploration landing page before any farming setup."""
+    owner.goto_page(pages.page_exploration)
+    for _ in range(3):
+        owner.screenshot()
+        if not owner.appear(GameUiAssets.I_CHECK_EXPLORATION):
+            continue
+        current, _, total = MetaDemonAssets.O_METADEMON_PASS_EXP.ocr_digit_counter(owner.device.image)
+        if current >= 0 and total > 0:
+            logger.info(f'门票刷取前检测: {current}/{total}')
+            return current >= total
+    logger.warning('探索入口未识别到有效超鬼王门票计数，继续刷取并由奖励页检测满票')
+    return False
+
+
 def run_ticket_farming(owner, mode) -> bool:
     """共享运行环境；御魂和战斗参数直接使用超鬼王门票刷取配置。"""
+    if mode not in (MetaDemonMode.AWAKE, MetaDemonMode.EXPLORATION):
+        raise ValueError(f'未知门票刷取模式: {mode}')
+    if tickets_full_before_farming(owner):
+        logger.info('超鬼王门票已满，跳过门票刷取')
+        return True
     config = owner.config
     limit_time = config.meta_demon.meta_demon_config.limit_time_v
     if mode == MetaDemonMode.AWAKE:

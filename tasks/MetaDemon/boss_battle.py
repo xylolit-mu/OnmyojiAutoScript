@@ -245,23 +245,12 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
             self.finish_task()
         return True
 
-    def check_and_switch_ticket(self):
+    def check_and_switch_ticket(self, sequence=None):
         """切换鬼王门票并更新当前鬼王级别"""
         logger.hr('Summon boss')
-        # 打开切换门票弹窗
-        while True:
-            self.screenshot()
-            if self.appear(self.I_MD_FIRE, interval=1.2):  # 可以直接挑战鬼王则退出
-                return True
-            if self.appear(self.I_MD_GET_BOSS, interval=0.6):  # 打开弹窗了
-                break
-            if self.appear(self.I_MD_TICKET_EMPTY, interval=0.6):  # 任何门票都没有了
-                self.State.done = True
-                logger.info('Not have any boss ticket, exit')
-                return False
-            if self.appear_then_click(self.I_MD_SWITCH_TICKET, interval=0.6):
-                continue
-        type_ticket_dict: dict[BossType, RuleImage] = {
+        # Keep panel opening, selection and confirmation in one screenshot-driven
+        # loop: a second entry click or a dropped click may close the panel.
+        tickets = {
             BossType.ONE_STAR: self.I_MD_ONE_STAR,
             BossType.TWO_STARS: self.I_MD_TWO_STARS,
             BossType.THREE_STARS: self.I_MD_THREE_STARS,
@@ -269,42 +258,54 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
             BossType.FIVE_STARS: self.I_MD_FIVE_STARS,
             BossType.SIX_STARS: self.I_MD_SIX_STARS,
         }
-        # 获取所有存在的鬼王门票
-        can_fire_list = [boss_type for boss_type, ticket_rule_image in type_ticket_dict.items() if
-                         self.appear(ticket_rule_image)]
-        if len(can_fire_list) <= 0:
-            self.State.done = True
-            logger.info('No remain boss ticket, exit')
-            self.ui_click_until_disappear(self.I_MD_CLOSE_POPUP, interval=0.6)
-            return False
-        # 根据存在的鬼王门票和配置的鬼王序列过滤出需要召唤的鬼王门票
-        need_fire_list = [boss_type for boss_type in self.conf.meta_demon_config.fire_sequence_v if
-                          boss_type in can_fire_list]
-        if len(need_fire_list) <= 0:
-            self.State.done = True
-            logger.info('There is no boss that needs to be attacked, exit')
-            self.ui_click_until_disappear(self.I_MD_CLOSE_POPUP, interval=0.6)
-            return False
-        if self.cur_boss_type is None or loadout_group(self.cur_boss_type) != loadout_group(need_fire_list[0]):
-            self.current_count = 0
-        self.cur_boss_type = need_fire_list[0]  # 更新当前鬼王级别
-        target_ticket_rule_image = type_ticket_dict[self.cur_boss_type]
-        selected = False
-        logger.info(f'Summon {self.cur_boss_type.name.lower()} boss')
-        while True:
+        target_type = None
+        deadline = time.monotonic() + 25
+        settle_until = 0.0
+        while time.monotonic() < deadline:
             self.screenshot()
-            if self.appear(self.I_MD_FIRE):  # 可以挑战鬼王则退出
-                self._boss_generation = getattr(self, "_boss_generation", 0) + 1
+            if self.appear(self.I_MD_FIRE):
+                if target_type is not None:
+                    if self.cur_boss_type is None or loadout_group(self.cur_boss_type) != loadout_group(target_type):
+                        self.current_count = 0
+                    self.cur_boss_type = target_type
+                    self._boss_generation = getattr(self, '_boss_generation', 0) + 1
+                    logger.info(f'Summon {target_type.name.lower()} boss confirmed')
                 return True
-            if selected and self.appear(self.I_MD_CHECK_SELECTED, interval=0.6):
-                selected_x, selected_y = self.I_MD_CHECK_SELECTED.coord()
-                x, y, w, h = target_ticket_rule_image.roi_front
-                if x <= selected_x <= x + w:  # 确定选中目标鬼王门票, 召唤鬼王
-                    self.ui_click_until_disappear(self.I_MD_GET_BOSS, interval=0.6)
+            panel_open = self.appear(self.I_MD_GET_BOSS)
+            if not panel_open:
+                if time.monotonic() < settle_until:
                     continue
-            if self.appear_then_click(target_ticket_rule_image, interval=0.6):  # 选择对应鬼王门票
-                selected = True
+                if self.appear(self.I_MD_TICKET_EMPTY):
+                    self.State.done = True
+                    logger.info('Not have any boss ticket, exit')
+                    return False
+                if self.appear_then_click(self.I_MD_SWITCH_TICKET, interval=1.5):
+                    # Let the opening animation finish before clicking its toggle again.
+                    settle_until = time.monotonic() + 1.5
                 continue
+            if target_type is None:
+                available = [star for star in (self.conf.meta_demon_config.fire_sequence_v if sequence is None else sequence)
+                             if star in tickets and self.appear(tickets[star])]
+                if not available:
+                    self.State.done = True
+                    logger.info('No remaining ticket in configured summon sequence')
+                    self.appear_then_click(self.I_MD_CLOSE_POPUP, interval=0.8)
+                    return False
+                target_type = available[0]
+                logger.info(f'Summon {target_type.name.lower()} boss')
+            target = tickets[target_type]
+            # Both the target ticket and its selected marker must belong to this frame.
+            if not self.appear(target):
+                continue
+            if self.appear(self.I_MD_CHECK_SELECTED):
+                marker_x, _, marker_w, _ = self.I_MD_CHECK_SELECTED.roi_front
+                x, _, width, _ = target.roi_front
+                if x <= marker_x + marker_w / 2 <= x + width:
+                    if self.appear_then_click(self.I_MD_GET_BOSS, interval=1.5):
+                        settle_until = time.monotonic() + 3
+                    continue
+            self.appear_then_click(target, interval=1.0)
+        logger.warning(f'鬼王召唤未完成（目标={target_type.name if target_type else "未选定"}），返回重新检查界面')
         return False
 
     def check_and_switch_powerful(self) -> bool:

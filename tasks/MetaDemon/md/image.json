@@ -32,8 +32,8 @@
   {
     "itemName": "md_get_yesterday_reward",
     "imageName": "md_md_get_yesterday_reward.png",
-    "roiFront": "547,571,183,56",
-    "roiBack": "471,523,327,163",
+    "roiFront": "709,544,183,56",
+    "roiBack": "628,487,327,163",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",

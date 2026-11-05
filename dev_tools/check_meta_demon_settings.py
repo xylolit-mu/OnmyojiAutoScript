@@ -87,7 +87,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_settings_payload_has_flat_groups_and_defaults(self):
         payload = ConfigModel.script_task(SimpleNamespace(meta_demon=MetaDemon()), 'MetaDemon')
-        self.assertEqual(set(payload), {'scheduler','meta_demon_config','general_config','switch_soul_config','low_star_battle_conf','high_star_battle_conf','ticket_farming_battle_conf','quick_preset_config','settings_layout_config'})
+        self.assertEqual(set(payload), {'scheduler','meta_demon_config','general_config','switch_soul_config','low_star_battle_conf','high_star_battle_conf','ticket_farming_battle_conf','quick_preset_config','settings_layout_config','assistance_config'})
         for group in payload.values():
             self.assertIsInstance(group, list)
             for field in group:
@@ -224,7 +224,8 @@ class MetaDemonSettingsChecks(unittest.TestCase):
                     self.assertIs(config, original)
                     return runner
 
-                with patch('tasks.MetaDemon.ticket_farming.AwakeTicketTask', side_effect=build), \
+                with patch('tasks.MetaDemon.ticket_farming.tickets_full_before_farming', return_value=False), \
+                     patch('tasks.MetaDemon.ticket_farming.AwakeTicketTask', side_effect=build), \
                      patch('tasks.MetaDemon.ticket_farming.ExplorationTicketTask', side_effect=build):
                     self.assertTrue(run_ticket_farming(SimpleNamespace(config=original, device=device), mode))
                 runner.install_ticket_reward_hook.assert_called_once()
@@ -373,6 +374,143 @@ class MetaDemonSettingsChecks(unittest.TestCase):
         task.appear_then_click = Mock(return_value=True)
         task.run_on_exp_exit()
         self.assertIs(task.appear_then_click.call_args.args[0], task.I_E_EXIT_CANCEL)
+
+    def _summon_owner(self, frames, star=BossType.TWO_STARS):
+        from copy import deepcopy
+        owner = object.__new__(BossBattle)
+        owner.conf = MetaDemon(meta_demon_config={'fire_sequence': '2 1'})
+        owner.State = SimpleNamespace(done=False)
+        owner.cur_boss_type = None
+        owner.current_count = 7
+        owner._boss_generation = 0
+        names = ('I_MD_FIRE', 'I_MD_GET_BOSS', 'I_MD_TICKET_EMPTY', 'I_MD_SWITCH_TICKET',
+                 'I_MD_CLOSE_POPUP', 'I_MD_CHECK_SELECTED', 'I_MD_ONE_STAR', 'I_MD_TWO_STARS',
+                 'I_MD_THREE_STARS', 'I_MD_FOUR_STARS', 'I_MD_FIVE_STARS', 'I_MD_SIX_STARS')
+        for name in names:
+            setattr(owner, name, deepcopy(getattr(owner, name)))
+        target_ticket = {BossType.TWO_STARS: owner.I_MD_TWO_STARS,
+                         BossType.SIX_STARS: owner.I_MD_SIX_STARS}[star]
+        state = {'index': -1, 'time': 0.0}
+        clicks = []
+
+        def screenshot():
+            state['index'] += 1
+            state['time'] += 1
+
+        def appear(rule, **kwargs):
+            frame = frames[min(state['index'], len(frames)-1)]
+            if rule is owner.I_MD_FIRE:
+                return frame.get('fire', False)
+            if rule is owner.I_MD_GET_BOSS:
+                return frame.get('panel', False)
+            if rule is owner.I_MD_SWITCH_TICKET:
+                return not frame.get('panel', False) and not frame.get('fire', False)
+            if rule is target_ticket:
+                return frame.get('panel', False)
+            if rule is owner.I_MD_CHECK_SELECTED and frame.get('panel'):
+                x = target_ticket.roi_front[0] if frame.get('selected') else 360
+                rule.roi_front = (x, 280, 50, 22)
+                return True
+            return False
+
+        def click(rule, **kwargs):
+            if not appear(rule):
+                return False
+            clicks.append((state['index'], rule))
+            return True
+
+        owner.screenshot = Mock(side_effect=screenshot)
+        owner.appear = Mock(side_effect=appear)
+        owner.appear_then_click = Mock(side_effect=click)
+        return owner, state, clicks
+
+    def test_summon_sequence_override_only_uses_six_without_changing_config(self):
+        owner, state, clicks = self._summon_owner([
+            {'panel': True, 'selected': True}, {'fire': True}], star=BossType.SIX_STARS)
+        original = owner.conf.meta_demon_config.fire_sequence
+        with patch('tasks.MetaDemon.boss_battle.time.monotonic', side_effect=lambda: state['time']):
+            self.assertTrue(owner.check_and_switch_ticket(sequence=(BossType.SIX_STARS,)))
+        self.assertEqual(owner.cur_boss_type, BossType.SIX_STARS)
+        self.assertEqual(owner.conf.meta_demon_config.fire_sequence, original)
+
+    def test_summon_recovers_closed_panel_and_confirms_two_star(self):
+        owner, state, clicks = self._summon_owner([
+            {'panel': True}, {}, {}, {'panel': True}, {'panel': True, 'selected': True},
+            {}, {'fire': True}])
+        with patch('tasks.MetaDemon.boss_battle.time.monotonic', side_effect=lambda: state['time']):
+            self.assertTrue(owner.check_and_switch_ticket())
+        self.assertTrue(any(rule is owner.I_MD_SWITCH_TICKET for _, rule in clicks))
+        self.assertEqual([index for index, rule in clicks if rule is owner.I_MD_GET_BOSS], [4])
+        self.assertEqual(owner.cur_boss_type, BossType.TWO_STARS)
+        self.assertEqual(owner._boss_generation, 1)
+        self.assertEqual(owner.current_count, 0)
+
+    def test_summon_retries_unresponsive_confirmation_without_reselecting(self):
+        owner, state, clicks = self._summon_owner([
+            {'panel': True, 'selected': True}, {'panel': True, 'selected': True}, {'fire': True}])
+        with patch('tasks.MetaDemon.boss_battle.time.monotonic', side_effect=lambda: state['time']):
+            self.assertTrue(owner.check_and_switch_ticket())
+        self.assertEqual(sum(rule is owner.I_MD_GET_BOSS for _, rule in clicks), 2)
+        self.assertFalse(any(rule is owner.I_MD_TWO_STARS for _, rule in clicks))
+
+    def test_summon_rejects_wrong_selection_and_bounds_missing_panel_wait(self):
+        for frames in ([{'panel': True}], [{}]):
+            with self.subTest(frames=frames):
+                owner, state, clicks = self._summon_owner(frames)
+                with patch('tasks.MetaDemon.boss_battle.time.monotonic', side_effect=lambda: state['time']):
+                    self.assertFalse(owner.check_and_switch_ticket())
+                self.assertFalse(any(rule is owner.I_MD_GET_BOSS for _, rule in clicks))
+                self.assertIsNone(owner.cur_boss_type)
+                self.assertEqual(owner._boss_generation, 0)
+                self.assertLessEqual(owner.screenshot.call_count, 25)
+
+    def test_full_ticket_precheck_skips_both_farming_runners(self):
+        from tasks.MetaDemon.assets import MetaDemonAssets
+        from tasks.MetaDemon.ticket_farming import run_ticket_farming
+        from tasks.GameUi import task_pages as pages
+        for mode in (MetaDemonMode.AWAKE, MetaDemonMode.EXPLORATION):
+            owner = SimpleNamespace(goto_page=Mock(), screenshot=Mock(), appear=Mock(return_value=True),
+                                    device=SimpleNamespace(image=object()))
+            with self.subTest(mode=mode), patch.object(MetaDemonAssets.O_METADEMON_PASS_EXP,
+                    'ocr_digit_counter', return_value=(50, 0, 50)) as ocr, \
+                 patch('tasks.MetaDemon.ticket_farming.AwakeTicketTask') as awake, \
+                 patch('tasks.MetaDemon.ticket_farming.ExplorationTicketTask') as exploration:
+                self.assertTrue(run_ticket_farming(owner, mode))
+                owner.goto_page.assert_called_once_with(pages.page_exploration)
+                ocr.assert_called_once_with(owner.device.image)
+                awake.assert_not_called()
+                exploration.assert_not_called()
+
+    def test_ticket_precheck_retries_invalid_counter_and_rejects_wrong_page(self):
+        from tasks.MetaDemon.assets import MetaDemonAssets
+        from tasks.MetaDemon.ticket_farming import tickets_full_before_farming
+        owner = SimpleNamespace(goto_page=Mock(), screenshot=Mock(), appear=Mock(return_value=True),
+                                device=SimpleNamespace(image=object()))
+        with patch.object(MetaDemonAssets.O_METADEMON_PASS_EXP, 'ocr_digit_counter',
+                          side_effect=[(0,0,0), (-1,51,50), (49,1,50)]) as ocr:
+            self.assertFalse(tickets_full_before_farming(owner))
+            self.assertEqual(ocr.call_count, 3)
+        owner.appear.return_value = False
+        with patch.object(MetaDemonAssets.O_METADEMON_PASS_EXP, 'ocr_digit_counter') as ocr:
+            self.assertFalse(tickets_full_before_farming(owner))
+            ocr.assert_not_called()
+
+    def test_full_tickets_still_continue_to_battle_or_assistance_mode(self):
+        from tasks.MetaDemon.script_task import ScriptTask
+        from tasks.MetaDemon.assets import MetaDemonAssets
+        for next_mode in (MetaDemonMode.BOSS_BATTLE, MetaDemonMode.BOSS_ASSIST):
+            owner = object.__new__(ScriptTask)
+            owner.config = SimpleNamespace(meta_demon=MetaDemon(meta_demon_config={
+                'mode': [MetaDemonMode.EXPLORATION, next_mode]}))
+            owner.device = SimpleNamespace(image=object())
+            owner.goto_page, owner.screenshot = Mock(), Mock()
+            owner.appear = Mock(return_value=True)
+            with patch.object(MetaDemonAssets.O_METADEMON_PASS_EXP, 'ocr_digit_counter', return_value=(50,0,50)), \
+                 patch('tasks.MetaDemon.boss_battle.BossBattle.run', return_value='battle') as battle, \
+                 patch('tasks.MetaDemon.assistance.run_assistance', return_value='assistance') as assistance:
+                self.assertEqual(owner.run(), 'battle' if next_mode == MetaDemonMode.BOSS_BATTLE else 'assistance')
+                self.assertEqual(battle.call_count, int(next_mode == MetaDemonMode.BOSS_BATTLE))
+                self.assertEqual(assistance.call_count, int(next_mode == MetaDemonMode.BOSS_ASSIST))
 
     def test_disabled_souls_do_not_navigate(self):
         owner = object.__new__(BossBattle)

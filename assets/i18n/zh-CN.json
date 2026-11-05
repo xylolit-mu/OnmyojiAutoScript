@@ -1,4 +1,5 @@
 {
+  "assistance_config": "鬼王协助",
   "Chess": "百鬼棋局",
   "emulatorinfo_path": "模拟器路径",
   "emulatorinfo_path_help": "举例：\"E:\\ProgramFiles\\MuMuPlayer-12.0\\shell\\MuMuPlayer.exe\"",
