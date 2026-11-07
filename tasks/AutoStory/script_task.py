@@ -65,6 +65,7 @@ class ScriptTask(GeneralBattle, GameUi, AutoStoryAssets):
         self._story_last_check = time.monotonic()
         self._reset_story_idle()
         self._story_unknown_click_at = 0
+        self._reset_story_entry()
         self._story_monitor_enabled = True
         try:
             while True:
@@ -84,6 +85,7 @@ class ScriptTask(GeneralBattle, GameUi, AutoStoryAssets):
         return bool(confirm or skip)
 
     def _run_story_battle(self) -> None:
+        self._reset_story_entry()
         self.run_general_battle(
             config=GeneralBattleConfig(), battle_key='autostory',
             exit_matcher=self.I_STORY_BACK,
@@ -109,14 +111,16 @@ class ScriptTask(GeneralBattle, GameUi, AutoStoryAssets):
         self.device.click_record_clear()
         # 事件内容独立循环处理，不依赖主页面，也不跟踪事件结束。
         if self._handle_story_video():
+            self._reset_story_entry()
             self._reset_story_idle()
             return
         if self.appear_then_click(self.I_STORY_CHAT_SKIP, interval=0.4):
+            self._reset_story_entry()
             self._reset_story_idle()
             return
 
         if self._on_courtyard_main():
-            if self.appear_then_click(self.I_STORY_CHAT_1, interval=2):
+            if self._click_story_entry(self.I_STORY_CHAT_1):
                 self._reset_story_idle()
             return
 
@@ -129,17 +133,39 @@ class ScriptTask(GeneralBattle, GameUi, AutoStoryAssets):
         if not self.appear(self.I_STORY_BACK):
             self._handle_story_idle()
             return
-        if self.appear_then_click(self.I_STORY_FIGHT, interval=2):
+        if self._click_story_entry(self.I_STORY_FIGHT):
             if self._wait_story_prepare():
                 self._run_story_battle()
             else:
                 self._reset_story_idle()
             return
-        for target in (self.I_STORY_CHAT_1, self.I_STORY_CHAT_2, self.I_STORY_ONMYOJI_EYE):
-            if self.appear_then_click(target, interval=2):
+        for target in (self.I_STORY_CHAT_1, self.I_STORY_CHAT_2):
+            if self._click_story_entry(target):
                 self._reset_story_idle()
                 return
+        if self.appear_then_click(self.I_STORY_ONMYOJI_EYE, interval=2):
+            self._reset_story_idle()
+            return
         self._handle_story_idle()
+
+    def _reset_story_entry(self) -> None:
+        self._story_entry_target = None
+        self._story_entry_attempts = 0
+        self._story_entry_click_at = 0
+
+    def _click_story_entry(self, target) -> bool:
+        if not self.appear(target):
+            return False
+        # 入口短暂消失或识别成其他入口不代表成功，保留累计次数和冷却。
+        self._story_entry_target = target
+        now = time.monotonic()
+        if now < self._story_entry_click_at:
+            return False
+        if not self.appear_then_click(target, interval=2):
+            return False
+        self._story_entry_attempts += 1
+        self._story_entry_click_at = now + min(2 + self._story_entry_attempts, 6)
+        return True
 
     def _reset_story_idle(self) -> None:
         self._story_idle_since = time.monotonic()

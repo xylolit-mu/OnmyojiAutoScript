@@ -43,10 +43,10 @@
   },
   {
     "itemName": "sa_login_form_cancel_svr_select",
-    "roiFront": "50,70,60,360",
-    "roiBack": "50,70,60,360",
+    "roiFront": "1081,91,45,44",
+    "roiBack": "1081,91,45,44",
     "profile": "Default",
-    "description": "登录界面-选择服务器-点击关闭选择服务器界面的空白区域"
+    "description": "登录界面-选择服务器-点击关闭选择服务器界面的红叉"
   },
   {
     "itemName": "sa_login_form_user_center_close_btn",
@@ -57,8 +57,8 @@
   },
   {
     "itemName": "sa_login_form_account_close_btn",
-    "roiFront": "895,165,40,40",
-    "roiBack": "895,165,40,40",
+    "roiFront": "1044,104,40,40",
+    "roiBack": "1044,104,40,40",
     "profile": "Default",
     "description": "登录界面-账号选择界面-右上角关闭按钮"
   },

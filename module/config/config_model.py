@@ -2,6 +2,7 @@
 # @author runhey
 # github https://github.com/runhey
 from tasks.AutoStory.config import AutoStory
+from tasks.CustomTask.config import CustomTask, ENTRY_PREFIX
 from tasks.GuguArtStudio.config import GuguArtStudio
 from tasks.GuildActivityMonitor.config import GuildActivityMonitor
 from tasks.OtherWorldTwilight.config import OtherWorldTwilight
@@ -60,6 +61,7 @@ from tasks.GuildActivityMonitor.config import GuildActivityMonitor
 from tasks.ActivityShikigami.config import ActivityShikigami
 from tasks.MartialArts.config import MartialArts
 from tasks.MetaDemon.config import MetaDemon
+from tasks.MetaDemonTicket.config import MetaDemonTicket, split_legacy_meta_demon
 from tasks.FrogBoss.config import FrogBoss
 from tasks.FrogChallenge.config import FrogChallenge
 from tasks.FloatParade.config import FloatParade
@@ -132,6 +134,7 @@ class ConfigModel(ConfigBase):
     activity_shikigami: ActivityShikigami = Field(default_factory=ActivityShikigami)
     martial_arts: MartialArts = Field(default_factory=MartialArts)
     meta_demon: MetaDemon = Field(default_factory=MetaDemon)
+    meta_demon_ticket: MetaDemonTicket = Field(default_factory=MetaDemonTicket)
     frog_boss: FrogBoss = Field(default_factory=FrogBoss)
     frog_challenge: FrogChallenge = Field(default_factory=FrogChallenge)
     float_parade: FloatParade = Field(default_factory=FloatParade)
@@ -151,6 +154,7 @@ class ConfigModel(ConfigBase):
     find_jade: FindJade = Field(default_factory=FindJade)
     memory_scrolls: MemoryScrolls = Field(default_factory=MemoryScrolls)
     auto_story: AutoStory = Field(default_factory=AutoStory)
+    custom_task: CustomTask = Field(default_factory=CustomTask)
 
     # 这些是每周任务
     true_orochi: TrueOrochi = Field(default_factory=TrueOrochi)
@@ -229,7 +233,7 @@ class ConfigModel(ConfigBase):
                     break
         data['activity_shikigami'] = activity
 
-        return data
+        return split_legacy_meta_demon(data)
 
     def __setattr__(self, key, value):
         """
@@ -362,11 +366,15 @@ class ConfigModel(ConfigBase):
         :param task: 同gui_args函数
         :return:
         """
-        task = convert_to_underscore(task)
-        task = getattr(self, task, None)
+        entry = self.custom_task.entry(task[len(ENTRY_PREFIX):]) if task.startswith(ENTRY_PREFIX) else None
+        if task.startswith(ENTRY_PREFIX) and entry is None:
+            return {}
+        task = entry.task_model() if entry else getattr(self, convert_to_underscore(task), None)
         if task is None:
             logger.warning(f'{task} is no inexistence')
             return {}
+
+        excluded = {'scheduler'} if entry else {'entries'} if isinstance(task, CustomTask) else set()
 
         def extract_groups(sch):
             # 从schema 中提取未解析的group的数据
@@ -374,6 +382,8 @@ class ConfigModel(ConfigBase):
             results = {}
             properties = {}
             for key, value in sch["properties"].items():
+                if key in excluded:
+                    continue
                 if 'items' in value:
                     properties[key] = re.search(r"/([^/]+)$", value['items']['$ref']).group(1)
                 else:
@@ -423,7 +433,7 @@ class ConfigModel(ConfigBase):
         groups_value = groups.copy()
 
         result: dict[str, list] = {}
-        for key, value in task.model_dump(context={'hide': True}).items():
+        for key, value in task.model_dump(exclude=excluded, context={'hide': True}).items():
             if value == 0xABCDEF:
                 continue
             if key not in groups:
@@ -442,13 +452,35 @@ class ConfigModel(ConfigBase):
             result = task.oasx_args(result)
 
         from module.config.settings_presentation import present_settings
-        return present_settings(task, result)
+        result = present_settings(task, result)
+        if entry and entry.type == 'AccountSwitch':
+            result['account'] = [row for row in result['account'] if row['name'] != 'last_complete_time']
+        if isinstance(task, CustomTask):
+            result['task_list'] = [{
+                'name': 'task_list', 'title': 'task_list', 'type': 'task_list', 'value': task.list_payload(),
+                'ui_group_title': {'zh_CN': '自定义任务列表', 'en_US': 'Task list'},
+                'ui_task_list': task.list_payload(),
+            }]
+        return result
 
     def script_set_arg(self, task: str, group: str, argument: str, value) -> bool:
+        if task == 'CustomTask' and group == 'task_list' and argument == 'task_list':
+            try:
+                candidate = CustomTask(entries=value['entries'])
+            except (ValidationError, KeyError, TypeError):
+                return False
+            self.custom_task.entries = candidate.entries
+            self.save()
+            return True
         # 验证参数
+        entry = self.custom_task.entry(task[len(ENTRY_PREFIX):]) if task.startswith(ENTRY_PREFIX) else None
+        if task.startswith(ENTRY_PREFIX) and (entry is None or convert_to_underscore(group) == 'scheduler'):
+            return False
         task = convert_to_underscore(task)
         group = convert_to_underscore(group)
         argument = convert_to_underscore(argument)
+        if entry and entry.type == 'AccountSwitch' and argument == 'last_complete_time':
+            return False
 
         # pandtic验证
         if isinstance(value, str) and len(value) == 8:
@@ -472,7 +504,7 @@ class ConfigModel(ConfigBase):
         if isinstance(value, str) and value == 'false':
             value = False
 
-        task_object = getattr(self, task, None)
+        task_object = entry.task_model() if entry else getattr(self, task, None)
         group_object = getattr(task_object, group, None)
         if isinstance(task_object, Chess) and group == 'chess_config' and argument == 'lineup_bond':
             handled = task_object.select_oasx_lineup(value)
@@ -513,6 +545,8 @@ class ConfigModel(ConfigBase):
             candidate = group_object.model_validate({**group_object.model_dump(), argument: value})
             value = getattr(candidate, argument)
             setattr(group_object, argument, value)
+            if entry:
+                entry.settings = task_object.model_dump(exclude={'scheduler'})
             logger.info(f'Set arg {self.config_name}.{task}.{group}.{argument}.{value}')
             self.save()  # 我是没有想到什么方法可以使得属性改变自动保存的
             return True

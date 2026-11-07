@@ -5,5 +5,12 @@
     "roiBack": "792,340,56,23",
     "mode": "default",
     "description": "向上滑动好友列表"
+  },
+  {
+    "itemName": "md_swipe_up",
+    "roiFront": "146,459,55,20",
+    "roiBack": "146,398,56,23",
+    "mode": "default",
+    "description": ""
   }
 ]

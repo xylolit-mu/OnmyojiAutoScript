@@ -124,7 +124,6 @@ class ScriptTask(ExplorationTask):
     def run_chapter(self) -> None:
         self.need_exit = False
         self.fire_monster_type = ''
-        self.paper_reward_pending = False
         self.pre_page = None
         self._boss_reward_timer = None
         self._match_end.refresh()
@@ -144,8 +143,6 @@ class ScriptTask(ExplorationTask):
             if self.close_chat_sidebar_first():
                 continue
             page = self.get_current_page()
-            if self.handle_paper_reward_page(page):
-                continue
             if page in (pages.page_exp_entrance, pages.page_mainline, pages.page_exploration):
                 return
             if page in (pages.page_battle_prepare, pages.page_battle, pages.page_battle_result):

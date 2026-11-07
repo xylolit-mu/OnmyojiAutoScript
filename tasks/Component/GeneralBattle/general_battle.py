@@ -976,6 +976,7 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
             logger.info("Preset is disable")
             return
 
+        self._last_quick_loadout = None
         logger.info("Preset is enable")
         timeout_warning = "Switch preset timeout, use current team"
 

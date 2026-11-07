@@ -4,28 +4,31 @@ import unittest
 from unittest.mock import Mock, patch
 
 from module.config.config_model import ConfigModel
-from tasks.MetaDemon.config import BossType, ExplorationTarget, MetaDemon, MetaDemonMode, loadout_group
+from tasks.MetaDemon.config import BossType, MetaDemon, MetaDemonMode, loadout_group
 from tasks.MetaDemon.boss_battle import BossBattle
-from tasks.MetaDemon.ticket_farming import ticket_farming_config, ExplorationTicketTask, AwakeTicketTask
+from tasks.MetaDemonTicket.config import ExplorationTarget, MetaDemonTicket, TicketMode
+from tasks.MetaDemonTicket.ticket_farming import ticket_farming_config, ExplorationTicketTask, AwakeTicketTask
 from tasks.EvoZone.config import EvoZone
 from tasks.Exploration.config import AutoRotate, Exploration, UpType
 
 
 class MetaDemonSettingsChecks(unittest.TestCase):
     def test_exploration_label_migrates(self):
-        conf = MetaDemon(meta_demon_config={'mode': ['鬼王战斗', '门票刷取：探索绘卷']})
-        self.assertEqual(conf.meta_demon_config.mode, [MetaDemonMode.EXPLORATION, MetaDemonMode.BOSS_BATTLE])
-        self.assertEqual(MetaDemonMode.EXPLORATION.value, '门票刷取：探索')
+        conf = ConfigModel(meta_demon={'meta_demon_config': {'mode': ['鬼王战斗', '门票刷取：探索绘卷']},
+                                      'scheduler': {'enable': True}})
+        self.assertEqual(conf.meta_demon.meta_demon_config.mode, [MetaDemonMode.BOSS_BATTLE])
+        self.assertEqual(conf.meta_demon_ticket.general_config.mode, TicketMode.EXPLORATION)
+        self.assertTrue(conf.meta_demon.scheduler.enable and conf.meta_demon_ticket.scheduler.enable)
 
     def test_categories_and_independent_presets(self):
         self.assertEqual([loadout_group(BossType(i)) for i in range(1, 7)], ['low_star']*4+['high_star']*2)
-        conf = MetaDemon(preset_config={'low_star_enable': True, 'low_star_group': 2, 'low_star_team': 3,
-            'ticket_farming_enable': True, 'ticket_farming_group': 4, 'ticket_farming_team': 2})
-        low = conf.battle_config('low_star')
-        ticket = conf.battle_config('ticket_farming')
+        conf = ConfigModel(meta_demon={'preset_config': {'low_star_enable': True, 'low_star_group': 2,
+            'low_star_team': 3, 'ticket_farming_enable': True, 'ticket_farming_group': 4, 'ticket_farming_team': 2}})
+        low = conf.meta_demon.battle_config('low_star')
+        ticket = conf.meta_demon_ticket.general_battle_config
         self.assertEqual((low.preset_group, low.preset_team), (2,3))
         self.assertEqual((ticket.preset_group, ticket.preset_team), (4,2))
-        self.assertFalse(conf.battle_config('high_star').preset_enable)
+        self.assertFalse(conf.meta_demon.battle_config('high_star').preset_enable)
 
     def test_legacy_souls_and_low_preset_migrate(self):
         conf = MetaDemon(switch_soul={'enable': True, 'one_star': '2,3', 'two_stars': '3,4',
@@ -43,12 +46,12 @@ class MetaDemonSettingsChecks(unittest.TestCase):
         expected = {ExplorationTarget.ALL: UpType.ALL, ExplorationTarget.COIN: UpType.COIN,
                     ExplorationTarget.EXP: UpType.EXP, ExplorationTarget.DARUMA: UpType.DARUMAA}
         for target, up_type in expected.items():
-            meta = MetaDemon(general_config={'exploration_rotate': True,
+            meta = MetaDemonTicket(general_config={'exploration_rotate': True,
                 'awake_buff_enable': True, 'exploration_target': target},
-                switch_soul_config={'ticket_farming_by_name': True, 'ticket_farming_group_team_name': '刷票,探索'},
-                preset_config={'ticket_farming_enable': True, 'ticket_farming_group': 3, 'ticket_farming_team': 2})
-            awake = ticket_farming_config(meta, MetaDemonMode.AWAKE)
-            exploration = ticket_farming_config(meta, MetaDemonMode.EXPLORATION)
+                switch_soul_config={'enable_switch_by_name': True, 'group_name': '刷票', 'team_name': '探索'},
+                general_battle_config={'preset_enable': True, 'preset_group': 3, 'preset_team': 2})
+            awake = ticket_farming_config(meta, TicketMode.AWAKE)
+            exploration = ticket_farming_config(meta, TicketMode.EXPLORATION)
             self.assertEqual(exploration.exploration_config.auto_rotate, AutoRotate.yes)
             self.assertEqual(exploration.exploration_config.up_type, up_type)
             self.assertFalse(exploration.scrolls.scrolls_enable)
@@ -65,9 +68,9 @@ class MetaDemonSettingsChecks(unittest.TestCase):
         self.assertIs(ExplorationTicketTask.switch_rotate, ExplorationTask.switch_rotate)
         self.assertIs(ExplorationTicketTask.run_on_exp_settings, ExplorationTask.run_on_exp_settings)
         for enabled in (False, True):
-            meta = MetaDemon(general_config={'exploration_rotate': enabled, 'scrolls_enable': True})
-            awake = ticket_farming_config(meta, MetaDemonMode.AWAKE)
-            exploration = ticket_farming_config(meta, MetaDemonMode.EXPLORATION)
+            meta = MetaDemonTicket(general_config={'exploration_rotate': enabled, 'scrolls_enable': True})
+            awake = ticket_farming_config(meta, TicketMode.AWAKE)
+            exploration = ticket_farming_config(meta, TicketMode.EXPLORATION)
             self.assertEqual(exploration.exploration_config.auto_rotate,
                              AutoRotate.yes if enabled else AutoRotate.no)
             self.assertFalse(exploration.scrolls.scrolls_enable)
@@ -87,12 +90,14 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_settings_payload_has_flat_groups_and_defaults(self):
         payload = ConfigModel.script_task(SimpleNamespace(meta_demon=MetaDemon()), 'MetaDemon')
-        self.assertEqual(set(payload), {'scheduler','meta_demon_config','general_config','switch_soul_config','low_star_battle_conf','high_star_battle_conf','ticket_farming_battle_conf','quick_preset_config','settings_layout_config','assistance_config'})
+        self.assertEqual(set(payload), {'scheduler','meta_demon_config','general_config','switch_soul_config','low_star_battle_conf','high_star_battle_conf','quick_preset_config','settings_layout_config','assistance_config'})
         for group in payload.values():
             self.assertIsInstance(group, list)
             for field in group:
                 self.assertIn('default', field)
-        common = {field['name']: field for field in payload['general_config']}
+        ticket = ConfigModel.script_task(SimpleNamespace(meta_demon_ticket=MetaDemonTicket()), 'MetaDemonTicket')
+        self.assertIn('invite_config', ticket)
+        common = {field['name']: field for field in ticket['general_config']}
         self.assertEqual(common['exploration_target']['enumEnum'], ['全部','金币','经验','达摩'])
 
     def test_low_and_high_share_loadout_within_category(self):
@@ -135,14 +140,14 @@ class MetaDemonSettingsChecks(unittest.TestCase):
     def test_quick_loadout_only_overrides_high_star(self):
         conf = MetaDemon(general_config={'high_star_quick_loadout_enable': True},
             low_star_battle_conf={'preset_enable': True},
-            high_star_battle_conf={'preset_enable': True, 'green_enable': True},
-            ticket_farming_battle_conf={'preset_enable': True, 'green_enable': True})
+            high_star_battle_conf={'preset_enable': True, 'green_enable': True})
+        ticket = MetaDemonTicket(general_battle_config={'preset_enable': True, 'green_enable': True})
         self.assertTrue(conf.battle_config('low_star').preset_enable)
         self.assertFalse(conf.battle_config('high_star').preset_enable)
         self.assertTrue(conf.battle_config('high_star').green_enable)
         self.assertTrue(conf.high_star_battle_conf.preset_enable)
-        awake = ticket_farming_config(conf, MetaDemonMode.AWAKE)
-        exploration = ticket_farming_config(conf, MetaDemonMode.EXPLORATION)
+        awake = ticket_farming_config(ticket, TicketMode.AWAKE)
+        exploration = ticket_farming_config(ticket, TicketMode.EXPLORATION)
         for task in (awake, exploration):
             self.assertTrue(task.general_battle_config.preset_enable)
             self.assertTrue(task.general_battle_config.green_enable)
@@ -193,18 +198,18 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_ticket_entry_uses_dedicated_config_without_copying_runtime(self):
         from module.config.config import Config
-        from tasks.MetaDemon.ticket_farming import run_ticket_farming, TicketsFull
+        from tasks.MetaDemonTicket.ticket_farming import run_ticket_farming, TicketsFull
         from tasks.EvoZone.config import Layer, UserStatus as AwakeStatus
         from tasks.Exploration.config import UserStatus as ExplorationStatus
-        for mode, runner_class in ((MetaDemonMode.AWAKE, AwakeTicketTask),
-                                   (MetaDemonMode.EXPLORATION, ExplorationTicketTask)):
+        for mode, runner_class in ((TicketMode.AWAKE, AwakeTicketTask),
+                                   (TicketMode.EXPLORATION, ExplorationTicketTask)):
             with self.subTest(mode=mode):
                 original = object.__new__(Config)
                 original.config_name = 'TICKET_CHECK'
                 original.task = 'MetaDemon'
                 original.model = ConfigModel()
-                original.model.meta_demon.general_config.exploration_rotate = True
-                battle = original.model.meta_demon.ticket_farming_battle_conf
+                original.model.meta_demon_ticket.general_config.exploration_rotate = True
+                battle = original.model.meta_demon_ticket.general_battle_config
                 battle.preset_enable, battle.preset_group, battle.preset_team = True, 3, 2
                 original.model.exploration.scrolls.scrolls_enable = True
                 original.model.exploration.general_battle_config.preset_group = 7
@@ -224,16 +229,16 @@ class MetaDemonSettingsChecks(unittest.TestCase):
                     self.assertIs(config, original)
                     return runner
 
-                with patch('tasks.MetaDemon.ticket_farming.tickets_full_before_farming', return_value=False), \
-                     patch('tasks.MetaDemon.ticket_farming.AwakeTicketTask', side_effect=build), \
-                     patch('tasks.MetaDemon.ticket_farming.ExplorationTicketTask', side_effect=build):
+                with patch('tasks.MetaDemonTicket.ticket_farming.tickets_full_before_farming', return_value=False), \
+                     patch('tasks.MetaDemonTicket.ticket_farming.AwakeTicketTask', side_effect=build), \
+                     patch('tasks.MetaDemonTicket.ticket_farming.ExplorationTicketTask', side_effect=build):
                     self.assertTrue(run_ticket_farming(SimpleNamespace(config=original, device=device), mode))
                 runner.install_ticket_reward_hook.assert_called_once()
                 self.assertTrue(runner._ticket_farming_complete)
                 self.assertIs(runner._config.general_battle_config, battle)
                 self.assertEqual((runner._config.general_battle_config.preset_group,
                                   runner._config.general_battle_config.preset_team), (3, 2))
-                if mode == MetaDemonMode.AWAKE:
+                if mode == TicketMode.AWAKE:
                     self.assertEqual(runner._config.evo_zone_config.layer, Layer.SEVEN)
                     self.assertEqual(runner._config.evo_zone_config.user_status, AwakeStatus.ALONE)
                     runner.run_alone.assert_called_once()
@@ -250,11 +255,11 @@ class MetaDemonSettingsChecks(unittest.TestCase):
     def test_inherited_ticket_flows_do_not_require_independent_task_settings(self):
         from datetime import datetime, timedelta
         from tasks.EvoZone.config import Layer
-        meta = MetaDemon(switch_soul_config={'ticket_farming_enable': True,
-            'ticket_farming_group_team': '2,3'}, ticket_farming_battle_conf={
+        meta = MetaDemonTicket(switch_soul_config={'enable': True,
+            'switch_group_team': '2,3'}, general_battle_config={
                 'preset_enable': True, 'preset_group': 3, 'preset_team': 2})
         # Deliberately omit evo_zone/exploration: reading either is a regression.
-        runtime = SimpleNamespace(meta_demon=meta)
+        runtime = SimpleNamespace(meta_demon_ticket=meta)
         awake = object.__new__(AwakeTicketTask)
         awake.config = runtime
         awake.goto_page = Mock()
@@ -269,7 +274,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
         awake.run_general_battle = Mock(side_effect=lambda **kw: setattr(awake, 'current_count', 1))
         awake.run_alone()
         awake.check_layer.assert_called_once_with(Layer.SEVEN)
-        self.assertIs(awake.run_general_battle.call_args.kwargs['config'], meta.ticket_farming_battle_conf)
+        self.assertIs(awake.run_general_battle.call_args.kwargs['config'], meta.general_battle_config)
         self.assertEqual(awake._config.switch_soul_config.switch_group_team, '2,3')
         exploration = object.__new__(ExplorationTicketTask)
         exploration.config = runtime
@@ -281,7 +286,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
         exploration.pre_process()
         exploration.run_switch_soul.assert_called_once_with('2,3')
         exploration.run_on_battle()
-        self.assertIs(exploration.run_general_battle.call_args.args[0], meta.ticket_farming_battle_conf)
+        self.assertIs(exploration.run_general_battle.call_args.args[0], meta.general_battle_config)
 
     def test_normal_awake_config_keeps_original_task_settings(self):
         from tasks.EvoZone.script_task import ScriptTask as NormalAwakeTask
@@ -292,7 +297,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_ticket_counter_uses_existing_resource_and_checks_capacity(self):
         from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
-        from tasks.MetaDemon.ticket_farming import metademon_tickets_full
+        from tasks.MetaDemonTicket.ticket_farming import metademon_tickets_full
         image = object()
         task = SimpleNamespace(device=SimpleNamespace(image=image),
             appear=Mock(side_effect=lambda target: target is GeneralBattleAssets.I_REWARD))
@@ -306,7 +311,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_full_tickets_interrupt_both_reward_flows_and_cleanup_skips_ocr(self):
         from tasks.Component.GeneralBattle.assets import GeneralBattleAssets
-        from tasks.MetaDemon.ticket_farming import TicketsFull
+        from tasks.MetaDemonTicket.ticket_farming import TicketsFull
         for runner_class in (AwakeTicketTask, ExplorationTicketTask):
             runner = object.__new__(runner_class)
             runner.device = SimpleNamespace(image=object())
@@ -344,6 +349,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
                 task.need_exit = False
                 task.fire_monster_type = ''
                 task.collect_reward = Mock(return_value=False)
+                task.ensure_exploration_team_locked = Mock(return_value=False)
                 task.switch_rotate = Mock(return_value=False)
                 task.get_fire_button = Mock(return_value=None)
                 task.swipe = Mock(return_value=True)
@@ -466,15 +472,15 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_full_ticket_precheck_skips_both_farming_runners(self):
         from tasks.MetaDemon.assets import MetaDemonAssets
-        from tasks.MetaDemon.ticket_farming import run_ticket_farming
+        from tasks.MetaDemonTicket.ticket_farming import run_ticket_farming
         from tasks.GameUi import task_pages as pages
-        for mode in (MetaDemonMode.AWAKE, MetaDemonMode.EXPLORATION):
+        for mode in (TicketMode.AWAKE, TicketMode.EXPLORATION):
             owner = SimpleNamespace(goto_page=Mock(), screenshot=Mock(), appear=Mock(return_value=True),
                                     device=SimpleNamespace(image=object()))
             with self.subTest(mode=mode), patch.object(MetaDemonAssets.O_METADEMON_PASS_EXP,
                     'ocr_digit_counter', return_value=(50, 0, 50)) as ocr, \
-                 patch('tasks.MetaDemon.ticket_farming.AwakeTicketTask') as awake, \
-                 patch('tasks.MetaDemon.ticket_farming.ExplorationTicketTask') as exploration:
+                 patch('tasks.MetaDemonTicket.ticket_farming.AwakeTicketTask') as awake, \
+                 patch('tasks.MetaDemonTicket.ticket_farming.ExplorationTicketTask') as exploration:
                 self.assertTrue(run_ticket_farming(owner, mode))
                 owner.goto_page.assert_called_once_with(pages.page_exploration)
                 ocr.assert_called_once_with(owner.device.image)
@@ -483,7 +489,7 @@ class MetaDemonSettingsChecks(unittest.TestCase):
 
     def test_ticket_precheck_retries_invalid_counter_and_rejects_wrong_page(self):
         from tasks.MetaDemon.assets import MetaDemonAssets
-        from tasks.MetaDemon.ticket_farming import tickets_full_before_farming
+        from tasks.MetaDemonTicket.ticket_farming import tickets_full_before_farming
         owner = SimpleNamespace(goto_page=Mock(), screenshot=Mock(), appear=Mock(return_value=True),
                                 device=SimpleNamespace(image=object()))
         with patch.object(MetaDemonAssets.O_METADEMON_PASS_EXP, 'ocr_digit_counter',
@@ -495,13 +501,13 @@ class MetaDemonSettingsChecks(unittest.TestCase):
             self.assertFalse(tickets_full_before_farming(owner))
             ocr.assert_not_called()
 
-    def test_full_tickets_still_continue_to_battle_or_assistance_mode(self):
+    def test_boss_dispatches_battle_or_assistance_without_ticket_runner(self):
         from tasks.MetaDemon.script_task import ScriptTask
         from tasks.MetaDemon.assets import MetaDemonAssets
         for next_mode in (MetaDemonMode.BOSS_BATTLE, MetaDemonMode.BOSS_ASSIST):
             owner = object.__new__(ScriptTask)
             owner.config = SimpleNamespace(meta_demon=MetaDemon(meta_demon_config={
-                'mode': [MetaDemonMode.EXPLORATION, next_mode]}))
+                'mode': [next_mode]}))
             owner.device = SimpleNamespace(image=object())
             owner.goto_page, owner.screenshot = Mock(), Mock()
             owner.appear = Mock(return_value=True)
@@ -511,6 +517,27 @@ class MetaDemonSettingsChecks(unittest.TestCase):
                 self.assertEqual(owner.run(), 'battle' if next_mode == MetaDemonMode.BOSS_BATTLE else 'assistance')
                 self.assertEqual(battle.call_count, int(next_mode == MetaDemonMode.BOSS_BATTLE))
                 self.assertEqual(assistance.call_count, int(next_mode == MetaDemonMode.BOSS_ASSIST))
+
+    def test_awake_kirin_and_layer_choices_use_dedicated_ticket_settings(self):
+        from tasks.EvoZone.config import KirinType, Layer
+        default = ticket_farming_config(MetaDemonTicket(), TicketMode.AWAKE)
+        self.assertEqual(default.evo_zone_config.kirin_type, KirinType.LIGHTNINGKIRIN)
+        self.assertEqual(default.evo_zone_config.layer, Layer.SEVEN)
+        for kirin in KirinType:
+            for layer in Layer:
+                conf = MetaDemonTicket(general_config={'awake_kirin_type': kirin, 'awake_layer': layer})
+                awake = ticket_farming_config(conf, TicketMode.AWAKE)
+                self.assertEqual(awake.evo_zone_config.kirin_type, kirin)
+                self.assertEqual(awake.evo_zone_config.layer, layer)
+        migrated = ConfigModel(meta_demon={'meta_demon_config': {'mode': ['门票刷取：觉醒七层']}, 'scheduler': {'enable': True}})
+        self.assertEqual(migrated.meta_demon_ticket.general_config.mode, TicketMode.AWAKE)
+        self.assertFalse(migrated.meta_demon.scheduler.enable)
+        self.assertTrue(migrated.meta_demon_ticket.scheduler.enable)
+        payload = ConfigModel.script_task(migrated, 'MetaDemonTicket')
+        fields = {row['name']: row for row in payload['general_config']}
+        self.assertEqual(fields['awake_kirin_type']['enumEnum'], [item.value for item in KirinType])
+        self.assertEqual(fields['awake_layer']['enumEnum'], [item.value for item in Layer])
+        self.assertEqual(fields['awake_layer']['default'], Layer.SEVEN.value)
 
     def test_disabled_souls_do_not_navigate(self):
         owner = object.__new__(BossBattle)

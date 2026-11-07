@@ -140,7 +140,7 @@ class GameUiAssets:
 	I_MAIN_GOTO_SUMMON = RuleImage(roi_front=(1073,174,57,65), roi_back=(571,153,586,124), threshold=0.7, method="Template matching", profile="High", file="./tasks/GameUi/page/page_main_goto_summon.png")
 	# 阴阳寮前往神社 
 	I_GUILD_TO_SHRIN = RuleImage(roi_front=(877,629,49,53), roi_back=(840,602,302,113), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page/page_guild_to_shrin.png")
-	#
+	#  
 	I_MAIN_SCROLL_CLOSE_DECADE = RuleImage(roi_front=(1198,634,28,39), roi_back=(1167,595,77,112), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page/page_main_scroll_close_decade.png")
 
 

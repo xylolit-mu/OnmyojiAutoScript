@@ -43,5 +43,14 @@
     "method": "Default",
     "keyword": "",
     "description": "探索页面超鬼王门票获得数量"
+  },
+  {
+    "itemName": "md_help_solo",
+    "roiFront": "134,374,111,28",
+    "roiBack": "22,358,309,280",
+    "mode": "Single",
+    "method": "Default",
+    "keyword": "已分享：1人",
+    "description": ""
   }
 ]

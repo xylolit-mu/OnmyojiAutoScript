@@ -560,7 +560,7 @@ class Script:
         try:
             cooperation = self.__dict__.get('_cooperation')
             self.config.cooperation_runtime = cooperation
-            if command in BATTLE_TASKS:
+            if command in BATTLE_TASKS and command not in ('MetaDemon', 'MetaDemonTicket'):
                 prepare_task_cooperation(self.config, command)
             self.device.screenshot()
             module_name = 'script_task'

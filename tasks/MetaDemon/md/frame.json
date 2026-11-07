@@ -7,12 +7,13 @@
     "threshold": 0.8,
     "profile": "High",
     "description": "",
-    "roiBadge": "1217,429,44,39",
-    "badgeSerial": 1,
+    "roiBadge": "1225,433,28,31",
+    "badgeSerial": 2,
     "badgeGrayscale": false,
     "roiRange": [
       "496,224,553,387",
-      "762,557,108,36"
+      "762,557,108,36",
+      "1113,428,109,38"
     ],
     "badges": [
       {
@@ -30,8 +31,10 @@
         "imageName": "md_quick_loadout_frame_fight.png",
         "method": "Template matching",
         "threshold": 0.8,
-        "type": "image",
-        "file": "./tasks/MetaDemon/md/md_quick_loadout_frame_fight.png"
+        "type": "image"
+      },
+      {
+        "type": "click"
       }
     ]
   }

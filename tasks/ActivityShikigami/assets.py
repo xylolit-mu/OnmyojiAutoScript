@@ -73,7 +73,7 @@ class ActivityShikigamiAssets:
 	O_REMAIN_PENTA_PASS = RuleOcr(roi=(948,13,93,34), area=(948,13,93,34), mode="Digit", method="Default", keyword="", name="remain_penta_pass")
 	# 剩余体力门票 
 	O_REMAIN_AP_PASS = RuleOcr(roi=(761,15,93,34), area=(761,15,93,34), mode="Digit", method="Default", keyword="", name="remain_ap_pass")
-	# 首领战分数
+	# 首领战分数 
 	O_BOSS_SCORE = RuleOcr(roi=(70,113,231,52), area=(1124,23,88,31), mode="Single", method="Default", keyword="", name="boss_score")
 
 
@@ -117,7 +117,7 @@ class ActivityShikigamiAssets:
 	I_EVENT_REWARD_CLOSE = RuleImage(roi_front=(1203,140,42,38), roi_back=(1184,116,76,87), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_reward_close.png")
 	# 遭遇战式神录入口 
 	I_ENCOUNTER_TO_RECORDS = RuleImage(roi_front=(929,506,42,42), roi_back=(910,488,74,80), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_encounter_to_records.png")
-	# 确认跳过
+	# 确认跳过 
 	I_EVENT_STORY_SKIP_ENSURE = RuleImage(roi_front=(719,446,109,30), roi_back=(702,432,144,54), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_story_skip_ensure.png")
 
 

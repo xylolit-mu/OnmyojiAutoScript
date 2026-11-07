@@ -30,7 +30,6 @@ from typing import Optional
 class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, ReplaceShikigami, SwitchSoul, ExplorationAssets):
     fire_monster_type: str = ''
     need_exit: bool = False
-    paper_reward_pending: bool = False
     user_status: UserStatus = UserStatus.ALONE
     wait_start_time: datetime = datetime.now()
     pre_page: pages.Page = None
@@ -376,18 +375,8 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
         # 没打boss或者收集纸人奖励, 且出现了纸人则处理掉落奖励
         if self.appear(self.I_BATTLE_REWARD) and self._config.exploration_config.collect_paper_reward:
             self.ui_get_reward(self.I_BATTLE_REWARD)
-            self.paper_reward_pending = True
             self.wait_start_time = datetime.now()  # 队友等待时间重置
             return True
-        return False
-
-    def handle_paper_reward_page(self, current_page: pages.Page | None) -> bool:
-        if not self.paper_reward_pending:
-            return False
-        if self.ocr_appear_click(self.O_FIND_SHIKIGAMI, interval=1):
-            return True
-        if current_page is not None and current_page != pages.page_reward:
-            self.paper_reward_pending = False
         return False
 
     def quit_exp_main(self):

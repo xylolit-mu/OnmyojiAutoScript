@@ -222,6 +222,11 @@ class BaseTask(GlobalGameAssets, CostumeBase):
         :return: interval时间到达且匹配成功则返回True, 否则False
         """
         timer_key = target.name
+        if isinstance(target, RuleImage):
+            if target is getattr(self, 'I_CHECK_MAIN', None) and getattr(self, '_main_auto', False):
+                self.detect_random_main_costume(threshold=threshold)
+            if target is getattr(self, 'I_CHECK_RECORDS', None) and getattr(self, '_shikigami_auto', False):
+                self.detect_auto_shikigami(threshold=threshold)
         if interval:
             if timer_key in self.interval_timer:
                 if self.interval_timer[timer_key].limit != interval:
@@ -740,27 +745,34 @@ class BaseTask(GlobalGameAssets, CostumeBase):
     def ui_get_reward(self, click_image: RuleImage | RuleOcr | RuleClick, click_interval: float = 1):
         """
         传进来一个点击图片 或是 一个ocr， 会点击这个图片，然后等待‘获得奖励’，
-        最后当获得奖励消失后 退出
+        同时处理妖怪发现提示，两者均消失后退出
         :param click_interval:
         :param click_image:
         :return:
         """
         _timer = Timer(10)
         _timer.start()
+        find_shikigami = getattr(self, 'O_FIND_SHIKIGAMI', None)
+
+        def click_discovery():
+            return (find_shikigami is not None
+                    and self.appear_then_click(find_shikigami, interval=1))
+
         while 1:
             self.screenshot()
 
-            if self.ui_reward_appear_click():
+            if self.ui_reward_appear_click() or click_discovery():
                 sleep(0.5)
                 while 1:
                     self.screenshot()
                     # 等待动画结束
-                    if not self.appear(self.I_UI_REWARD, threshold=0.6):
+                    if not (self.appear(self.I_UI_REWARD, threshold=0.6)
+                            or (find_shikigami is not None and self.ocr_appear(find_shikigami))):
                         logger.info('Get reward success')
                         break
 
                     # 一直点击
-                    if self.ui_reward_appear_click():
+                    if self.ui_reward_appear_click() or click_discovery():
                         continue
                 break
             if _timer.reached():

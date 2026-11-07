@@ -9,6 +9,7 @@ from enum import Enum
 
 # 庭院皮肤
 class MainType(str, Enum):
+    AUTO = 'costume_main_auto'
     COSTUME_MAIN = 'costume_main'  # 初语谧景
     COSTUME_MAIN_1 = 'costume_main_1'  # 织梦莲庭
     COSTUME_MAIN_2 = 'costume_main_2'  # 琼夜淬光
@@ -40,6 +41,7 @@ class ThemeType(str, Enum):
 
 # 幕间，就是式神录这里
 class ShikigamiType(str, Enum):
+    AUTO = 'costume_shikigami_auto'
     COSTUME_SHIKIGAMI_DEFAULT = 'costume_shikigami_default'  # 静栖走廊
     COSTUME_SHIKIGAMI_1 = 'costume_shikigami_1'  # 妙音空境
     COSTUME_SHIKIGAMI_2 = 'costume_shikigami_2'  # 缘台樱垂
@@ -89,13 +91,13 @@ class CostumeConfig(BaseModel):
 
     # 皮肤配置
     costume_main_type: list[MainType] = Field(
-        default=[MainType.COSTUME_MAIN],
+        default=[MainType.AUTO],
         min_length=1,
         description='costume_main_type_help',
     )
     costume_realm_type: RealmType = Field(default=RealmType.COSTUME_REALM_DEFAULT, description='costume_realm_type_help')
     costume_theme_type: ThemeType = Field(default=ThemeType.COSTUME_THEME_DEFAULT, description='costume_theme_type_help')
-    costume_shikigami_type: ShikigamiType = Field(default=ShikigamiType.COSTUME_SHIKIGAMI_DEFAULT, description='costume_shikigami_type_help')
+    costume_shikigami_type: ShikigamiType = Field(default=ShikigamiType.AUTO, description='costume_shikigami_type_help')
     costume_sign_type: SignType = Field(default=SignType.COSTUME_SIGN_DEFAULT, description='costume_sign_type_help')
     costume_battle_type: BattleType = Field(default=BattleType.COSTUME_BATTLE_DEFAULT, description='costume_battle_type_help')
     custom_courtyard_affair: CourtyardAffairType = Field(default=CourtyardAffairType.CUSTOM_COURTYARD_AFFAIR_DEFAULT)

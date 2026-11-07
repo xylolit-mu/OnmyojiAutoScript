@@ -35,6 +35,7 @@ MAIN_COSTUME_ASSET_KEYS = {
     for key in model
 }
 _default_main_assets: dict[str, RuleImage] = {}
+_default_shikigami_assets: dict[str, RuleImage] = {}
 
 # 战斗主题（使用循环处理常规情况 + 特例处理）
 battle_theme_model = {}
@@ -91,6 +92,7 @@ class CostumeBase:
     def check_costume(self, config: CostumeConfig=None):
         if config is None:
             config: CostumeConfig = self.config.model.global_game.costume_config
+        self._costume_config = config
         self.check_costume_main(config.costume_main_type)
         self.check_costume_battle(config.costume_battle_type)
         self.check_costume_shikigami(config.costume_shikigami_type)
@@ -141,6 +143,8 @@ class CostumeBase:
                 _default_main_assets[key] = self._clone_rule_image(rule)
 
     def _main_check_rule(self, main_type: MainType) -> RuleImage | None:
+        if main_type == MainType.AUTO:
+            return None
         if main_type == MainType.COSTUME_MAIN:
             return _default_main_assets.get('I_CHECK_MAIN')
         asset_name = main_costume_model[main_type]['I_CHECK_MAIN']
@@ -183,6 +187,9 @@ class CostumeBase:
             main_types = [MainType(main_types)]
         else:
             main_types = [MainType(item) for item in main_types]
+        self._main_auto = MainType.AUTO in main_types
+        if self._main_auto:
+            main_types = [item for item in MainType if item != MainType.AUTO]
         self._main_costume_candidates = tuple(dict.fromkeys(main_types))
 
         if len(self._main_costume_candidates) == 1:
@@ -204,7 +211,7 @@ class CostumeBase:
         rules = []
         rule_types = []
         for main_type in candidates:
-            if main_type == getattr(self, 'current_main_type', None):
+            if not getattr(self, '_main_auto', False) and main_type == getattr(self, 'current_main_type', None):
                 continue
             rule = self._main_check_rule(main_type)
             if rule is not None:
@@ -239,6 +246,11 @@ class CostumeBase:
                 continue
             logger.info(f'Detected random main costume: {main_type.value}')
             self._activate_main_costume(main_type)
+            if self._main_auto:
+                self._costume_config.costume_main_type = [main_type]
+                self.config.model.save()
+                self._main_auto = False
+                self._main_costume_candidates = (main_type,)
             return True
         return False
 
@@ -256,6 +268,13 @@ class CostumeBase:
                 self.replace_img(key, assert_value)
 
     def check_costume_shikigami(self, shikigami_type: ShikigamiType):
+        for key in next(iter(shikigami_costume_model.values())):
+            if key not in _default_shikigami_assets and hasattr(self, key):
+                _default_shikigami_assets[key] = self._clone_rule_image(getattr(self, key))
+        self._shikigami_auto = shikigami_type == ShikigamiType.AUTO
+        if self._shikigami_auto:
+            self._shikigami_defaults = _default_shikigami_assets
+            return
         if shikigami_type == ShikigamiType.COSTUME_SHIKIGAMI_DEFAULT:
             return
         logger.info(f'Switch shikigami theme {shikigami_type}')
@@ -268,6 +287,29 @@ class CostumeBase:
             assert_value: RuleImage = getattr(shikigami_assets, value)
             # 一般不需要固定 back ROI，如确有需要可在此为特例设置 rp_roi_back=False
             self.replace_img(key, assert_value)
+
+    def detect_auto_shikigami(self, threshold=None) -> bool:
+        if not getattr(self, '_shikigami_auto', False):
+            return False
+        assets = CostumeShikigamiAssets()
+        for skin in ShikigamiType:
+            if skin == ShikigamiType.AUTO:
+                continue
+            rule = (self._shikigami_defaults.get('I_CHECK_RECORDS')
+                    if skin == ShikigamiType.COSTUME_SHIKIGAMI_DEFAULT
+                    else getattr(assets, shikigami_costume_model[skin]['I_CHECK_RECORDS'], None))
+            if rule is None or not rule.match(
+                    self.device.image, threshold=threshold, frame_id=self.device.image_frame_id):
+                continue
+            for key, default in self._shikigami_defaults.items():
+                self.replace_img(key, default)
+            self.check_costume_shikigami(skin)
+            self._costume_config.costume_shikigami_type = skin
+            self.config.model.save()
+            self.device.invalidate_image_batch_cache()
+            logger.info(f'Detected shikigami theme: {skin.value}')
+            return True
+        return False
 
     def check_custom_courtyard_affair(self, courtyard_affair_type: CourtyardAffairType):
         if courtyard_affair_type == CourtyardAffairType.CUSTOM_COURTYARD_AFFAIR_DEFAULT:

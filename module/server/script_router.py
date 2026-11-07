@@ -8,6 +8,8 @@ from urllib.parse import quote
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
+from pydantic import BaseModel, Field
+from typing import Literal
 from datetime import datetime
 from module.config.utils import convert_to_underscore
 
@@ -270,10 +272,59 @@ async def desktop_launch_status(script_name: str):
 async def script_task(script_name: str, task: str):
     return mm.config_cache(script_name).model.script_task(task)
 
+
+class TaskListChange(BaseModel):
+    action: Literal['add', 'reorder', 'remove']
+    type: str = ''
+    id: str = ''
+    ids: list[str] = Field(default_factory=list)
+    preview: bool = False
+    entries: list[dict] | None = None
+
+
+@script_app.post('/{script_name}/{task}/list')
+async def change_task_list(script_name: str, task: str, change: TaskListChange):
+    from tasks.CustomTask.config import CustomTask
+
+    model = mm.config_cache(script_name).model
+    group = getattr(model, convert_to_underscore(task), None)
+    if not isinstance(group, CustomTask):
+        raise HTTPException(status_code=404, detail='Task list not found')
+    try:
+        if change.preview:
+            group = CustomTask(entries=change.entries or [])
+        match change.action:
+            case 'add':
+                group.add(change.type)
+            case 'reorder':
+                group.reorder(change.ids)
+            case 'remove':
+                group.remove(change.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not change.preview:
+        model.save()
+    return group.list_payload()
+
+
+@script_app.post('/{script_name}/CustomTask/entry-args')
+async def preview_custom_task_entry(script_name: str, entry: dict):
+    from tasks.CustomTask.config import CustomTask, CustomTaskEntry, ENTRY_PREFIX
+    try:
+        candidate = CustomTaskEntry.model_validate(entry)
+        group = CustomTask(entries=[candidate])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    model = mm.config_cache(script_name).model.model_copy(update={'custom_task': group}, deep=True)
+    return model.script_task(ENTRY_PREFIX + candidate.id)
+
+
 @script_app.put('/{script_name}/{task}/{group}/{argument}/value')
 async def script_task(script_name: str, task: str, group: str, argument: str, types: str, value):
     try:
         match types:
+            case 'task_list':
+                value = json.loads(value)
             case 'multi_enum':
                 from module.config.multi_select import normalize_multi_select
                 value = normalize_multi_select(value)

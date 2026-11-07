@@ -26,6 +26,7 @@ class SwitchSoul(BaseTask, SwitchSoulAssets):
         保证在式神录的界面
         :return:
         """
+        self._last_quick_loadout = None
         if isinstance(target, str):
             try:
                 target = switch_parser(target)
@@ -168,6 +169,7 @@ class SwitchSoul(BaseTask, SwitchSoulAssets):
         :return:
         """
         if isinstance(groupName, str) and isinstance(teamName, str):
+            self._last_quick_loadout = None
             self.click_preset()
             self.switch_soul_by_name(groupName, teamName)
 

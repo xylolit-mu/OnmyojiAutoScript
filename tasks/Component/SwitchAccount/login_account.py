@@ -19,57 +19,63 @@ class LoginAccount(BaseTask, SwitchAccountAssets):
         ocrRes = self.O_SA_LOGIN_FORM_SVR_NAME.ocr(self.device.image)
         return ocrRes
 
-    def switch_svr(self, svrName: str):
-        """
-            需保证账号已登录 且处于登录界面
-        @param svrName:
-        @type svrName:
-        """
-        self.O_SA_LOGIN_FORM_SVR_NAME.keyword = svrName
-        if self.ocr_appear(self.O_SA_LOGIN_FORM_SVR_NAME):
-            return True
-        self.ui_click(self.C_SA_LOGIN_FORM_SWITCH_SVR_BTN, self.I_SA_CHECK_SELECT_SVR_1, 1.5)
-        # 展开底部角色列表,显示角色所属服务器
-        self.screenshot()
-        if self.appear(self.I_SA_CHECK_SELECT_SVR_1) and (not self.appear(self.I_SA_CHECK_SELECT_SVR_2)):
-            self.click(self.O_SA_SELECT_SVR_CHARACTER_LIST)
+    def server_selection_visible(self):
+        return (self.appear(self.I_SA_CHECK_SELECT_SVR_1)
+                or self.appear(self.I_SA_CHECK_SELECT_SVR_2)
+                or self.ocr_appear(self.O_SA_CHECK_SELECT_SVR))
 
-        self.O_SA_SELECT_SVR_SVR_LIST.keyword = svrName
-        found = False
-        lastSvrList: tuple = ()
-        while 1:
+    def open_server_selection(self):
+        deadline = time.monotonic() + 12
+        while time.monotonic() < deadline:
             self.screenshot()
-            self.device.image = threshold_bgr_to_inverted_rgb(self.device.image, threshold=100)
+            if self.appear(self.I_SA_CHECK_SELECT_SVR_2):
+                return True
+            # 已打开浮窗时等待列表就绪，不再点击浮窗背后的选区按钮。
+            if not self.server_selection_visible():
+                self.click(self.C_SA_LOGIN_FORM_SWITCH_SVR_BTN, interval=1.5)
+        logger.warning('等待已有角色列表就绪超时')
+        return False
 
-            ocrRes = self.O_SA_SELECT_SVR_SVR_LIST.detect_and_ocr(self.device.image)
-            # 受限于图像识别文字准确率,此处对识别结果与实际服务器名字 进行检查 字重合度大于阈值 就认为查找成功
-            thresh = 0.5
-            ocrSvrList = [res.ocr_text for res in ocrRes]
-            for index, ocrSvrName in enumerate(ocrSvrList):
-                if len(ocrSvrName) < 3:
-                    break
-                tmp = set(svrName).intersection(set(ocrSvrName))
-                if len(tmp) > max(len(svrName), len(ocrSvrName)) * thresh:
-                    logger.info("found svr %s which is similar with %s", ocrSvrName, svrName)
-                    found = True
-                    # 确定点击位置
-                    box = ocrRes[index].box
-                    self.O_SA_SELECT_SVR_SVR_LIST.area = [self.O_SA_SELECT_SVR_SVR_LIST.roi[0] + box[0][0],
-                                                          self.O_SA_SELECT_SVR_SVR_LIST.roi[1] + box[0][1],
-                                                          box[1][0] - box[0][0],
-                                                          box[2][1] - box[1][1]]
-                    # 跳出此层for循环
-                    break
-            # 两次OCR结果相等表示滑动到最右侧
-            if found or lastSvrList == ocrSvrList:
+    def switch_svr(self, svrName: str):
+        """在已有角色卡片中匹配服务器，选择后等待进入游戏按钮。"""
+        from tasks.Restart.assets import RestartAssets
+
+        if not self.open_server_selection():
+            return False
+        target = self.O_SA_SELECT_SVR_CHARACTER_LIST
+        target.keyword = svrName.strip()
+        previous = None
+        while True:
+            self.screenshot()
+            results = target.detect_and_ocr(self.device.image)
+            names = [item.ocr_text.strip() for item in results]
+            for item, name in zip(results, names):
+                if name != svrName.strip():
+                    continue
+                box = item.box
+                card = RuleClick(
+                    roi_back=target.roi,
+                    roi_front=(target.roi[0] + box[0][0], target.roi[1] + box[0][1],
+                               box[1][0] - box[0][0], box[2][1] - box[1][1]),
+                    name='sa_select_server_card',
+                )
+                logger.info('在已有角色中找到服务器 %s，点击对应卡片', name)
+                deadline = time.monotonic() + 12
+                while time.monotonic() < deadline:
+                    if self.server_selection_visible():
+                        self.click(card, interval=1.5)
+                    elif (self.ocr_appear(RestartAssets.O_LOGIN_ENTER_GAME)
+                          or self.ocr_appear(RestartAssets.O_LOGIN_ENTER_GAME_OLD)):
+                        return True
+                    self.screenshot()
+                logger.warning('选择角色卡片后等待登录按钮超时')
+                return False
+            if previous == names:
                 break
-            lastSvrList = ocrSvrList
-            self.swipe(self.S_SA_SVR_SWIPE_LEFT)
-            time.sleep(3.5)
-        if found:
-            self.click(self.O_SA_SELECT_SVR_SVR_LIST, interval=1.5)
-            return True
-        # 没找到 点击空白区域关闭选择服务器界面
+            previous = names
+            self.swipe(self.S_SA_ACCOUNT_LIST_UP)
+            time.sleep(1.5)
+        logger.warning('已有角色列表中未找到服务器 %s', svrName)
         self.click(self.C_SA_LOGIN_FORM_CANCEL_SVR_SELECT)
         return False
 
@@ -82,7 +88,8 @@ class LoginAccount(BaseTask, SwitchAccountAssets):
         """
         logger.info("start switch_character")
         # 改成对比是否出现 已有角色 
-        self.ui_click(self.C_SA_LOGIN_FORM_SWITCH_SVR_BTN, self.O_SA_CHECK_SELECT_SVR)
+        if not self.open_server_selection():
+            return False
         # 展开底部角色列表,显示角色所属服务器
         self.screenshot()
         while (not self.appear(self.I_SA_CHECK_SELECT_SVR_2)) and self.appear(self.I_SA_CHECK_SELECT_SVR_1):
@@ -289,10 +296,7 @@ class LoginAccount(BaseTask, SwitchAccountAssets):
                     self.click(self.C_SA_LOGIN_FORM_USER_CENTER)
                     continue
 
-                # 已登录 查找对应角色
-                if not isCharacterSelected and self.switch_character(accountInfo.character):
-                    isCharacterSelected = True
-                    continue
+                # 账号登录后统一在已有角色列表中按目标服务器选择卡片。
                 break
             continue
 

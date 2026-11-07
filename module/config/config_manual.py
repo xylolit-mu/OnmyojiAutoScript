@@ -14,12 +14,12 @@ class ConfigManual:
         > Dokan > AbyssShadows > Hunt > GuildBanquet > DemonRetreat > GuildActivityMonitor
         > Orochi > OrochiMoans > OrochiJudgement > Sougenbi > FallenSun > EternitySea > SixRealms > OtherWorldTwilight
         > ActivityShikigami > MartialArts > WantedQuests
-        > BondlingFairyland > EvoZone > GoryouRealm > HeroTest > FindJade > AutoStory > ExplorationFight
+        > BondlingFairyland > EvoZone > GoryouRealm > HeroTest > FindJade > AutoStory > ExplorationFight > CustomTask
         > CollectiveMissions
         > Pets > TalismanPass > Delegation > Hyakkiyakou
         > Secret > WeeklyTrifles > MysteryShop > Duel > Chess > DraftDuel
         > TrueOrochi > WeeklyPurchase
-        > MetaDemon > FrogBoss > FrogChallenge > FloatParade > LBS > Quiz > KittyShop > DyeTrials > MemoryScrolls > GuguArtStudio > IbukiArena
+        > MetaDemonTicket > MetaDemon > FrogBoss > FrogChallenge > FloatParade > LBS > Quiz > KittyShop > DyeTrials > MemoryScrolls > GuguArtStudio > IbukiArena
         """
 
     DEVICE_OVER_HTTP = False

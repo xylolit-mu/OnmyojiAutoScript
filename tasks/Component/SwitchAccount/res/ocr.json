@@ -1,8 +1,8 @@
 [
   {
     "itemName": "sa_login_form_svr_name",
-    "roiFront": "537,212,44,145",
-    "roiBack": "537,212,44,145",
+    "roiFront": "498,507,181,38",
+    "roiBack": "498,507,181,38",
     "mode": "Single",
     "method": "Default",
     "keyword": "",
@@ -55,8 +55,8 @@
   },
   {
     "itemName": "sa_check_select_svr",
-    "roiFront": "252,145,97,32",
-    "roiBack": "248,141,102,38",
+    "roiFront": "220,145,128,36",
+    "roiBack": "220,145,128,36",
     "mode": "Single",
     "method": "Default",
     "keyword": "已有角色",

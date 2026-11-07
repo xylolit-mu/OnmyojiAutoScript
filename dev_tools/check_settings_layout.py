@@ -35,7 +35,7 @@ class SettingsLayoutChecks(unittest.TestCase):
     def test_backend_owns_selection_rules_and_activity_form(self):
         for name, attr, model, group, field, expected in (
             ('MetaDemon', 'meta_demon', MetaDemon(), 'meta_demon_config', 'mode',
-             [['门票刷取：觉醒七层', '门票刷取：探索'], ['鬼王战斗', '鬼王协助']]),
+               [['鬼王战斗', '鬼王协助']]),
             ('ActivityShikigami', 'activity_shikigami', ActivityShikigami(), 'general_config', 'task_sequence',
              [['探索', '大富翁', '伪神']]),
         ):

@@ -2,7 +2,7 @@
   {
     "itemName": "md_fire",
     "imageName": "md_md_fire.png",
-    "roiFront": "1132,577,99,53",
+    "roiFront": "1135,597,99,53",
     "roiBack": "1104,546,154,147",
     "method": "Template matching",
     "threshold": 0.8,
@@ -45,7 +45,7 @@
     "roiFront": "361,312,68,69",
     "roiBack": "261,299,754,133",
     "method": "Template matching",
-    "threshold": 0.85,
+    "threshold": 0.98,
     "profile": "High",
     "description": "一星鬼王召唤票"
   },
@@ -55,7 +55,7 @@
     "roiFront": "460,314,66,67",
     "roiBack": "266,303,751,134",
     "method": "Template matching",
-    "threshold": 0.85,
+    "threshold": 0.98,
     "profile": "High",
     "description": "二星鬼王召唤票"
   },
@@ -65,7 +65,7 @@
     "roiFront": "557,315,67,67",
     "roiBack": "266,302,749,129",
     "method": "Template matching",
-    "threshold": 0.85,
+    "threshold": 0.98,
     "profile": "High",
     "description": "三星鬼王召唤票"
   },
@@ -75,7 +75,7 @@
     "roiFront": "656,314,71,68",
     "roiBack": "261,299,754,132",
     "method": "Template matching",
-    "threshold": 0.85,
+    "threshold": 0.98,
     "profile": "High",
     "description": "四星鬼王召唤票"
   },
@@ -85,7 +85,7 @@
     "roiFront": "754,313,71,69",
     "roiBack": "267,303,749,129",
     "method": "Template matching",
-    "threshold": 0.85,
+    "threshold": 0.98,
     "profile": "High",
     "description": "五星鬼王召唤票"
   },
@@ -95,7 +95,7 @@
     "roiFront": "856,316,66,69",
     "roiBack": "265,299,754,133",
     "method": "Template matching",
-    "threshold": 0.85,
+    "threshold": 0.98,
     "profile": "High",
     "description": "六星鬼王召唤票"
   },
@@ -302,71 +302,31 @@
   {
     "itemName": "md_ticket_empty",
     "imageName": "md_md_ticket_empty.png",
-    "roiFront": "591,305,100,100",
-    "roiBack": "447,295,368,154",
+    "roiFront": "591,303,101,101",
+    "roiBack": "446,295,368,154",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",
     "description": "无鬼王门票标志"
   },
   {
-    "itemName": "summon_quick_one_star",
-    "imageName": "md_summon_quick_one_star.png",
-    "roiFront": "1061,526,53,32",
-    "roiBack": "1028,465,117,97",
+    "itemName": "share_demon",
+    "imageName": "md_share_demon.png",
+    "roiFront": "47,137,80,82",
+    "roiBack": "47,137,80,82",
     "method": "Template matching",
-    "threshold": 0.96,
+    "threshold": 0.8,
     "profile": "High",
-    "description": "快速召唤序列一星"
+    "description": "分享鬼王头像"
   },
   {
-    "itemName": "summon_quick_two_star",
-    "imageName": "md_summon_quick_two_star.png",
-    "roiFront": "1060,527,53,19",
-    "roiBack": "1029,466,117,98",
+    "itemName": "fight_share_demon",
+    "imageName": "md_fight_share_demon.png",
+    "roiFront": "49,376,80,82",
+    "roiBack": "30,361,298,276",
     "method": "Template matching",
-    "threshold": 0.96,
+    "threshold": 0.8,
     "profile": "High",
-    "description": "快速召唤序列二星"
-  },
-  {
-    "itemName": "summon_quick_three_star",
-    "imageName": "md_summon_quick_three_star.png",
-    "roiFront": "1060,527,53,19",
-    "roiBack": "1029,466,117,98",
-    "method": "Template matching",
-    "threshold": 0.96,
-    "profile": "High",
-    "description": "快速召唤序列三星"
-  },
-  {
-    "itemName": "summon_quick_four_star",
-    "imageName": "md_summon_quick_four_star.png",
-    "roiFront": "1060,527,53,19",
-    "roiBack": "1029,466,117,98",
-    "method": "Template matching",
-    "threshold": 0.96,
-    "profile": "High",
-    "description": "快速召唤序列四星"
-  },
-  {
-    "itemName": "summon_quick_five_star",
-    "imageName": "md_summon_quick_five_star.png",
-    "roiFront": "1060,527,53,19",
-    "roiBack": "1029,466,117,98",
-    "method": "Template matching",
-    "threshold": 0.96,
-    "profile": "High",
-    "description": "快速召唤序列五星"
-  },
-  {
-    "itemName": "summon_quick_six_star",
-    "imageName": "md_summon_quick_six_star.png",
-    "roiFront": "1060,527,53,19",
-    "roiBack": "1029,466,117,98",
-    "method": "Template matching",
-    "threshold": 0.96,
-    "profile": "High",
-    "description": "快速召唤序列六星"
+    "description": "协助鬼王头像"
   }
 ]

@@ -68,8 +68,6 @@ class ScriptTask(BaseExploration):
             if self.check_exit(current_page):
                 self.appear_then_click(self.I_UI_CANCEL, interval=0.8)  # 处理队长结束的邀请弹窗
                 break
-            if self.handle_paper_reward_page(current_page):
-                continue
             if current_page is None:
                 time.sleep(0.5)
                 continue

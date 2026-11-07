@@ -38,9 +38,9 @@ class AssistanceChecks(unittest.TestCase):
         return t
 
     def test_mode_and_api_defaults(self):
-        conf = MetaDemon(meta_demon_config={'mode': ['鬼王协助', '门票刷取：探索']},
+        conf = MetaDemon(meta_demon_config={'mode': ['鬼王协助']},
                          assistance_config={'friend_names': ' Alice ;Bob\nAlice；Carol '})
-        self.assertEqual(conf.meta_demon_config.mode, [MetaDemonMode.EXPLORATION, MetaDemonMode.BOSS_ASSIST])
+        self.assertEqual(conf.meta_demon_config.mode, [MetaDemonMode.BOSS_ASSIST])
         self.assertEqual(conf.assistance_config.friends, ['Alice', 'Bob', 'Carol'])
         self.assertEqual(conf.assistance_config.role, AssistanceRole.OFFERING)
         with self.assertRaises(ValidationError):

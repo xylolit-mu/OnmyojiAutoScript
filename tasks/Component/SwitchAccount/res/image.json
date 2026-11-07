@@ -2,131 +2,131 @@
   {
     "itemName": "check_login_form",
     "imageName": "check_login_form.png",
-    "profile": "High",
     "roiFront": "178,572,53,60",
     "roiBack": "1,547,241,105",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "用于判断是否在登录界面的"
   },
   {
     "itemName": "sa_user_center",
     "imageName": "sa_user_center.png",
-    "profile": "High",
     "roiFront": "190,390,330,200",
     "roiBack": "190,390,330,200",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "游戏内-点击头像弹出的设置界面-左侧-用户中心按钮"
   },
   {
     "itemName": "sa_user_center_profile",
     "imageName": "sa_user_center_profile.png",
-    "profile": "High",
     "roiFront": "590,60,90,55",
     "roiBack": "590,60,90,55",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "游戏内-点击头像弹出的设置界面-顶部设置字样"
   },
   {
     "itemName": "sa_switch_account_btn",
     "imageName": "sa_switch_account_btn.png",
-    "profile": "High",
     "roiFront": "930,170,160,75",
     "roiBack": "930,170,160,75",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "游戏内点击用户中心后弹出的 切换用户按钮"
   },
   {
     "itemName": "sa_user_center_copy_btn",
     "imageName": "sa_user_center_copy_btn.png",
-    "profile": "High",
     "roiFront": "460,280,640,50",
     "roiBack": "460,280,640,50",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面 已登录状态下 点击用户中心后弹出的对话框中 复制账号按钮"
   },
   {
     "itemName": "sa_netease_game_logo",
     "imageName": "sa_netease_game_logo.png",
-    "profile": "High",
     "roiFront": "500,170,300,90",
     "roiBack": "500,170,300,90",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面-选取账号界面-顶部网易游戏LOGO"
   },
   {
     "itemName": "sa_account_drop_down_closed",
     "imageName": "sa_account_drop_down_closed.png",
-    "profile": "High",
     "roiFront": "850,320,30,25",
     "roiBack": "850,320,30,25",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面-选取账号界面-账号下拉菜单-关闭标志."
   },
   {
     "itemName": "sa_account_drop_down_add_account",
     "imageName": "sa_account_drop_down_add_account.png",
-    "profile": "High",
     "roiFront": "400,540,220,60",
     "roiBack": "400,540,220,60",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面-选取账号界面-账号下拉菜单-添加新账号."
   },
   {
     "itemName": "sa_account_login_btn",
     "imageName": "sa_account_login_btn.png",
-    "profile": "High",
     "roiFront": "400,400,480,90",
     "roiBack": "400,400,480,90",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面-选取账号界面-账号下拉菜单-已经打开标志."
   },
   {
     "itemName": "sa_login_form_apple",
     "imageName": "res_sa_login_form_apple.png",
-    "profile": "High",
     "roiFront": "508,354,100,100",
     "roiBack": "508,355,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面-选择手机类型为苹果."
   },
   {
     "itemName": "sa_login_form_android",
     "imageName": "res_sa_login_form_android.png",
-    "profile": "High",
     "roiFront": "671,353,100,100",
     "roiBack": "670,352,100,100",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "登录界面-选择手机类型为android"
   },
   {
     "itemName": "sa_check_select_svr_1",
     "imageName": "res_sa_check_select_svr_1.png",
-    "profile": "High",
-    "roiFront": "213,133,181,60",
-    "roiBack": "210,128,185,68",
+    "roiFront": "194,130,181,60",
+    "roiBack": "187,121,197,79",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "判断是否在 选择服务器 界面的标志物 角色的服务器图标还未显示时"
   },
   {
     "itemName": "sa_check_select_svr_2",
     "imageName": "res_sa_check_select_svr_2.png",
-    "profile": "High",
-    "roiFront": "209,131,184,64",
-    "roiBack": "207,127,187,70",
+    "roiFront": "194,130,181,60",
+    "roiBack": "187,121,197,79",
     "method": "Template matching",
     "threshold": 0.8,
+    "profile": "High",
     "description": "判断是否在 选择服务器 界面的标志物 角色的服务器图标已经显示时"
   }
 ]

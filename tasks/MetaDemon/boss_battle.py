@@ -14,6 +14,7 @@ from tasks.GameUi.game_ui import GameUi
 from tasks.MetaDemon.config import MetaDemon, BossType, loadout_group
 from tasks.MetaDemon.assets import MetaDemonAssets
 from tasks.MetaDemon.synthesis import parse_synthesis_material_level
+from tasks.MetaDemon.ticket_stars import recognize_ticket_stars
 import tasks.GameUi.task_pages as ipages
 
 from module.logger import logger
@@ -31,6 +32,12 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
     conf: MetaDemon = None
     cur_boss_type: BossType = None
     total_count: int = 0
+    _current_boss_attempts: int = 0
+
+    def _quick_loadout_fight(self, frame):
+        return super()._quick_loadout_fight(
+            frame, fight_file='./tasks/MetaDemon/md/md_quick_loadout_frame_fight.png',
+        )
 
     def _meta_demon_battle_key(self) -> str:
         """返回当前鬼王类型对应的通用战斗分组键。"""
@@ -40,9 +47,11 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
         return f"meta_demon_{loadout_group(self.cur_boss_type)}"
 
     @property
-    def enable_powerful_fire(self):
-        powerful_list = self.conf.meta_demon_config.powerful_list_v
-        return self.cur_boss_type is not None and self.cur_boss_type in powerful_list
+    def enable_powerful_fire(self) -> bool:
+        config = self.conf.meta_demon_config
+        return (config.high_star_powerful_enable
+                and self.cur_boss_type in (BossType.FIVE_STARS, BossType.SIX_STARS)
+                and self._current_boss_attempts < config.powerful_count)
 
     def before_run(self):
         self.navigator.add_unknown_closer(self.I_MD_GET_YESTERDAY_REWARD)
@@ -51,6 +60,7 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
         self._boss_generation = 0
         self.cur_boss_type = None
         self.total_count = 0
+        self._current_boss_attempts = 0
         self.conf = self.config.meta_demon
         self.limit_time = self.conf.meta_demon_config.limit_time_v
         self.limit_count = self.conf.meta_demon_config.limit_count
@@ -100,17 +110,23 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
         self.set_next_run(task="MetaDemon", success=True)
         self.finish_task()
 
-    def start_battle(self):
+    def start_battle(self, within_limit=None):
         logger.hr('Click fire, start battle')
-        while True:
+        last_challenge = time.monotonic()
+        while within_limit is None or within_limit():
             self.screenshot()
             if self.is_in_battle(False):
                 self.total_count += 1
+                self._current_boss_attempts += 1
+                battle_config = self.conf.battle_config(loadout_group(self.cur_boss_type))
+                if self.cur_boss_type is None:
+                    battle_config = battle_config.model_copy(update={'preset_enable': False})
                 self.run_general_battle(
-                    self.conf.battle_config(loadout_group(self.cur_boss_type)),
+                    battle_config,
                     battle_key=self._meta_demon_battle_key(),
+                    exit_matcher=self.I_MD_SETTLING if within_limit is not None else None,
                 )
-                break
+                return True
             if self.appear(self.I_MD_DRINK_TEA, interval=1.2):  # 出现喝茶弹窗
                 if self.conf.meta_demon_config.auto_tea:
                     self.click(self.I_MD_DRINK_TEA)  # 喝茶
@@ -119,8 +135,17 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                 self.ui_click_until_disappear(self.I_MD_CLOSE_POPUP, interval=0.6)
                 self.set_next_run('MetaDemon', target=datetime.now() + self.conf.scheduler.wait_interval)
                 self.finish_task()
+            if within_limit is not None and self.appear(self.I_MD_SETTLING):
+                return False
             if self.appear_then_click(self.I_MD_FIRE, interval=0.8):
+                last_challenge = time.monotonic()
                 continue
+            if within_limit is not None:
+                if self.appear(self.I_MD_FIRE):
+                    last_challenge = time.monotonic()
+                elif time.monotonic() - last_challenge >= 5:
+                    return False
+        return False
 
     def battle_wait(self, random_click_swipt_enable: bool) -> bool:
         self.device.stuck_record_add('BATTLE_STATUS_S')
@@ -163,6 +188,9 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
         logger.hr('battle prepare', 2)
         if not self.check_fatigue():
             return False
+        if self.cur_boss_type is None and self.appear(self.I_MD_FIRE):
+            logger.info('已有鬼王星级未知，沿用当前阵容并使用普通追击')
+            return self.check_and_switch_powerful()
         self.synthesis_boss_ticket()
         return self.check_and_switch_ticket() and self.check_and_switch_soul() and self.check_and_switch_powerful()
 
@@ -193,7 +221,7 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
         :param need_ticket: 合成当前级别鬼王需要的门票数量
         :param material_level: 配置要求消耗的材料星级，必须与标题 OCR 换算结果一致
         """
-        if not self.appear(target_boss_ticket):
+        if not self.ticket_matches_star(target_boss_ticket, material_level, synthesis=True):
             logger.info(f'{target_boss_ticket} not recognized, skip synthesis')
             return
         click_cnt, max_cnt = 0, random.randint(2, 3)
@@ -210,11 +238,14 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                 click_cnt = 0  # 清空点击标志
                 continue
             if self.appear(self.I_MD_SYNTHESIS_EMPTY, interval=0.8):  # 有空位
-                empty_list = self.I_MD_SYNTHESIS_EMPTY.match_all(self.device.image, frame_id=self.device.image_frame_id)
+                empty_list = self.I_MD_SYNTHESIS_EMPTY.match_all_any(self.device.image, frame_id=self.device.image_frame_id)
                 if len(empty_list) < need_ticket:  # 空位数量小于需要的门票数量->门票不够则退出
                     logger.info(f'{target_boss_ticket} ticket not enough, skip synthesis')
                     break
-            if self.appear_then_click(target_boss_ticket, interval=2):  # 点击对应级别鬼王门票
+            if not self.ticket_matches_star(target_boss_ticket, material_level, synthesis=True):
+                logger.info('合成材料未通过底部星级复核，跳过本星级')
+                break
+            if self.click(target_boss_ticket, interval=2):
                 # 选中后重新截图，不能拿点击之前的标题验证。
                 time.sleep(0.3)
                 self.screenshot()
@@ -269,6 +300,7 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                         self.current_count = 0
                     self.cur_boss_type = target_type
                     self._boss_generation = getattr(self, '_boss_generation', 0) + 1
+                    self._current_boss_attempts = 0
                     logger.info(f'Summon {target_type.name.lower()} boss confirmed')
                 return True
             panel_open = self.appear(self.I_MD_GET_BOSS)
@@ -285,7 +317,7 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                 continue
             if target_type is None:
                 available = [star for star in (self.conf.meta_demon_config.fire_sequence_v if sequence is None else sequence)
-                             if star in tickets and self.appear(tickets[star])]
+                             if star in tickets and self.ticket_matches_star(tickets[star], star)]
                 if not available:
                     self.State.done = True
                     logger.info('No remaining ticket in configured summon sequence')
@@ -295,7 +327,7 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                 logger.info(f'Summon {target_type.name.lower()} boss')
             target = tickets[target_type]
             # Both the target ticket and its selected marker must belong to this frame.
-            if not self.appear(target):
+            if not self.ticket_matches_star(target, target_type):
                 continue
             if self.appear(self.I_MD_CHECK_SELECTED):
                 marker_x, _, marker_w, _ = self.I_MD_CHECK_SELECTED.roi_front
@@ -304,8 +336,25 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                     if self.appear_then_click(self.I_MD_GET_BOSS, interval=1.5):
                         settle_until = time.monotonic() + 3
                     continue
-            self.appear_then_click(target, interval=1.0)
+            self.click(target, interval=1.0)
         logger.warning(f'鬼王召唤未完成（目标={target_type.name if target_type else "未选定"}），返回重新检查界面')
+        return False
+
+    def ticket_matches_star(self, ticket: RuleImage, star: BossType, *, synthesis=False) -> bool:
+        if not self.appear(ticket):
+            return False
+        image = self.device.image
+        if recognize_ticket_stars(image, ticket.roi_front, synthesis=synthesis) == int(star):
+            return True
+        # The best template hit can be a different star level. Inspect the other
+        # non-overlapping candidates before deciding the desired ticket is absent.
+        matches = ticket.match_all_any(image, frame_id=self.device.image_frame_id)
+        for _, x, y, width, height in sorted(matches, reverse=True):
+            area = (x, y, width, height)
+            if recognize_ticket_stars(image, area, synthesis=synthesis) == int(star):
+                ticket.roi_front = list(area)
+                return True
+        logger.info(f'门票模板命中但底部星级未通过复核：目标 {int(star)} 星')
         return False
 
     def check_and_switch_powerful(self) -> bool:
@@ -316,24 +365,15 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
             self.screenshot()
             if not self.appear(self.I_MD_FIRE):  # 处于boss界面但是没有挑战按钮
                 return False
-        powerful_list = self.conf.meta_demon_config.powerful_list_v
-        # 当前boss类型未知或不在强力列表中则使用普通追击
-        if self.cur_boss_type is None or self.cur_boss_type not in powerful_list:
-            self.ui_click(self.I_MD_ENABLE_POWERFUL_FIRE, self.I_MD_DISABLE_POWERFUL_FIRE, interval=0.6)
-            return True
-        # 已知类型且在强力列表中则开启强力追击
-        self.ui_click(self.I_MD_DISABLE_POWERFUL_FIRE, self.I_MD_ENABLE_POWERFUL_FIRE, interval=0.6)
+        enabled, disabled = self.I_MD_ENABLE_POWERFUL_FIRE, self.I_MD_DISABLE_POWERFUL_FIRE
+        click, stop = (disabled, enabled) if self.enable_powerful_fire else (enabled, disabled)
+        self.ui_click(click, stop, interval=0.6)
         return True
 
     def check_and_switch_soul(self) -> bool:
         """按鬼王分类应用御魂；显式开启快速上阵时通过 frame 装魂并上阵。"""
         if self.cur_boss_type is None:
-            enabled = any(self.conf.switch_soul_config.switch_for(group).enable or
-                          self.conf.switch_soul_config.switch_for(group).enable_switch_by_name or
-                          self.conf.battle_config(group).preset_enable or
-                          self.conf.general_config.high_star_quick_loadout_enable
-                          for group in ('low_star', 'high_star'))
-            return not enabled
+            return True
         category = loadout_group(self.cur_boss_type)
         custom = self.conf.quick_preset_config
         custom_enabled = (category == 'high_star' and
@@ -347,11 +387,10 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
             soul = self.conf.switch_soul_config.switch_for(category)
             quick = QuickLoadoutConfig(enable=True, group_name=soul.group_name, preset_name=soul.team_name)
             if custom_enabled:
-                # Invalid numeric targets must never silently fall back to another preset.
                 try:
-                    presets = self._parse_custom_presets(custom.high_star_custom_preset)
+                    presets = custom.named_presets()
                 except ValueError as exc:
-                    logger.error(f'高星快速预设格式错误，仅支持名称: {exc}')
+                    logger.error(f'高星快速预设配置错误: {exc}')
                     return False
                 name_ocr = getattr(self, 'O_BOSS_NAME', None)
                 if name_ocr is None:
@@ -366,7 +405,9 @@ class BossBattle(GeneralBattle, SwitchSoul, QuickLoadout, GameUi, MetaDemonAsset
                     logger.error(f'首领 {boss_name} 无匹配预设，请配置对应名称或 ALL')
                     return False
                 quick.group_name, quick.preset_name = target
-            if not self.run_quick_loadout(quick, frame=self.F_QUICK_LOADOUT_FRAME):
+            if not self.run_quick_loadout(
+                quick, frame=self.F_QUICK_LOADOUT_FRAME, skip_equip_soul=custom.skip_equip_soul,
+            ):
                 return False
         else:
             soul = self.conf.switch_soul_config.switch_for(category)

@@ -84,15 +84,15 @@ class DraftDuelAssets:
 	I_AUTO_RIGHT = RuleImage(roi_front=(1000,619,58,71), roi_back=(957,579,142,138), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_auto_right.png")
 	# 自动上阵 
 	I_AUTO_DOWN = RuleImage(roi_front=(999,619,58,71), roi_back=(956,574,142,138), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_auto_down.png")
-	# 胜利
+	# 胜利 
 	I_FIGHT_WIN = RuleImage(roi_front=(422,71,122,113), roi_back=(389,21,191,206), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_fight_win.png")
-	# 失败
+	# 失败 
 	I_FIGHT_LOSE = RuleImage(roi_front=(410,51,122,113), roi_back=(389,21,191,206), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_fight_lose.png")
-	# 继续邀请
+	# 继续邀请 
 	I_INVITE_CONTINUE = RuleImage(roi_front=(1142,440,51,56), roi_back=(1101,396,130,142), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_invite_continue.png")
-	# 用户提供 fork.png 黄叉模板，定位最近手牌框
+	# 用户提供 fork.png 黄叉模板，定位最近手牌框 
 	I_HAND_SELECTED_CROSS = RuleImage(roi_front=(419,511,29,27), roi_back=(250,490,600,70), threshold=0.8, method="Masked template matching", profile="High", file="./tasks/DraftDuel/draft/draft_hand_selected_cross.png")
-	# 属性详情
+	# 属性详情 
 	I_SHIKIGAMI_DETAILS = RuleImage(roi_front=(732,539,37,33), roi_back=(334,524,819,63), threshold=0.8, method="Template matching", profile="High", file="./tasks/DraftDuel/draft/draft_shikigami_details.png")
 
 
