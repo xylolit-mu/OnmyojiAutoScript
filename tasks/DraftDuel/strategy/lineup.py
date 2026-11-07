@@ -559,6 +559,29 @@ def _is_amplifier(name: str, catalog: Mapping[str, Entry] = CATALOG) -> bool:
     return '增伤' in text
 
 
+ROLE_LABELS = {
+    'fire': '鬼火', 'sustain': '治疗', 'shield': '护盾', 'control': '控制',
+    'damage': '输出', 'tempo': '拉条', 'support': '辅助',
+}
+# Values are on the matrix score scale. Protection is a separate aggregate quota.
+ROLE_DIVERSITY_BONUS = {
+    'fire': .03, 'sustain': .035, 'shield': .035, 'control': .045,
+    'damage': .04, 'tempo': .045, 'support': .04,
+}
+ROLE_DUPLICATE_PENALTY = {
+    'fire': (2, .035), 'protect': (2, .05), 'damage': (2, .06),
+    'sustain': (1, .025), 'shield': (1, .025), 'control': (1, .04),
+    'tempo': (1, .035), 'support': (1, .055),
+}
+
+
+def role_diversity_score(counts: Mapping[str, int]) -> float:
+    bonus = sum(value for tag, value in ROLE_DIVERSITY_BONUS.items() if counts[tag])
+    penalty = sum(value * max(0, counts[tag] - cap)
+                  for tag, (cap, value) in ROLE_DUPLICATE_PENALTY.items())
+    return bonus - penalty
+
+
 def composition_counts(names: Iterable[str], catalog: Mapping[str, Entry] = CATALOG,
                        defenses: Mapping[str, int] | None = None) -> dict[str, int]:
     """按用户公式统计编排位：2 打火 + 2 输出 + 1 治疗/盾 + 1 控制或拉条。
@@ -569,21 +592,22 @@ def composition_counts(names: Iterable[str], catalog: Mapping[str, Entry] = CATA
     names = list(names)
     defens = defenses or {}
     tags = [role_tags(catalog[name], defense=defens.get(name)) for name in names]
-    fire = sum('fire' in tag for tag in tags)
-    damage = sum('damage' in tag for tag in tags)
+    raw_counts = Counter(role for card_tags in tags for role in card_tags)
     weak_damage = sum('damage' in tag and not _winrate_ok(name, 0.45)
                       for tag, name in zip(tags, names))
-    protect = sum(bool({'sustain', 'shield'} & tag) for tag in tags)
     flex = sum(bool({'control', 'tempo'} & tag) for tag in tags)
-    amplify = sum('support' in tag and 'damage' not in tag
+    amplifiers = ['support' in tag and 'damage' not in tag
                   and _is_amplifier(name, catalog) and _strong_support(name)
-                  for tag, name in zip(tags, names))
+                  for tag, name in zip(tags, names)]
+    amplify = sum(amplifiers)
+    protect = sum(buff or bool({'sustain', 'shield'} & tag)
+                  for tag, buff in zip(tags, amplifiers))
     # 纯奶: 只有治疗/盾, 不带控制/拉条/增伤(用户口径: 两个辅助位尽量别全是奶)
     heal_only = sum(bool({'sustain', 'shield'} & tag)
                     and not ({'control', 'tempo', 'support', 'damage'} & tag)
                     for tag in tags)
-    return {'fire': fire, 'damage': damage, 'weak_damage': weak_damage,
-            'protect': protect + amplify, 'flex': flex + amplify,
+    return {**{role: raw_counts[role] for role in ROLE_LABELS}, 'weak_damage': weak_damage,
+            'protect': protect, 'flex': flex + amplify,
             'amplify': amplify, 'heal_only': heal_only}
 
 
@@ -939,11 +963,17 @@ def plan_lineup(available: Iterable[str], *, team_size: int = 5,
     return states[0]
 
 
+def minimum_role_coverage(counts: Mapping[str, int]) -> int:
+    """Count fulfilled quota slots; surplus in one role cannot replace another."""
+    return min(counts['fire'], 2) + min(counts['protect'], 1) + min(counts['damage'], 1)
+
+
 def plan_duel_lineup(own: Iterable[str], mate: Iterable[str], *, locked: Iterable[str] = (),
                      mate_locked: Iterable[str] = (),
                      team_size: int = 3,
                      field_weights: Mapping[str, float] | None = None,
-                     catalog: Mapping[str, Entry] = CATALOG) -> tuple[tuple[str, ...], tuple[str, ...]]:
+                     catalog: Mapping[str, Entry] = CATALOG,
+                     prioritize_minimum_roles: bool = False) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """协同对弈联合规划：两个号共 6 个位置按公式分配。
 
     公式（用户口径）：2 打火 + 2 输出 + 1 治疗/盾 + 1 控制或拉条, 强力增伤可顶替后两个辅助位;
@@ -969,9 +999,11 @@ def plan_duel_lineup(own: Iterable[str], mate: Iterable[str], *, locked: Iterabl
         # 档4 兜底
         lambda c: True,
     )
+    if prioritize_minimum_roles:
+        formulas = (formulas[-1],)
     field_table = battle_stats._tally('fielded') if battle_stats is not None and field_weights is None else None
     for formula in formulas:
-        best, best_rank = None, (-1e18, -1)
+        best, best_rank = None, None
         for own_pick in combinations(own_pool, team_size):
             if not set(required).issubset(own_pick):
                 continue
@@ -1004,8 +1036,11 @@ def plan_duel_lineup(own: Iterable[str], mate: Iterable[str], *, locked: Iterabl
                     score -= 12.0 * (counts['damage'] - 2)
                 if counts.get('heal_only', 0) >= 2:
                     score -= 10.0 * (counts['heal_only'] - 1)
-                rank = (score, -abs(counts['damage'] - 2))
-                if rank > best_rank:
+                coverage = minimum_role_coverage(counts) if prioritize_minimum_roles else 0
+                if prioritize_minimum_roles:
+                    score += 100 * role_diversity_score(counts)
+                rank = (coverage, score, -abs(counts['damage'] - 2))
+                if best_rank is None or rank > best_rank:
                     best_rank, best = rank, (own_pick, mate_pick)
         if best is not None:
             return best

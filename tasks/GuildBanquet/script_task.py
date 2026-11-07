@@ -64,27 +64,10 @@ class ScriptTask(GameUi, GuildBanquetAssets):
             raise TaskEnd
         self._watching_banquet = True
         self.goto_page(pages.page_guild)
-        if not self._wait_banquet_flag():
-            self._watching_banquet = False
-            self.set_next_run(task='GuildBanquet', server=False, target=self.get_next_dt(datetime.now()))
-            self.finish_task_navigation()
-            raise TaskEnd
-        logger.info("Start guild banquet!")
-        self.device.stuck_record_clear()
-        max_wait_seconds = 660
         wait_interval_seconds = 6
         start_banquet_time = datetime.now()
         exp_full_appeared = False
-        banquet_finished = False
-        while True:
-            self.screenshot()
-            if datetime.now() - start_banquet_time > timedelta(seconds=max_wait_seconds):
-                logger.info('Guild banquet timeout, exit')
-                break
-            if not self._wait_banquet_flag():
-                logger.info("Guild banquet finished, exit")
-                banquet_finished = True
-                break
+        while self._wait_banquet_flag():
             logger.attr(f'{(datetime.now()-start_banquet_time).seconds}s',"Banquet ongoing, waiting...")
             if self.config.guild_banquet.guild_banquet_config.auto_switch_shikigami:
                 if self.appear(self.I_BANQUET_EXP_FULL):
@@ -97,8 +80,10 @@ class ScriptTask(GameUi, GuildBanquetAssets):
             self.device.stuck_record_clear()
             time.sleep(wait_interval_seconds)
         self._watching_banquet = False
+        logger.info('Guild banquet finished: banquet flags absent on guild page')
+        # 只传目标时间，避免通用调度器取成功间隔和目标时间中较早的一个。
         self.set_next_run(task='GuildBanquet', server=False,
-                          target=self.get_next_dt(datetime.now(), banquet_finished))
+                          target=self.get_next_dt(datetime.now(), success=True))
         self.finish_task_navigation()
         raise TaskEnd
 

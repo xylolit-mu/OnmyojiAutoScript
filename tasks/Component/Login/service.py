@@ -99,7 +99,12 @@ class LoginService(
                 continue
             if self.appear(self.I_CHECK_MAIN, interval=0.2) and not self.appear(self.I_MAIN_GOTO_SHIKIGAMI_RECORDS):
                 logger.info('The main had already appeared, but shikigami records had not yet appeared')
-                if self.click(self.C_LOGIN_SCROLL_CLOSE_AREA, interval=2):
+                if self.appear(self.I_LOGIN_SCROOLL_CLOSE_DECADE):
+                    if self.click(self.I_LOGIN_SCROOLL_CLOSE_DECADE, interval=2):
+                        continue
+                elif not self.appear(self.I_LOGIN_SCROOLL_OPEN_DECADE) and self.click(
+                    self.C_LOGIN_SCROLL_CLOSE_AREA, interval=2
+                ):
                     continue
             if self.appear(self.I_MAIN_GOTO_SHIKIGAMI_RECORDS, interval=0.2):
                 if confirm_timer.reached():
@@ -192,7 +197,12 @@ class LoginService(
                     logger.info('Enter game OCR unavailable; clicked login fallback area')
                     self.wait_until_appear(self.I_LOGIN_SPECIFIC_SERVE, True, wait_time=5)
                     continue
-            if self.appear(self.I_LOGIN_SCROOLL_CLOSE) or self.appear(self.I_LOGIN_SCROOLL_OPEN):
+            if any(self.appear(scroll) for scroll in (
+                self.I_LOGIN_SCROOLL_CLOSE,
+                self.I_LOGIN_SCROOLL_OPEN,
+                self.I_LOGIN_SCROOLL_CLOSE_DECADE,
+                self.I_LOGIN_SCROOLL_OPEN_DECADE,
+            )):
                 return login_success
 
     def app_handle_login(self) -> bool:

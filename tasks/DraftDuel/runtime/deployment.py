@@ -204,7 +204,7 @@ class DraftDuelDeploymentMixin:
         logger.warning(f"DraftDuel top shows {pending.get('preview')} instead of {pending['name']}; "
                        f're-located hand score={score:.3f}, re-drag once')
         self.device.press_and_drag(center(source), center(destination), hold_duration=0.2,
-                                   swipe_duration=0.45, name=f"DraftDuel_redrag_{pending['name']}")
+                                   swipe_duration=0.45, name=f"DraftDuel_redrag_{pending['name']}", curve='hook')
         pending.update(failures=0, preview=None, preview_stable=0, actual=None, stable=0)
         pending.pop('portrait_sample', None)
         self._save_draft_checkpoint('fight')
@@ -412,7 +412,7 @@ class DraftDuelDeploymentMixin:
                     center = lambda a: (int(a[0]+a[2]/2), int(a[1]+a[3]/2))
                     self.device.press_and_drag(center(areas[target]),
                         center(destinations[state['slots'][index]]), hold_duration=.28 if attempts else .2,
-                        swipe_duration=.65 if attempts else .45, name=f'DraftDuel_deploy_{name}')
+                        swipe_duration=.65 if attempts else .45, name=f'DraftDuel_deploy_{name}', curve='hook')
                     pending['last_drag'] = time.time()
                     pending['drag_attempts'] = attempts + 1
                     pending['cleared_after_drag'] = False
@@ -623,7 +623,7 @@ class DraftDuelDeploymentMixin:
             destination = destinations[slots[index]]
             center = lambda area: (int(area[0] + area[2] / 2), int(area[1] + area[3] / 2))
             self.device.press_and_drag(center(source), center(destination), hold_duration=0.2,
-                                       swipe_duration=0.45, name=f'DraftDuel_deploy_{name}')
+                                       swipe_duration=0.45, name=f'DraftDuel_deploy_{name}', curve='hook')
             pending = {'index': index, 'name': name, 'failures': 0, 'clicked': False,
                        'stable': 0, 'locked': False, 'epoch': self._draft_deploy_epoch}
             recovering = False

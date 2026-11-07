@@ -52,5 +52,14 @@
     "method": "Default",
     "keyword": "",
     "description": "（点出困难28时候）探索右上角 突破卷的数量 超鬼王时期"
+  },
+  {
+    "itemName": "find_shikigami",
+    "roiFront": "561,558,138,38",
+    "roiBack": "538,547,188,72",
+    "mode": "Single",
+    "method": "Default",
+    "keyword": "妖怪发现",
+    "description": "发现妖怪"
   }
 ]

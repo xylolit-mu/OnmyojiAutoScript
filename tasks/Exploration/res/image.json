@@ -268,5 +268,45 @@
     "threshold": 0.8,
     "profile": "High",
     "description": "右侧候补标志"
+  },
+  {
+    "itemName": "e_records_entry",
+    "imageName": "res_e_records_entry.png",
+    "roiFront": "880,645,46,42",
+    "roiBack": "768,606,177,104",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": ""
+  },
+  {
+    "itemName": "exp_unlock",
+    "imageName": "res_exp_unlock.png",
+    "roiFront": "890,650,32,33",
+    "roiBack": "871,626,165,85",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": ""
+  },
+  {
+    "itemName": "exp_lock",
+    "imageName": "res_exp_lock.png",
+    "roiFront": "892,651,30,33",
+    "roiBack": "871,626,165,85",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": ""
+  },
+  {
+    "itemName": "unknown_shikigami",
+    "imageName": "res_unknown_shikigami.png",
+    "roiFront": "882,333,55,59",
+    "roiBack": "867,294,334,140",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "未知式神"
   }
 ]

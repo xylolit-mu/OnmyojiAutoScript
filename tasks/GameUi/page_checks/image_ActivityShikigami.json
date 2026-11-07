@@ -32,8 +32,8 @@
   {
     "itemName": "page_check_act_general_1",
     "imageName": "page_check_act_general_1.png",
-    "roiFront": "592,0,136,41",
-    "roiBack": "554,0,213,59",
+    "roiFront": "150,17,136,41",
+    "roiBack": "117,8,213,59",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",

@@ -2,6 +2,7 @@
 # @author runhey
 # github https://github.com/runhey
 import time
+import random
 from time import sleep
 
 from enum import Enum
@@ -503,7 +504,8 @@ class ScriptTask(GameUi, GeneralBattle, DemonEncounterAssets, SwitchSoul):
             if not index:
                 index = Answer().answer_one(question=question, options=[answer_1, answer_2, answer_3])
             if index is None:
-                index = 1
+                index = random.choice(list(click_match))
+                logger.warning(f'No matching answer found, randomly choose option {index}')
             logger.info(f'Question: {question}, Answer: {index}')
             return click_match[index]
 
@@ -514,7 +516,6 @@ class ScriptTask(GameUi, GeneralBattle, DemonEncounterAssets, SwitchSoul):
             return
         logger.info('Question answering Start')
         for i in range(1, 4):
-            # 还未测试题库无法识别的情况
             logger.hr(f'Answer {i}', 3)
             answer_click = answer()
             while 1:

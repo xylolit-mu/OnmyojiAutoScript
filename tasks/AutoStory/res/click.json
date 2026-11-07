@@ -1,0 +1,16 @@
+[
+  {
+    "itemName": "story_walk_right",
+    "roiFront": "1211,426,46,91",
+    "roiBack": "1211,426,46,91",
+    "profile": "Default",
+    "description": ""
+  },
+  {
+    "itemName": "story_walk_left",
+    "roiFront": "27,408,46,91",
+    "roiBack": "27,408,46,91",
+    "profile": "Default",
+    "description": ""
+  }
+]

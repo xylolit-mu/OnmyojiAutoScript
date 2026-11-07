@@ -351,7 +351,7 @@ page_exp_exit = Page(all_of(GameUiAssets.I_PAGE_EXPLORATION_E_CHECK_EXIT, Explor
 page_exp_exit.connect(page_exp_entrance, ExplorationAssets.I_E_EXIT_CONFIRM, key="page_exp_exit->page_exp_entrance")
 
 # 探索副本主界面
-page_exp_main = Page(any_of(ExplorationAssets.I_E_SETTINGS_BUTTON, ExplorationAssets.I_E_AUTO_ROTATE_ON, ExplorationAssets.I_E_AUTO_ROTATE_OFF), key='page_exp_main', name='page_exp_main', category='exploration')
+page_exp_main = Page(any_of(ExplorationAssets.I_E_SETTINGS_BUTTON, ExplorationAssets.I_E_AUTO_ROTATE_ON, ExplorationAssets.I_E_AUTO_ROTATE_OFF, ExplorationAssets.I_E_RECORDS_ENTRY), key='page_exp_main', name='page_exp_main', category='exploration')
 page_exp_main.connect(page_exp_exit, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_exp_main->page_exp_exit")
 page_exp_entrance.connect(page_exp_main, ExplorationAssets.I_E_EXPLORATION_CLICK, key="page_exp_entrance->page_exp_main")
 page_exp_exit.connect(page_exp_main, ExplorationAssets.I_E_EXIT_CANCEL, key="page_exp_exit->page_exp_main")

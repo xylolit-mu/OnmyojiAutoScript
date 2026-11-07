@@ -158,5 +158,15 @@
     "threshold": 0.8,
     "profile": "High",
     "description": "阴阳寮前往神社"
+  },
+  {
+    "itemName": "main_scroll_close_decade",
+    "imageName": "page_main_scroll_close_decade.png",
+    "roiFront": "1198,634,28,39",
+    "roiBack": "1167,595,77,112",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": ""
   }
 ]

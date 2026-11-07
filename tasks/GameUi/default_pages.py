@@ -154,18 +154,17 @@ def handle_activity_overlay(task) -> bool:
     while not timer.reached():
         task.screenshot()
 
+        if handle_activity_close(task):
+            task.device.click_record_clear()
+            time.sleep(0.2)
+            continue
+
         if task.appear(GlobalGameAssets.I_UI_REWARD):
             if not award_clicked:
                 logger.info('Clear activity award overlay via ui_reward')
                 task.click(GlobalGameAssets.C_UI_REWARD, interval=0)
                 task.device.click_record_clear()
                 award_clicked = True
-            time.sleep(0.2)
-            continue
-
-        if handle_activity_close(task):
-            logger.info('Closed activity red overlay')
-            task.device.click_record_clear()
             time.sleep(0.2)
             continue
 
@@ -210,6 +209,7 @@ page_activity = Page(
     category="global",
 )
 page_activity.add_enter_success_hooks(handle_activity_overlay)
+page_activity.add_leave_failure_hooks(handle_activity_close)
 page_activity.add_enter_failure_hooks(
     find_activity_entry,
     conditional_action(GlobalGameAssets.I_UI_REWARD, reward_random_click),
@@ -227,30 +227,39 @@ page_relax = Page(
 )
 page_relax.connect(page_main, GameUiAssets.I_BACK_BROWN, key="page_relax->page_main")
 
+def courtyard_scroll_expand_action(task):
+    """选择当前庭院卷轴的展开按钮，交由导航器执行点击。"""
+    if task.appear(GameUiAssets.I_MAIN_SCROLL_CLOSE_DECADE):
+        return GameUiAssets.I_MAIN_SCROLL_CLOSE_DECADE
+    if task.appear(RestartAssets.I_LOGIN_SCROOLL_OPEN_DECADE):
+        return None
+    return RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA
+
+
 # 庭院区域页面。
 page_shikigami_records = Page(GameUiAssets.I_CHECK_RECORDS, category="global")
 page_shikigami_records.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                                  action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                                  action=courtyard_scroll_expand_action))
 page_shikigami_records.add_enter_success_hooks(GlobalGameAssets.I_UI_CANCEL_SAMLL)
 page_shikigami_records.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_shikigami_records->page_main")
 page_main.connect(page_shikigami_records, GameUiAssets.I_MAIN_GOTO_SHIKIGAMI_RECORDS, key="page_main->page_shikigami_records")
 
 page_onmyodo = Page(GameUiAssets.I_CHECK_ONMYODO, category="global")
 page_onmyodo.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                        action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                        action=courtyard_scroll_expand_action))
 page_onmyodo.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_onmyodo->page_main")
 page_main.connect(page_onmyodo, GameUiAssets.I_MAIN_GOTO_ONMYODO, key="page_main->page_onmyodo")
 
 page_friends = Page(GameUiAssets.I_CHECK_FRIENDS, category="global")
 page_friends.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                        action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                        action=courtyard_scroll_expand_action))
 page_friends.connect(page_main, GlobalGameAssets.I_UI_BACK_RED, key="page_friends->page_main")
 page_friends.add_leave_failure_hooks(GlobalGameAssets.I_UI_BACK_RED)
 page_main.connect(page_friends, GameUiAssets.I_MAIN_GOTO_FRIENDS, key="page_main->page_friends")
 
 page_daily = Page(GameUiAssets.I_CHECK_DAILY, category="global")
 page_daily.add_enter_failure_hooks(
-    conditional_action(condition=GameUiAssets.I_CHECK_MAIN, action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA),
+    conditional_action(condition=GameUiAssets.I_CHECK_MAIN, action=courtyard_scroll_expand_action),
     conditional_action(condition=lambda task: not task.appear(GameUiAssets.I_CHECK_MAIN),
                        action=lambda task: task.ui_click(click=random_click(ltrb=(False, False, False, True)),
                                                          stop=GlobalGameAssets.I_UI_BACK_YELLOW)))
@@ -265,7 +274,7 @@ page_courtyard_affairs.add_leave_failure_hooks(GlobalGameAssets.I_UI_CANCEL_SAML
 
 page_mall = Page(GameUiAssets.I_CHECK_MALL, category="global")
 page_mall.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                     action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                     action=courtyard_scroll_expand_action))
 page_mall.add_enter_success_hooks(GameUiAssets.I_AD_CLOSE_RED, GlobalGameAssets.I_UI_BACK_RED, GlobalGameAssets.I_UI_CANCEL_SAMLL)
 page_mall.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_mall->page_main")
 
@@ -278,7 +287,7 @@ page_main.connect(page_mall_recommend, GameUiAssets.I_MAIN_GOTO_MALL, key="page_
 page_guild = Page(GameUiAssets.I_CHECK_GUILD, category="global")
 page_guild.add_enter_success_hooks(KekkaiUtilizeAssets.I_PLANT_TREE_CLOSE)
 page_guild.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                      action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                      action=courtyard_scroll_expand_action))
 page_guild.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_guild->page_main")
 page_main.connect(page_guild, GameUiAssets.I_MAIN_GOTO_GUILD, key="page_main->page_guild")
 
@@ -288,20 +297,20 @@ page_shirin.connect(page_guild, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_shi
 
 page_team = Page(GameUiAssets.I_CHECK_TEAM, category="global")
 page_team.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                     action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                     action=courtyard_scroll_expand_action))
 page_team.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_team->page_main")
 page_main.connect(page_team, GameUiAssets.I_MAIN_GOTO_TEAM, key="page_main->page_team")
 
 page_collection = Page(GameUiAssets.I_CHECK_COLLECTION, category="global")
 page_collection.add_enter_success_hooks(GlobalGameAssets.I_UI_CANCEL_SAMLL)
 page_collection.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                           action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                           action=courtyard_scroll_expand_action))
 page_collection.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_collection->page_main")
 page_main.connect(page_collection, GameUiAssets.I_MAIN_GOTO_COLLECTION, key="page_main->page_collection")
 
 page_travel = Page(GameUiAssets.I_CHECK_TRAVEL, category="global")
 page_travel.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,
-                                                       action=RestartAssets.C_LOGIN_SCROLL_CLOSE_AREA))
+                                                       action=courtyard_scroll_expand_action))
 page_travel.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_travel->page_main")
 page_main.connect(page_travel, GameUiAssets.I_MAIN_GOTO_TRAVEL, key="page_main->page_travel")
 

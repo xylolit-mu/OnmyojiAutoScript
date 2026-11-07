@@ -84,7 +84,7 @@ class Answer:
         if result is not None:
             return result
         # 5) 完全未知：返回 None
-        logger.error('Unknown question: %s', question)
+        logger.warning('Unknown question: %s', question)
         return None
 
     def _cache_store(self, question: str, std_answer: str, chosen: str) -> None:

@@ -201,16 +201,17 @@ class Control(Minitouch, Adb, Scrcpy, Window):
         self.swipe(p1, p2, duration=duration, control_name=name, distance_check=distance_check)
 
     def press_and_drag(self, p1, p2, hold_duration=None, point_random=(-2, -2, 2, 2),
-                       swipe_duration=None, name='Press_and_Drag', retry=False) -> None:
+                       swipe_duration=None, name='Press_and_Drag', retry=False, *, curve=False) -> None:
         """先按住再连续拖动；保留快速/重试时序，业务结果由任务确认。
 
         hold_duration 和 swipe_duration 的单位为秒；retry 使用较慢的默认时序，
         不会自动重放手势。minitouch、uiautomator2、scrcpy、window_message（含
         桌面客户端）支持完整触摸/鼠标事件与起点停顿，其余通道沿用 ADB swipe 兜底。
+        curve='hook' 使用越过目标上方再圆弧回钩的轻微随机路径。
         """
         return _press_and_drag(
             self, p1, p2, hold_duration=hold_duration, point_random=point_random,
-            swipe_duration=swipe_duration, name=name, retry=retry,
+            swipe_duration=swipe_duration, name=name, retry=retry, curve=curve,
         )
 
     def drag(self, p1, p2, segments=1, shake=(0, 15), point_random=(-10, -10, 10, 10), shake_random=(-5, -5, 5, 5),

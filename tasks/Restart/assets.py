@@ -1,4 +1,5 @@
 from module.atom.image import RuleImage
+from module.atom.frame import RuleFrame, Image, Ocr, Click
 from module.atom.click import RuleClick
 from module.atom.scatter import RuleScatter
 from module.atom.long_click import RuleLongClick
@@ -13,51 +14,51 @@ class RestartAssets:
 
 	# Image Rule Assets
 	# 点击勾玉 
-	I_HARVEST_JADE = RuleImage(profile="High", roi_front=(732,489,34,33), roi_back=(177,358,973,234), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_jade.png")
+	I_HARVEST_JADE = RuleImage(roi_front=(732,489,34,33), roi_back=(177,358,973,234), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_jade.png")
 	# 签到小图标 
-	I_HARVEST_SIGN = RuleImage(profile="High", roi_front=(397,500,24,34), roi_back=(70,375,1085,184), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_sign.png")
+	I_HARVEST_SIGN = RuleImage(roi_front=(397,500,24,34), roi_back=(70,375,1085,184), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_sign.png")
 	# description 
-	I_HARVEST_SIGN_2 = RuleImage(profile="High", roi_front=(592,135,100,252), roi_back=(592,135,100,252), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_sign_2.png")
+	I_HARVEST_SIGN_2 = RuleImage(roi_front=(592,135,100,252), roi_back=(592,135,100,252), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_sign_2.png")
 	# 999签到福袋 
-	I_HARVEST_SIGN_999 = RuleImage(profile="High", roi_front=(345,494,23,29), roi_back=(51,372,1109,189), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_sign_999.png")
+	I_HARVEST_SIGN_999 = RuleImage(roi_front=(345,494,23,29), roi_back=(51,372,1109,189), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_sign_999.png")
 	# 有些邮件需要点击一次 
-	I_HARVEST_MAIL_OPEN = RuleImage(profile="High", roi_front=(163,367,45,48), roi_back=(139,86,100,487), threshold=0.9, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_mail_open.png")
+	I_HARVEST_MAIL_OPEN = RuleImage(roi_front=(163,367,45,48), roi_back=(139,86,100,487), threshold=0.9, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_mail_open.png")
 	# description 
-	I_HARVEST_SOUL = RuleImage(profile="High", roi_front=(241,497,38,36), roi_back=(68,392,1113,159), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_soul.png")
+	I_HARVEST_SOUL = RuleImage(roi_front=(241,497,38,36), roi_back=(68,392,1113,159), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_soul.png")
 	# description 
-	I_HARVEST_MAIL_TITLE = RuleImage(profile="High", roi_front=(520,48,245,41), roi_back=(520,48,245,41), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_mail_title.png")
+	I_HARVEST_MAIL_TITLE = RuleImage(roi_front=(520,48,245,41), roi_back=(520,48,245,41), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_mail_title.png")
 	# description 
-	I_HARVEST_AP = RuleImage(profile="High", roi_front=(721,486,31,38), roi_back=(206,361,970,235), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_ap.png")
+	I_HARVEST_AP = RuleImage(roi_front=(721,486,31,38), roi_back=(206,361,970,235), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_ap.png")
 	# 打开聊天频道会自动关闭 
-	I_HARVEST_CHAT_CLOSE = RuleImage(profile="High", roi_front=(639,309,35,100), roi_back=(639,309,35,100), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_chat_close.png")
+	I_HARVEST_CHAT_CLOSE = RuleImage(roi_front=(639,309,35,100), roi_back=(639,309,35,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_chat_close.png")
 	# 签到 
-	I_HARVEST_SIGN_3 = RuleImage(profile="High", roi_front=(291,495,33,36), roi_back=(100,385,1014,179), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_sign_3.png")
+	I_HARVEST_SIGN_3 = RuleImage(roi_front=(291,495,33,36), roi_back=(100,385,1014,179), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_sign_3.png")
 	# description 
-	I_HARVEST_SIGN_4 = RuleImage(profile="High", roi_front=(587,151,100,228), roi_back=(547,123,185,281), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_sign_4.png")
+	I_HARVEST_SIGN_4 = RuleImage(roi_front=(587,151,100,228), roi_back=(547,123,185,281), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_sign_4.png")
 	# 点击随机御魂 
-	I_HARVEST_SOUL_1 = RuleImage(profile="High", roi_front=(248,501,34,37), roi_back=(165,389,929,168), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_soul_1.png")
+	I_HARVEST_SOUL_1 = RuleImage(roi_front=(248,501,34,37), roi_back=(165,389,929,168), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_soul_1.png")
 	# 选择中间第二个御魂 
-	I_HARVEST_SOUL_2 = RuleImage(profile="High", roi_front=(586,561,112,47), roi_back=(570,547,139,71), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_soul_2.png")
+	I_HARVEST_SOUL_2 = RuleImage(roi_front=(586,561,112,47), roi_back=(570,547,139,71), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_soul_2.png")
 	# 六星御魂标志 
-	I_HARVEST_SOUL_3 = RuleImage(profile="High", roi_front=(313,489,188,33), roi_back=(302,472,216,60), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_soul_3.png")
+	I_HARVEST_SOUL_3 = RuleImage(roi_front=(313,489,188,33), roi_back=(302,472,216,60), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_soul_3.png")
 	# 寮包 
-	I_HARVEST_GUILD_REWARD = RuleImage(profile="High", roi_front=(244,498,41,42), roi_back=(200,403,817,157), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_guild_reward.png")
+	I_HARVEST_GUILD_REWARD = RuleImage(roi_front=(244,498,41,42), roi_back=(200,403,817,157), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_guild_reward.png")
 	# 宠物小屋关闭按钮 
-	I_HARVEST_BACK_PET_HOUSE = RuleImage(profile="High", roi_front=(20,15,70,70), roi_back=(20,15,70,70), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_back_pet_house.png")
+	I_HARVEST_BACK_PET_HOUSE = RuleImage(roi_front=(20,15,70,70), roi_back=(20,15,70,70), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_back_pet_house.png")
 	# 点击庭院阴阳师出现的姿度按钮 
-	I_HARVEST_ZIDU = RuleImage(profile="High", roi_front=(785,475,135,135), roi_back=(785,475,135,135), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_zidu.png")
+	I_HARVEST_ZIDU = RuleImage(roi_front=(785,475,135,135), roi_back=(785,475,135,135), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_zidu.png")
 	# description 
-	I_HARVEST_MAIL_2 = RuleImage(profile="High", roi_front=(156,125,65,60), roi_back=(120,94,290,536), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_harvest_mail_2.png")
+	I_HARVEST_MAIL_2 = RuleImage(roi_front=(156,125,65,60), roi_back=(120,94,290,536), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_harvest_mail_2.png")
 	# 系统邮件打开状态 
-	I_SYSTEM_MAIL_OPEN = RuleImage(profile="High", roi_front=(1186,221,51,112), roi_back=(1172,184,88,166), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_system_mail_open.png")
+	I_SYSTEM_MAIL_OPEN = RuleImage(roi_front=(1186,221,51,112), roi_back=(1172,184,88,166), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_system_mail_open.png")
 	# 特殊邮件关闭状态 
-	I_SPECIAL_MAIL_CLOSE = RuleImage(profile="High", roi_front=(1188,379,53,108), roi_back=(1164,340,114,178), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_special_mail_close.png")
+	I_SPECIAL_MAIL_CLOSE = RuleImage(roi_front=(1188,379,53,108), roi_back=(1164,340,114,178), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_special_mail_close.png")
 	# 系统邮件关闭状态 
-	I_SYSTEM_MAIL_CLOSE = RuleImage(profile="High", roi_front=(1187,220,53,112), roi_back=(1171,186,106,164), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_system_mail_close.png")
+	I_SYSTEM_MAIL_CLOSE = RuleImage(roi_front=(1187,220,53,112), roi_back=(1171,186,106,164), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_system_mail_close.png")
 	# 特殊邮件打开状态 
-	I_SPECIAL_MAIL_OPEN = RuleImage(profile="High", roi_front=(1185,377,55,110), roi_back=(1166,350,112,162), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_special_mail_open.png")
+	I_SPECIAL_MAIL_OPEN = RuleImage(roi_front=(1185,377,55,110), roi_back=(1166,350,112,162), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_special_mail_open.png")
 	# 邮件红点 
-	I_MAIL_RED_POINT = RuleImage(profile="High", roi_front=(1229,200,16,21), roi_back=(1159,189,100,317), threshold=0.8, method="Template matching", file="./tasks/Restart/harvest/harvest_mail_red_point.png")
+	I_MAIL_RED_POINT = RuleImage(roi_front=(1229,200,16,21), roi_back=(1159,189,100,317), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/harvest/harvest_mail_red_point.png")
 
 
 	# Click Rule Assets
@@ -73,43 +74,47 @@ class RestartAssets:
 
 	# Image Rule Assets
 	# 庭院卷轴打开 
-	I_LOGIN_SCROOLL_OPEN = RuleImage(profile="High", roi_front=(1208,609,33,83), roi_back=(1208,609,33,83), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_scrooll_open.png")
+	I_LOGIN_SCROOLL_OPEN = RuleImage(roi_front=(1208,609,33,83), roi_back=(1208,609,33,83), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_scrooll_open.png")
 	# 庭院卷轴关闭 
-	I_LOGIN_SCROOLL_CLOSE = RuleImage(profile="High", roi_front=(1181,634,28,39), roi_back=(1162,595,77,112), threshold=0.7, method="Template matching", file="./tasks/Restart/login/login_login_scrooll_close.png")
+	I_LOGIN_SCROOLL_CLOSE = RuleImage(roi_front=(1181,634,28,39), roi_back=(1162,595,77,112), threshold=0.7, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_scrooll_close.png")
 	# 闲庭图片 
-	I_LOGIN_COURTYARD = RuleImage(profile="High", roi_front=(40,640,100,50), roi_back=(40,640,100,50), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_courtyard.png")
+	I_LOGIN_COURTYARD = RuleImage(roi_front=(40,640,100,50), roi_back=(40,640,100,50), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_courtyard.png")
 	# description 
-	I_LOGIN_RED_CLOSE = RuleImage(profile="High", roi_front=(800,0,480,290), roi_back=(800,0,480,290), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_red_close.png")
+	I_LOGIN_RED_CLOSE = RuleImage(roi_front=(800,0,480,290), roi_back=(800,0,480,290), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_red_close.png")
 	# description 
-	I_LOGIN_YELLOW_CLOSE = RuleImage(profile="High", roi_front=(29,17,46,44), roi_back=(0,0,94,86), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_yellow_close.png")
+	I_LOGIN_YELLOW_CLOSE = RuleImage(roi_front=(29,17,46,44), roi_back=(0,0,94,86), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_yellow_close.png")
 	# 用于判断是否出现登录选区的 
-	I_LOGIN_8 = RuleImage(profile="High", roi_front=(178,572,53,60), roi_back=(1,547,241,105), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_8.png")
+	I_LOGIN_8 = RuleImage(roi_front=(178,572,53,60), roi_back=(1,547,241,105), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_8.png")
 	# 登录时候不观看CG视频 
-	I_WATCH_VIDEO_CANCEL = RuleImage(profile="High", roi_front=(466,396,130,61), roi_back=(466,396,130,61), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_watch_video_cancel.png")
+	I_WATCH_VIDEO_CANCEL = RuleImage(roi_front=(466,396,130,61), roi_back=(466,396,130,61), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_watch_video_cancel.png")
 	# 指定角色进入游戏,默认第一个 
-	I_LOGIN_SPECIFIC_SERVE = RuleImage(profile="High", roi_front=(0,0,120,120), roi_back=(0,0,120,120), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_specific_serve.png")
+	I_LOGIN_SPECIFIC_SERVE = RuleImage(roi_front=(0,0,120,120), roi_back=(0,0,120,120), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_specific_serve.png")
 	# 下载插画 
-	I_LOGIN_LOAD_DOWN = RuleImage(profile="High", roi_front=(711,450,153,58), roi_back=(711,450,153,58), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_load_down.png")
+	I_LOGIN_LOAD_DOWN = RuleImage(roi_front=(711,450,153,58), roi_back=(711,450,153,58), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_load_down.png")
 	# 登录界面 弹出框 前往绑定 手机 
-	I_LOGIN_LOGIN_GOTO_BIND_PHONE = RuleImage(profile="High", roi_front=(940,430,170,150), roi_back=(940,430,170,150), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_goto_bind_phone.png")
+	I_LOGIN_LOGIN_GOTO_BIND_PHONE = RuleImage(roi_front=(940,430,170,150), roi_back=(940,430,170,150), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_goto_bind_phone.png")
 	# 登录界面 弹出框 确定绑定手机 
-	I_LOGIN_LOGIN_ENSURE_BIND_PHONE = RuleImage(profile="High", roi_front=(670,460,160,100), roi_back=(670,460,160,100), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_ensure_bind_phone.png")
+	I_LOGIN_LOGIN_ENSURE_BIND_PHONE = RuleImage(roi_front=(670,460,160,100), roi_back=(670,460,160,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_ensure_bind_phone.png")
 	# 登录界面 弹出框 取消绑定手机 
-	I_LOGIN_LOGIN_CANCEL_BIND_PHONE = RuleImage(profile="High", roi_front=(450,460,160,100), roi_back=(450,460,160,100), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_cancel_bind_phone.png")
+	I_LOGIN_LOGIN_CANCEL_BIND_PHONE = RuleImage(roi_front=(450,460,160,100), roi_back=(450,460,160,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_cancel_bind_phone.png")
 	# 登录界面 弹出框 阴阳师精灵 
-	I_LOGIN_LOGIN_ONMYOJI_GENIE = RuleImage(profile="High", roi_front=(80,110,280,120), roi_back=(80,110,280,120), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_login_onmyoji_genie.png")
+	I_LOGIN_LOGIN_ONMYOJI_GENIE = RuleImage(roi_front=(80,110,280,120), roi_back=(80,110,280,120), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_onmyoji_genie.png")
 	# 已有角色 
-	I_CHARACTARS = RuleImage(profile="High", roi_front=(246,535,100,31), roi_back=(219,523,173,57), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_charactars.png")
+	I_CHARACTARS = RuleImage(roi_front=(246,535,100,31), roi_back=(219,523,173,57), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_charactars.png")
 	# description 
-	I_CREATE_ACCOUNT = RuleImage(profile="High", roi_front=(555,636,169,52), roi_back=(504,614,263,100), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_create_account.png")
+	I_CREATE_ACCOUNT = RuleImage(roi_front=(555,636,169,52), roi_back=(504,614,263,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_create_account.png")
 	# 进入体验服过快出现弹窗 
-	I_EARLY_SERVER = RuleImage(profile="High", roi_front=(596,269,115,33), roi_back=(596,269,115,33), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_early_server.png")
+	I_EARLY_SERVER = RuleImage(roi_front=(596,269,115,33), roi_back=(596,269,115,33), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_early_server.png")
 	# 取消体验服切换弹窗 
-	I_EARLY_SERVER_CANCEL = RuleImage(profile="High", roi_front=(435,404,172,56), roi_back=(435,404,172,56), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_early_server_cancel.png")
+	I_EARLY_SERVER_CANCEL = RuleImage(roi_front=(435,404,172,56), roi_back=(435,404,172,56), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_early_server_cancel.png")
 	# 取消继续战斗 
-	I_CANCEL_BATTLE = RuleImage(profile="High", roi_front=(471,395,129,55), roi_back=(367,227,545,296), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_cancel_battle.png")
+	I_CANCEL_BATTLE = RuleImage(roi_front=(471,395,129,55), roi_back=(367,227,545,296), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_cancel_battle.png")
 	# 取消返回百鬼棋局，进入棋局结算流程 
-	I_RETURN_CHESS_CANCEL = RuleImage(profile="High", roi_front=(432,400,181,69), roi_back=(400,370,240,120), threshold=0.8, method="Template matching", file="./tasks/Restart/login/login_return_chess_cancel.png")
+	I_RETURN_CHESS_CANCEL = RuleImage(roi_front=(432,400,181,69), roi_back=(400,370,240,120), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_return_chess_cancel.png")
+	#
+	I_LOGIN_SCROOLL_CLOSE_DECADE = RuleImage(roi_front=(1201,633,28,39), roi_back=(1162,595,77,112), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_scrooll_close_decade.png")
+	#
+	I_LOGIN_SCROOLL_OPEN_DECADE = RuleImage(roi_front=(1213,626,28,39), roi_back=(1186,608,77,112), threshold=0.8, method="Template matching", profile="High", file="./tasks/Restart/login/login_login_scrooll_open_decade.png")
 
 
 	# Ocr Rule Assets

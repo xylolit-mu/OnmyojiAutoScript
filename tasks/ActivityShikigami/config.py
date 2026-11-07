@@ -32,6 +32,12 @@ class ClimbTask(str, Enum):
     AP100 = '百体'
 
 
+class ExplorationTask(str, Enum):
+    MAIN = '主线'
+    ENCOUNTER = '遭遇战'
+    BRANCH = '支线'
+
+
 ACTIVITY_EXECUTION_ORDER = ('探索', '大富翁', '伪神', '爬塔', '首领')
 ACTIVITY_NAME_TO_FIELD = {
     '大富翁': 'rich_man',
@@ -71,6 +77,10 @@ class GeneralConfig(ConfigBase):
     climb_task_sequence: list[ClimbTask] = Field(
         default=[ClimbTask.EASY],
         title='爬塔启用',
+    )
+    exploration_task_sequence: list[ExplorationTask] = Field(
+        default=[ExplorationTask.MAIN, ExplorationTask.ENCOUNTER, ExplorationTask.BRANCH],
+        title='探索启用',
     )
     ap_limit: int = Field(default=0, title='Ap Limit', ge=0)
     pass_limit: str = Field(
@@ -355,6 +365,7 @@ class ActivityShikigami(ConfigBase):
     settings_forms: ClassVar[dict] = {'general_config': [
         {'type': 'selection', 'field': 'task_sequence'},
         {'type': 'selection', 'field': 'climb_task_sequence'},
+        {'type': 'selection', 'field': 'exploration_task_sequence'},
         {'type': 'mode', 'label': '大富翁', 'children': [{'type': 'field', 'field': 'throw_limit', 'label': '投掷次数'}]},
         {'type': 'mode', 'label': '爬塔', 'children': [
             {'type': 'row', 'children': [{'type': 'field', 'field': 'ap_limit', 'label': '体力'}, {'type': 'field', 'field': 'ap100_limit', 'label': '百体'}]},
@@ -376,11 +387,11 @@ class ActivityShikigami(ConfigBase):
                                ('pass', '门票简单'), ('pass_hard', '门票困难'), ('ap100', '百体'), ('boss', '首领'), ('fakegod', '伪神'))]),
         settings_section('battle_config', '战斗配置', variants=[
             {'id': key, 'label': label, 'groups': [{'name': f'{key}_battle_conf'}]}
-            for key, label in (('rich_man', '大富翁'), ('ap', '体力'), ('pass', '门票简单'),
+            for key, label in (('rich_man', '大富翁'), ('exp_encounter', '遭遇战'), ('ap', '体力'), ('pass', '门票简单'),
                                ('pass_hard', '门票困难'), ('ap100', '百体'), ('boss', '首领'), ('fakegod', '伪神'))]),
     ]
 
-    # OASX 按字段顺序排版：任务调度、通用设置、切换御魂、六种战斗配置。
+    # OASX 按字段顺序排版：任务调度、通用设置、切换御魂、各模式战斗配置。
     scheduler: Scheduler = Field(default_factory=Scheduler)
     general_config: GeneralConfig = Field(default_factory=GeneralConfig)
     switch_soul_config: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)

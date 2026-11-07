@@ -34,6 +34,7 @@ class DraftDuelRoundStateMixin:
         self.draft_selected = []
         self._draft_transcript = {}
         self._draft_detail_capture_rounds = set()
+        self._draft_panel_snapshot = None
         self._draft_theoretical_lineup = ()
         self._draft_deployment_overrides = {}
         self._draft_peer_transcript = []

@@ -31,6 +31,11 @@ class WQExplore(ExplorationScriptTask, HighLight):
         categories.add("exploration")
         return categories
 
+    @property
+    def solo_difficulty(self) -> None:
+        # 悬赏的「前往」已经指定章节和难度。
+        return None
+
     def switch_rotate(self) -> bool:
         if self.config.wanted_quests.wanted_quests_config.auto_rotate:
             if self.appear(self.I_E_AUTO_ROTATE_OFF):

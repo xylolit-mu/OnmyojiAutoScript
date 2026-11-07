@@ -140,6 +140,8 @@ class GameUiAssets:
 	I_MAIN_GOTO_SUMMON = RuleImage(roi_front=(1073,174,57,65), roi_back=(571,153,586,124), threshold=0.7, method="Template matching", profile="High", file="./tasks/GameUi/page/page_main_goto_summon.png")
 	# 阴阳寮前往神社 
 	I_GUILD_TO_SHRIN = RuleImage(roi_front=(877,629,49,53), roi_back=(840,602,302,113), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page/page_guild_to_shrin.png")
+	#
+	I_MAIN_SCROLL_CLOSE_DECADE = RuleImage(roi_front=(1198,634,28,39), roi_back=(1167,595,77,112), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page/page_main_scroll_close_decade.png")
 
 
 	# Image Rule Assets
@@ -178,7 +180,7 @@ class GameUiAssets:
 	# 活动通用子页面2标志 
 	I_PAGE_CHECK_ACT_GENERAL_2 = RuleImage(roi_front=(151,18,134,40), roi_back=(141,0,157,67), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_act_general_2.png")
 	# 活动通用子页面1标志 
-	I_PAGE_CHECK_ACT_GENERAL_1 = RuleImage(roi_front=(592,0,136,41), roi_back=(554,0,213,59), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_act_general_1.png")
+	I_PAGE_CHECK_ACT_GENERAL_1 = RuleImage(roi_front=(150,17,136,41), roi_back=(117,8,213,59), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_act_general_1.png")
 	# 活动体力挑战标志 
 	I_PAGE_CHECK_BATTLE_AP = RuleImage(roi_front=(151,18,141,41), roi_back=(141,0,192,69), threshold=0.8, method="Template matching", profile="High", file="./tasks/GameUi/page_checks/page_check_battle_ap.png")
 	# 活动大富翁主页面 

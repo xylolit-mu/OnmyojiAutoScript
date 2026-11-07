@@ -128,11 +128,13 @@ class DraftDuelCooperationMixin:
             self._draft_sync_wait_reason = None
         return same_game if require_small_game else True
 
-    def _captain_selection(self, number, names):
+    def _captain_selection(self, number, names, template_keys=None):
         """队员上报候选；决策绑定双方已选前缀和候选，拒绝旧轮指令。"""
         from tasks.DraftDuel.strategy import Pick
         from tasks.DraftDuel.strategy.runtime_policy import choose_pick
         self._draft_offer = dict(number=number, names=list(names), picks=list(self.draft_selected))
+        if template_keys:
+            self._draft_offer['template_keys'] = {name: key for name, key in template_keys.items() if name and key}
         self._sync_draft_state(allow_partial=True)
         captain = self.config.draft_duel.draft_duel_config.match_mode == DraftMatchMode.CAPTAIN
         if captain:
@@ -148,8 +150,12 @@ class DraftDuelCooperationMixin:
                     previous.get('member_offer') == other):
                 decision = previous
             else:
-                own_pick = choose_pick(self, [n for n in names if n], team=self.draft_selected)
-                peer_pick = choose_pick(self, [n for n in other['names'] if n], team=other['picks'])
+                own_keys = self._draft_offer.get('template_keys')
+                peer_keys = other.get('template_keys')
+                own_pick = choose_pick(self, [n for n in names if n], team=self.draft_selected,
+                                      **({'template_keys': own_keys} if own_keys else {}))
+                peer_pick = choose_pick(self, [n for n in other['names'] if n], team=other['picks'],
+                                       **({'template_keys': peer_keys} if isinstance(peer_keys, dict) else {}))
                 a, b = own_pick.name, peer_pick.name
                 score = own_pick.score + peer_pick.score
                 decision = dict(captain_offer=self._draft_offer, member_offer=other,

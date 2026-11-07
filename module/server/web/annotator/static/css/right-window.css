@@ -222,6 +222,11 @@
   grid-column: 1 / -1;
 }
 
+#selectAllFrameBtn[aria-pressed="true"] {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
 .action-row {
   align-items: center;
 }

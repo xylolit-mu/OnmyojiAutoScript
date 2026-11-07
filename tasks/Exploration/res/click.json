@@ -26,5 +26,19 @@
     "roiBack": "1178,172,77,28",
     "profile": "Default",
     "description": "点击玩法tab"
+  },
+  {
+    "itemName": "select_normal",
+    "roiFront": "62,228,68,34",
+    "roiBack": "62,228,68,34",
+    "profile": "Default",
+    "description": ""
+  },
+  {
+    "itemName": "select_hard",
+    "roiFront": "69,315,68,34",
+    "roiBack": "69,315,68,34",
+    "profile": "Default",
+    "description": ""
   }
 ]

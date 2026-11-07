@@ -43,6 +43,11 @@ class ExplorationLevel(str, Enum):
         return list(ExplorationLevel).index(self)
 
 
+class ExplorationDifficulty(str, Enum):
+    SIMPLE = '简单'
+    HARD = '困难'
+
+
 class AttackNumber(str, Enum):
     SEVEN = '7'
     ALL = 'all'
@@ -92,6 +97,10 @@ class ExplorationConfig(BaseModel):
 
     exploration_level: ExplorationLevel = Field(title='探索等级', default=ExplorationLevel.EXPLORATION_28,
                                                 description='exploration_level_help')
+    difficulty: ExplorationDifficulty = Field(
+        title='探索难度', default=ExplorationDifficulty.HARD,
+        description='单人探索可选择简单或困难，组队时由队长进入困难。',
+    )
     collect_paper_reward: bool = Field(default=True, description='collect_paper_reward_help')
 
     auto_rotate: AutoRotate = Field(title='自动添加候补式神', default=AutoRotate.no,

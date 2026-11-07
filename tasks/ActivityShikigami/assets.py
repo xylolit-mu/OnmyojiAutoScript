@@ -92,19 +92,19 @@ class ActivityShikigamiAssets:
 	# 宝箱事件 
 	I_EVENT_REWARD = RuleImage(roi_front=(529,78,222,51), roi_back=(524,73,232,61), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_reward.png")
 	# 战斗事件 
-	I_EVENT_FIGHT = RuleImage(roi_front=(529,78,222,51), roi_back=(524,73,232,61), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_fight.png")
+	I_EVENT_FIGHT = RuleImage(roi_front=(726,328,89,36), roi_back=(628,299,355,90), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_fight.png")
 	# 战斗 
-	I_EVENT_FIGHT_FIGHT = RuleImage(roi_front=(1048,548,96,44), roi_back=(1043,543,106,54), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_fight_fight.png")
+	I_EVENT_FIGHT_FIGHT = RuleImage(roi_front=(1088,581,96,44), roi_back=(1039,543,190,121), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_fight_fight.png")
 	# 开启宝箱 
 	I_EVENT_REWARD_OPEN = RuleImage(roi_front=(1050,558,96,44), roi_back=(1045,552,106,54), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_reward_open.png")
 	#  
-	I_EVENT_CLOSE = RuleImage(roi_front=(1095,117,42,38), roi_back=(1079,94,76,87), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_close.png")
+	I_EVENT_CLOSE = RuleImage(roi_front=(1100,101,42,38), roi_back=(1079,63,136,118), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_close.png")
 	# 式神助战 
 	I_SHIKIGAMI_HELP = RuleImage(roi_front=(142,282,42,42), roi_back=(127,266,74,80), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_shikigami_help.png")
 	# 遭遇战解锁 
 	I_EVENT_FIGHT_UNLOCK = RuleImage(roi_front=(795,600,33,30), roi_back=(790,595,43,40), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_fight_unlock.png")
 	#  
-	I_EXP_MAIN = RuleImage(roi_front=(23,109,58,34), roi_back=(19,85,263,323), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_exp_main.png")
+	I_EXP_MAIN = RuleImage(roi_front=(6,160,58,29), roi_back=(0,90,263,323), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_exp_main.png")
 	#  
 	I_EXP_BRANCH = RuleImage(roi_front=(24,348,58,34), roi_back=(19,85,263,323), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_exp_branch.png")
 	#  
@@ -117,6 +117,8 @@ class ActivityShikigamiAssets:
 	I_EVENT_REWARD_CLOSE = RuleImage(roi_front=(1203,140,42,38), roi_back=(1184,116,76,87), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_reward_close.png")
 	# 遭遇战式神录入口 
 	I_ENCOUNTER_TO_RECORDS = RuleImage(roi_front=(929,506,42,42), roi_back=(910,488,74,80), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_encounter_to_records.png")
+	# 确认跳过
+	I_EVENT_STORY_SKIP_ENSURE = RuleImage(roi_front=(719,446,109,30), roi_back=(702,432,144,54), threshold=0.8, method="Template matching", profile="High", file="./tasks/ActivityShikigami/as/exploration/exploration_event_story_skip_ensure.png")
 
 
 	# Ocr Rule Assets

@@ -5,11 +5,13 @@ import time
 from module.exception import GameStuckError
 from module.logger import logger
 from tasks.GameUi.assets import GameUiAssets
+from tasks.MetaDemon.assets import MetaDemonAssets
 
 
 def handle_activity_overlays(task) -> bool:
-    """活动通用附属处理：跳过确认、剧情跳过、红叉；每次点击后重新截图。"""
+    """优先领取昨日奖励，再处理活动跳过和关闭按钮。"""
     rules = (
+        MetaDemonAssets.I_MD_GET_YESTERDAY_REWARD,
         GameUiAssets.I_ACTIVITY_SKIP_ENSURE,
         GameUiAssets.I_ACTIVITY_SKIP,
         GameUiAssets.I_ACTIVITY_GENERAL_CLOSE_RED,
@@ -24,7 +26,7 @@ def handle_activity_overlays(task) -> bool:
         task.screenshot()
         if not task.appear_then_click(rule, interval=0):
             continue
-        logger.info(f'Handle ActivityShikigami overlay: {rule.name}')
+        logger.info(f'Handle activity overlay: {rule.name}')
         clicked = True
         task.device.click_record_clear()
         time.sleep(0.2)

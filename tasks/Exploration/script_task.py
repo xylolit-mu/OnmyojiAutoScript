@@ -3,9 +3,11 @@
 import time
 from datetime import datetime, timedelta
 
+from module.base.timer import Timer
+from module.exception import GameStuckError
 from module.logger import logger
 from tasks.Exploration.base import BaseExploration
-from tasks.Exploration.config import AutoRotate, UserStatus, ExplorationLevel
+from tasks.Exploration.config import AutoRotate, ExplorationDifficulty, UserStatus, ExplorationLevel
 import tasks.GameUi.task_pages as pages
 from tasks.GameUi.page_definition import Page
 from typing import Callable
@@ -24,8 +26,9 @@ class ScriptTask(BaseExploration):
 
     def arrive_end(self) -> bool:
         # 28章直接匹配
-        if self._config.exploration_config.exploration_level == ExplorationLevel.EXPLORATION_28:
-            return self.appear(self.I_SWIPE_END)
+        if (self._config.exploration_config.exploration_level == ExplorationLevel.EXPLORATION_28
+                and self.appear(self.I_SWIPE_END)):
+            return True
         return super().arrive_end()
 
     @property
@@ -62,12 +65,14 @@ class ScriptTask(BaseExploration):
             if self.close_chat_sidebar_first():
                 continue
             current_page = self.get_current_page()
-            if current_page is None:
-                time.sleep(0.5)
-                continue
             if self.check_exit(current_page):
                 self.appear_then_click(self.I_UI_CANCEL, interval=0.8)  # 处理队长结束的邀请弹窗
                 break
+            if self.handle_paper_reward_page(current_page):
+                continue
+            if current_page is None:
+                time.sleep(0.5)
+                continue
             handle = self.exp_page_handle_dict.get(current_page, None)
             if handle is None:
                 self.goto_page(pages.page_mainline)
@@ -99,6 +104,8 @@ class ScriptTask(BaseExploration):
             self.device.click_record_clear()
         if self.collect_reward():
             return
+        if self.ensure_exploration_team_locked():
+            return
         if self.user_status != UserStatus.ALONE:
             if self.fire_monster_type == 'boss':
                 return
@@ -114,6 +121,21 @@ class ScriptTask(BaseExploration):
         if self.fire_monster_type != 'boss' and self.swipe(self.S_SWIPE_BACKGROUND_RIGHT, interval=1.5) and self.arrive_end():
             self.quit_exp_main()
 
+    def ensure_exploration_team_locked(self) -> bool:
+        """按战斗配置切换探索阵容锁，下一帧重新确认。"""
+        if self._config.exploration_config.auto_rotate == AutoRotate.yes:
+            return False
+        lock_enabled = self._config.general_battle_config.lock_team_enable
+        expected, toggle = self.I_EXP_LOCK, self.I_EXP_UNLOCK
+        if not lock_enabled:
+            expected, toggle = toggle, expected
+        if self.appear(expected):
+            return False
+        if self.appear_then_click(toggle, interval=1):
+            logger.info(f'Exploration: set team lock to {lock_enabled}')
+            return True
+        return False
+
     def run_on_exp_entrance(self):
         self.collect_treasure_box()
         self.fire_monster_type = ''  # 入口处重置怪物类型
@@ -123,12 +145,39 @@ class ScriptTask(BaseExploration):
                 if self.check_and_invite(self._config.invite_config.default_invite):
                     return
                 if datetime.now() - self.wait_start_time >= timedelta(seconds=10) or self.current_count == 0:
+                    self.ensure_difficulty(ExplorationDifficulty.HARD)
                     self.enter_team()
             case UserStatus.ALONE:
+                difficulty = self.solo_difficulty
+                if difficulty is not None:
+                    self.ensure_difficulty(difficulty)
                 self.goto_page(pages.page_exp_main)
             case UserStatus.MEMBER:
                 self.check_then_accept()
                 self.device.stuck_record_clear()
+
+    @property
+    def solo_difficulty(self) -> ExplorationDifficulty | None:
+        return self._config.exploration_config.difficulty
+
+    def ensure_difficulty(self, difficulty: ExplorationDifficulty) -> None:
+        hard = difficulty == ExplorationDifficulty.HARD
+        selector = self.C_SELECT_HARD if hard else self.C_SELECT_NORMAL
+        timeout = Timer(8).start()
+        matched = False
+        while not timeout.reached():
+            self.screenshot()
+            if not self.appear(self.I_E_EXPLORATION_CLICK):
+                matched = False
+                continue
+            if self.appear(self.I_EXP_CREATE_TEAM) == hard:
+                if matched:
+                    return
+                matched = True
+                continue
+            matched = False
+            self.click(selector, interval=1)
+        raise GameStuckError(f'未确认探索难度：{difficulty.value}')
 
     def run_on_exp(self):
         self.fire_monster_type = ''  # 入口处重置怪物类型
@@ -142,7 +191,7 @@ class ScriptTask(BaseExploration):
                     self.goto_page(pages.page_exp_entrance)
             case UserStatus.ALONE:
                 self.collect_treasure_box()
-                self.goto_page(pages.page_exp_main)
+                self.goto_page(pages.page_exp_entrance)
             case UserStatus.MEMBER:
                 self.collect_treasure_box()
                 self.check_then_accept()

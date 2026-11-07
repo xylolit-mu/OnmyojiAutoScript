@@ -1476,5 +1476,9 @@
   "args_min_value": "最小值",
   "args_max_value": "最大值",
   "args_unsaved_prompt": "当前有未保存的修改，是否放弃？",
+  "gamehelper": "游戏辅助",
+  "AutoStory": "自动剧情",
+  "ExplorationFight": "探索推进",
+  "exploration_fight_config": "通用设置",
   "Success": "成功"
 }

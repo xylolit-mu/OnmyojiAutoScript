@@ -60,6 +60,10 @@ class ExplorationAssets:
 	C_CLICK_MAIN_TITLE = RuleClick(roi_front=(1070,174,77,28), roi_back=(1070,174,77,28), name="click_main_title")
 	# 点击玩法tab
 	C_CLICK_PALY_TITLE = RuleClick(roi_front=(1178,172,77,28), roi_back=(1178,172,77,28), name="click_paly_title")
+	#
+	C_SELECT_NORMAL = RuleClick(roi_front=(62,228,68,34), roi_back=(62,228,68,34), name="select_normal")
+	#
+	C_SELECT_HARD = RuleClick(roi_front=(69,315,68,34), roi_back=(69,315,68,34), name="select_hard")
 
 
 	# Image Rule Assets
@@ -117,6 +121,14 @@ class ExplorationAssets:
 	I_E_REWARD_BOX_SMALL = RuleImage(roi_front=(234,626,43,32), roi_back=(0,597,327,100), threshold=0.8, method="Template matching", profile="High", file="./tasks/Exploration/res/res_e_reward_box_small.png")
 	# 右侧候补标志 
 	I_E_ROTATE_EXIST_RIGHT = RuleImage(roi_front=(829,580,33,35), roi_back=(700,574,450,46), threshold=0.8, method="Template matching", profile="High", file="./tasks/Exploration/res/res_e_ratate_exsit.png")
+	#
+	I_E_RECORDS_ENTRY = RuleImage(roi_front=(880,645,46,42), roi_back=(768,606,177,104), threshold=0.8, method="Template matching", profile="High", file="./tasks/Exploration/res/res_e_records_entry.png")
+	#
+	I_EXP_UNLOCK = RuleImage(roi_front=(890,650,32,33), roi_back=(871,626,165,85), threshold=0.8, method="Template matching", profile="High", file="./tasks/Exploration/res/res_exp_unlock.png")
+	#
+	I_EXP_LOCK = RuleImage(roi_front=(892,651,30,33), roi_back=(871,626,165,85), threshold=0.8, method="Template matching", profile="High", file="./tasks/Exploration/res/res_exp_lock.png")
+	# 未知式神
+	I_UNKNOWN_SHIKIGAMI = RuleImage(roi_front=(882,333,55,59), roi_back=(867,294,334,140), threshold=0.8, method="Template matching", profile="High", file="./tasks/Exploration/res/res_unknown_shikigami.png")
 
 
 	# Long Click Rule Assets
@@ -143,6 +155,8 @@ class ExplorationAssets:
 	O_REALM_RAID_NUMBER_META = RuleOcr(roi=(547,12,78,37), area=(547,12,78,37), mode="DigitCounter", method="Default", keyword="", name="realm_raid_number_meta")
 	# （点出困难28时候）探索右上角 突破卷的数量 超鬼王时期
 	O_REALM_RAID_NUMBER1_META = RuleOcr(roi=(920,11,78,37), area=(920,11,78,37), mode="DigitCounter", method="Default", keyword="", name="realm_raid_number1_meta")
+	# 发现妖怪
+	O_FIND_SHIKIGAMI = RuleOcr(roi=(561,558,138,38), area=(538,547,188,72), mode="Single", method="Default", keyword="妖怪发现", name="find_shikigami")
 
 
 	# Swipe Rule Assets

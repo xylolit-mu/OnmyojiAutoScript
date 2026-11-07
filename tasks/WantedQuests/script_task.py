@@ -128,8 +128,14 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
             self.screenshot()
             if self.appear(self.I_TRACE_DISABLE) or self.appear(self.I_WQ_TRACE_ONE_REALWORLD):
                 return True
+            # 未揭晓的神秘妖怪详情没有取消追踪按钮。
+            if self.appear(self.I_UI_BACK_RED) and '神秘妖怪' in self.read_wq_target():
+                return True
             self.click(self.O_WQ_TEXT_ALL, interval=1.2)
         return False
+
+    def read_wq_target(self) -> str:
+        return ''.join(self.O_WQ_MONSTER_TYPE.detect_text(self.device.image).split())
 
     def next_run(self):
         before_end: time = self.get_config().before_end
@@ -269,7 +275,7 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
             self.ui_click_until_disappear(self.I_UI_BACK_RED, interval=1.5)
             self.goto_page(page_exploration)
             return False
-        target_text = ''.join(self.O_WQ_MONSTER_TYPE.detect_text(self.device.image).split())
+        target_text = self.read_wq_target()
         ignored_target = next((name.strip() for name in self.unwanted_boss_name_list
                                if name.strip() and name.strip() in target_text), None)
         self._wanted_target_text = target_text

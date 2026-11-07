@@ -161,6 +161,7 @@
     description: null,
 
     testRuleBtn: document.getElementById("testRuleBtn"),
+    selectAllFrameBtn: document.getElementById("selectAllFrameBtn"),
     saveImageBtn: document.getElementById("saveImageBtn"),
     saveRulesBtn: document.getElementById("saveRulesBtn"),
   };
@@ -1712,12 +1713,17 @@
     frameBadges(rule).forEach((badge, index) => {
       const row = document.createElement("div"); row.className = "frame-collection-row";
       const select = document.createElement("button"); select.type = "button"; select.textContent = `Badge ${index + 1}`;
+      select.disabled = !badge.imageName;
       select.onclick = () => {
         rule.imageName = badge.imageName;
         if (el.imageName) el.imageName.value = badge.imageName;
         refreshRoiLayoutFromRule(); refreshActiveRuleItem();
       };
       const name = document.createElement("input"); name.type = "text"; name.value = badge.imageName;
+      if (!badge.imageName) {
+        name.placeholder = "待裁剪新素材";
+        name.readOnly = true;
+      }
       name.onchange = () => {
         const value = name.value.trim();
         if (!value) { name.value = badge.imageName; return; }
@@ -1726,19 +1732,18 @@
         markDirty(); refreshActiveRuleItem();
       };
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "×";
-      remove.disabled = rule.badges.length <= 1;
-      remove.title = remove.disabled ? "至少保留一个 badge 素材" : "删除该 badge 素材";
+      remove.title = "删除该 badge 素材";
       remove.onclick = async () => {
-        if (rule.badges.length <= 1 || state.frameBadgeDeletePending) return;
+        if (state.frameBadgeDeletePending) return;
         state.frameBadgeDeletePending = true;
         try {
           // Preserve files still used by another rule in this JSON.
           const shared = state.rules.some(other => other !== rule && frameImageNames(other).includes(badge.imageName)) ||
             (rule.rangeOperations || []).some(op => op && op.imageName === badge.imageName) ||
             rule.badges.some((other, i) => i !== index && other.imageName === badge.imageName);
-          if (!shared) await deleteRuleLinkedImage(badge.imageName);
+          if (badge.imageName && !shared) await deleteRuleLinkedImage(badge.imageName);
           rule.badges.splice(index, 1);
-          const next = rule.badges[0];
+          const next = rule.badges.find(item => item.imageName);
           rule.imageName = next ? next.imageName : "";
 
           if (el.imageName) el.imageName.value = rule.imageName;
@@ -1863,6 +1868,21 @@
   }
 
   function createRuleFromCurrentCanvas(type) {
+    const source = getCurrentRule();
+    if (type === "frame" && source) {
+      const rule = structuredClone(source);
+      frameRanges(rule);
+      for (const badge of frameBadges(rule)) badge.imageName = "";
+      for (const operation of rule.rangeOperations) {
+        if (operation?.type === "image") {
+          operation.imageName = "";
+          delete operation.file;
+        }
+      }
+      rule.imageName = "";
+      rule.badgeSerial = 0;
+      return rule;
+    }
     const rule = defaultRuleByType(type);
     const roi = captureCurrentCanvasRois();
     if (!roi) {
@@ -1967,6 +1987,59 @@
     renderPolygonCanvas();
   }
 
+  function setupFrameGroupDrag() {
+    const stage = el.imageStage;
+    let drag = null;
+
+    stage.addEventListener("pointerdown", (event) => {
+      const rule = getCurrentRule();
+      if (!state.frameSelectAll || !rule || event.button !== 0 || drag) return;
+
+      const viewport = getRoiViewport();
+      const regions = [rule.roiBadge, rule.roiBack, ...frameRanges(rule)].map(parseRoi);
+      drag = {
+        rule, viewport, regions, pointerId: event.pointerId,
+        startX: event.clientX, startY: event.clientY,
+        minX: -Math.min(...regions.map(([x]) => x)),
+        minY: -Math.min(...regions.map(([, y]) => y)),
+        maxX: viewport.naturalWidth - Math.max(...regions.map(([x, , w]) => x + w)),
+        maxY: viewport.naturalHeight - Math.max(...regions.map(([, y, , h]) => y + h)),
+        dx: 0, dy: 0,
+      };
+      event.preventDefault();
+      stage.setPointerCapture(event.pointerId);
+    });
+
+    stage.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.pointerId || !state.frameSelectAll || getCurrentRule() !== drag.rule) return;
+      const { rule, regions, viewport } = drag;
+      const dx = Math.max(Math.min(0, drag.minX), Math.min(Math.max(0, drag.maxX),
+        Math.round(stageToNaturalW(event.clientX - drag.startX, viewport))));
+      const dy = Math.max(Math.min(0, drag.minY), Math.min(Math.max(0, drag.maxY),
+        Math.round(stageToNaturalH(event.clientY - drag.startY, viewport))));
+      if (dx === drag.dx && dy === drag.dy) return;
+      drag.dx = dx;
+      drag.dy = dy;
+      if (state.testOverlayActive) clearTestOverlay();
+
+      const [badge, back, ...ranges] = regions.map(([x, y, w, h]) => formatRoiFromNumbers(x + dx, y + dy, w, h));
+      rule.roiBadge = el.roiFrontValue.value = badge;
+      rule.roiBack = el.roiBackValue.value = back;
+      rule.roiRange = ranges;
+      refreshRoiLayoutFromRule();
+      markDirty();
+    });
+
+    const finish = (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      if (getCurrentRule() === drag.rule) renderFrameCollections();
+      drag = null;
+    };
+    stage.addEventListener("pointerup", finish);
+    stage.addEventListener("pointercancel", finish);
+    stage.addEventListener("lostpointercapture", finish);
+  }
+
   function setupRoiBox(box) {
     const handles = Array.from(box.querySelectorAll(".resize-handle"));
     let mode = "";
@@ -2024,7 +2097,7 @@
     };
 
     box.addEventListener("mousedown", (event) => {
-      if (event.target.closest(".resize-handle")) {
+      if (state.frameSelectAll || event.target.closest(".resize-handle")) {
         return;
       }
       event.preventDefault();
@@ -2043,6 +2116,7 @@
 
     for (const handle of handles) {
       handle.addEventListener("mousedown", (event) => {
+        if (state.frameSelectAll) return;
         event.preventDefault();
         event.stopPropagation();
         mode = "resize";
@@ -2147,6 +2221,7 @@
 
     const showSaveImage = (type === "image" || type === "frame") || isListImageRule();
     el.saveImageBtn.classList.toggle("hidden", !showSaveImage);
+    updateTestButtonVisibility();
 
     refreshActiveRuleImageExists().catch(() => {
       // ignore
@@ -2453,6 +2528,7 @@
 
   function fillRuleForm() {
     state.frameRangeIndex = 0;
+    state.frameSelectAll = false;
     const rule = getCurrentRule();
     if (!rule) {
       clearRuleForm();
@@ -2898,6 +2974,9 @@
     const rules = state.rules.map((rule) => {
       const cleaned = { ...rule };
       delete cleaned.__autoImageName;
+      if (state.ruleType === "frame" && cleaned.badges?.some(badge => !badge.imageName)) {
+        throw new Error(`Frame ${rule.itemName} 还有待裁剪的 Badge，请裁剪新素材或删除空项`);
+      }
       if (state.ruleType === "list") {
         delete cleaned.description;
       }
@@ -3014,7 +3093,10 @@
     });
 
     if (state.ruleType === "frame") {
-      frameBadges(rule).push({imageName});
+      const badges = frameBadges(rule);
+      const pending = badges.find(badge => !badge.imageName);
+      if (pending) pending.imageName = imageName;
+      else badges.push({imageName});
       rule.imageName = imageName;
       if (el.imageName) el.imageName.value = imageName;
       markDirty(); renderFrameCollections();
@@ -3174,6 +3256,14 @@
 
     el.testRuleBtn.classList.toggle("hidden", !canUse);
     el.testRuleBtn.textContent = state.testOverlayActive ? "清除" : "测试";
+    const isFrame = state.ruleType === "frame";
+    const canSelectFrame = isFrame && hasRule && Boolean(el.mainImage.src);
+    if (!canSelectFrame) state.frameSelectAll = false;
+    el.selectAllFrameBtn.classList.toggle("hidden", !isFrame);
+    el.selectAllFrameBtn.disabled = !canSelectFrame;
+    el.selectAllFrameBtn.title = canSelectFrame ? "拖动画布以移动整个 Frame" : "请先选择 Frame 规则和图片";
+    el.selectAllFrameBtn.setAttribute("aria-pressed", String(Boolean(state.frameSelectAll)));
+    el.imageStage.classList.toggle("frame-select-all", Boolean(state.frameSelectAll));
   }
 
   async function testCurrentRule() {
@@ -3457,6 +3547,7 @@
     el.captureBtn.addEventListener("click", withError(captureEmulatorFrame));
 
     el.mainImage.addEventListener("load", adjustStageByImage);
+    setupFrameGroupDrag();
     // 由 ROI 画布本身接收钢笔事件，避免空 SVG 在不同浏览器中的
     // hit-test 行为导致无法落点。
     el.imageStage.addEventListener("pointerdown", handlePolygonPointerDown);
@@ -3528,8 +3619,10 @@
 
     el.addRuleBtn.addEventListener("click", () => {
       const rule = createRuleFromCurrentCanvas(state.ruleType);
-      rule.itemName = `item_${state.rules.length + 1}`;
-      if ((state.ruleType === "image" || state.ruleType === "frame")) {
+      let number = state.rules.length + 1;
+      while (state.rules.some(item => String(item.itemName || "").toLowerCase() === `item_${number}`)) number += 1;
+      rule.itemName = `item_${number}`;
+      if (state.ruleType === "image" || (state.ruleType === "frame" && !getCurrentRule())) {
         rule.imageName = defaultImageNameForItem(rule.itemName);
       }
       state.rules.push(rule);
@@ -3549,6 +3642,10 @@
     }
 
     el.testRuleBtn.addEventListener("click", withError(testCurrentRule));
+    el.selectAllFrameBtn.addEventListener("click", () => {
+      state.frameSelectAll = !state.frameSelectAll;
+      updateTestButtonVisibility();
+    });
     el.saveImageBtn.addEventListener("click", withError(saveImageCrop));
     el.saveRulesBtn.addEventListener("click", withError(saveRules));
     el.clearOutputBtn.addEventListener("click", clearOutput);

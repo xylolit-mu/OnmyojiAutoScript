@@ -105,6 +105,15 @@
   box-shadow: var(--shadow-stage);
 }
 
+.image-stage.frame-select-all {
+  cursor: move;
+  touch-action: none;
+}
+
+.image-stage.frame-select-all .resize-handle {
+  visibility: hidden;
+}
+
 #mainImage {
   position: relative;
   display: block;

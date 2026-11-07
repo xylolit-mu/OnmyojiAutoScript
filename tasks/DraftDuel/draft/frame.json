@@ -177,7 +177,7 @@
   {
     "itemName": "fight_shikigami_set",
     "imageName": "fight_shikigami_set_badge_1.png",
-    "roiBack": "0,220,1147,276",
+    "roiBack": "0,222,1147,276",
     "method": "Template matching",
     "threshold": 0.8,
     "profile": "High",
@@ -186,12 +186,12 @@
     "badgeSerial": 3,
     "badgeGrayscale": false,
     "roiRange": [
-      "183,324,67,66",
-      "347,321,67,66",
-      "514,359,67,66",
-      "690,369,67,66",
-      "858,344,67,66",
-      "1022,319,67,66"
+      "162,305,67,66",
+      "342,321,67,66",
+      "511,355,67,66",
+      "687,347,67,66",
+      "861,324,67,66",
+      "1023,311,67,66"
     ],
     "badges": [
       {
@@ -216,6 +216,279 @@
       },
       {
         "type": "click"
+      }
+    ]
+  },
+  {
+    "itemName": "shikigami_details_left",
+    "imageName": "shikigami_details_left_badge_1.png",
+    "roiBack": "136,264,317,449",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "",
+    "roiBadge": "370,630,58,52",
+    "badgeSerial": 2,
+    "badgeGrayscale": false,
+    "roiRange": [
+      "326,278,68,26",
+      "324,307,69,27",
+      "324,338,69,27",
+      "325,370,69,27",
+      "308,400,68,27",
+      "309,431,67,27",
+      "309,462,67,27",
+      "308,493,68,27",
+      "210,673,150,29",
+      "136,628,85,85"
+    ],
+    "badges": [
+      {
+        "imageName": "shikigami_details_left_badge_1.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Single",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      }
+    ]
+  },
+  {
+    "itemName": "shikigami_details_medium",
+    "imageName": "shikigami_details_medium_badge_2.png",
+    "roiBack": "512,266,317,449",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "",
+    "roiBadge": "746,632,58,52",
+    "badgeSerial": 2,
+    "badgeGrayscale": false,
+    "roiRange": [
+      "702,280,68,26",
+      "700,309,69,27",
+      "700,340,69,27",
+      "701,372,69,27",
+      "684,402,67,27",
+      "685,433,66,27",
+      "685,464,66,27",
+      "684,495,67,27",
+      "586,675,150,29",
+      "512,630,85,85"
+    ],
+    "badges": [
+      {
+        "imageName": "shikigami_details_medium_badge_2.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Single",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
+      }
+    ]
+  },
+  {
+    "itemName": "shikigami_details_right",
+    "imageName": "shikigami_details_right_badge_2.png",
+    "roiBack": "886,265,317,449",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "profile": "High",
+    "description": "",
+    "roiBadge": "1120,631,58,52",
+    "badgeSerial": 2,
+    "badgeGrayscale": false,
+    "roiRange": [
+      "1076,279,68,26",
+      "1074,308,69,27",
+      "1074,339,69,27",
+      "1075,371,69,27",
+      "1058,401,63,27",
+      "1059,432,62,27",
+      "1059,463,62,27",
+      "1058,494,63,27",
+      "960,674,150,29",
+      "886,629,85,85"
+    ],
+    "badges": [
+      {
+        "imageName": "shikigami_details_right_badge_2.png"
+      }
+    ],
+    "rangeOperations": [
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Digit",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "type": "ocr",
+        "mode": "Single",
+        "method": "Default",
+        "keyword": ""
+      },
+      {
+        "imageName": "",
+        "method": "Template matching",
+        "threshold": 0.8,
+        "type": "image"
       }
     ]
   }

@@ -26,6 +26,7 @@ def present_settings(task, payload):
         return result
 
     forms = getattr(task, 'settings_forms', {})
+    options = getattr(task, 'settings_options', {})
     for group, rows in payload.items():
         if not rows:
             continue
@@ -33,6 +34,11 @@ def present_settings(task, payload):
         if group in forms:
             rows[0]['ui_form'] = localize(deepcopy(forms[group]))
         for row in rows:
+            choices = options.get(group, {}).get(row['name'])
+            if choices:
+                row['enumEnum'] = choices
+                if row['default'] not in choices:
+                    row['default'] = choices[-1]
             title = row.get('title', row['name'])
             # Explicit prose takes precedence; schema-generated English titles use the field dictionary.
             explicit = any(ord(char) > 127 for char in title)

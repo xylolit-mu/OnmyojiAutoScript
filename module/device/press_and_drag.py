@@ -23,6 +23,7 @@ def press_and_drag(
     swipe_duration=None,
     name='Press_and_Drag',
     retry=False,
+    curve=False,
 ):
     """在起点按住后连续拖至终点，支持不同触摸通道；结果由调用任务确认。"""
     device.handle_control_check(name)
@@ -52,6 +53,7 @@ def press_and_drag(
             point_random=point_random,
             swipe_duration=swipe_duration,
             release_duration=release_duration,
+            curve=curve,
         )
     elif method == 'uiautomator2':
         _press_and_drag_uiautomator2(
@@ -62,6 +64,7 @@ def press_and_drag(
             point_random=point_random,
             swipe_duration=swipe_duration,
             release_duration=release_duration,
+            curve=curve,
         )
     elif method == 'scrcpy':
         _press_and_drag_scrcpy(
@@ -72,6 +75,7 @@ def press_and_drag(
             point_random=point_random,
             swipe_duration=swipe_duration,
             release_duration=release_duration,
+            curve=curve,
         )
     elif method == 'window_message':
         _press_and_drag_window_message(
@@ -82,7 +86,11 @@ def press_and_drag(
             point_random=point_random,
             swipe_duration=swipe_duration,
             release_duration=release_duration,
+            curve=curve,
         )
+    elif curve:
+        _press_and_drag_adb(device, p1, p2, hold_duration, point_random,
+                            swipe_duration, release_duration, curve=curve)
     else:
         logger.warning(
             f'Control method {method} cannot hold before moving; '
@@ -106,12 +114,16 @@ def _randomized_points(p1, p2, point_random):
             tuple(int(v) for v in np.clip(p2, (0, 0), (1279, 719))))
 
 
-def _motion_steps(p1, p2, swipe_duration):
+def _motion_steps(p1, p2, swipe_duration, curve=False):
     """An initial 4-8px slow move followed by a straight continuous drag.
 
     Each returned wait follows its MOVE; the finger stays down throughout.
     """
     p1, p2 = np.asarray(p1, dtype=float), np.asarray(p2, dtype=float)
+    if curve == 'hook':
+        return _hook_motion_steps(p1, p2, swipe_duration)
+    if curve:
+        return _rounded_motion_steps(p1, p2, swipe_duration)
     delta = p2 - p1
     distance = float(np.linalg.norm(delta))
     if distance < 1:
@@ -131,6 +143,79 @@ def _motion_steps(p1, p2, swipe_duration):
     return steps
 
 
+def _rounded_motion_steps(p1, p2, duration):
+    """Rise vertically, round the turn, then ease the last five pixels into the slot."""
+    dx, dy = p2 - p1
+    approach_y = p2[1] - np.sign(dy) * min(5., abs(dy))
+    rise = approach_y - p1[1]
+    radius = min(120., abs(dx) * .7, abs(rise) * .7)
+    if radius < 1:
+        return _motion_steps(p1, p2, duration)
+
+    corner = np.array([p1[0], approach_y])
+    entry = corner - np.array([0., np.sign(rise) * radius])
+    bend_end = corner + np.array([np.sign(dx) * radius, 0.])
+    lead_distance = abs(entry[1] - p1[1])
+    slow_end = p1 + (entry - p1) * min(6. / lead_distance, .5)
+    lead_steps = [(np.rint(point).astype(int).tolist(), .025)
+                  for point in ((p1 + slow_end) / 2, slow_end)]
+    points = [slow_end]
+    for t in np.linspace(0., 1., max(3, int(np.ceil(lead_distance / 20))) + 1)[1:]:
+        points.append(slow_end + (entry - slow_end) * t)
+    for t in np.linspace(0., 1., 11)[1:]:
+        points.append((1 - t) ** 2 * entry + 2 * (1 - t) * t * corner + t ** 2 * bend_end)
+    for t in np.linspace(0., 1., max(3, int(np.ceil(abs(p2[0] - bend_end[0]) / 20))) + 1)[1:]:
+        points.append(np.array([bend_end[0] + (p2[0] - bend_end[0]) * t,
+                                approach_y + (p2[1] - approach_y) * (3 * t*t - 2 * t*t*t)]))
+    distances = np.linalg.norm(np.diff(points, axis=0), axis=1)
+    total = distances.sum()
+    return lead_steps + [(np.rint(point).astype(int).tolist(), duration * distance / total)
+                         for point, distance in zip(points[1:], distances)]
+
+
+def _hook_motion_steps(p1, p2, duration):
+    """越过目标上方 10–20px 后圆弧回钩，叠加轻微低频摆动。"""
+    distance = float(np.linalg.norm(p2 - p1))
+    if distance < 1:
+        return _motion_steps(p1, p2, duration)
+    side = np.sign(p2[0] - p1[0]) or float(np.random.choice((-1, 1)))
+    overshoot = float(np.random.uniform(12, 18))
+    radius = float(np.random.uniform(12, 24))
+    apex = np.clip(p2 + (-side * radius, -overshoot), (0, 0), (1279, 719))
+    initial = apex - p1
+    initial /= max(float(np.linalg.norm(initial)), 1)
+    slow_end = p1 + initial * min(6, distance / 4)
+    lead_steps = [(np.rint(point).astype(int).tolist(), .025)
+                  for point in ((p1 + slow_end) / 2, slow_end)]
+
+    control1 = slow_end + (float(np.random.uniform(-3, 3)), (apex[1] - slow_end[1]) * .65)
+    control2 = apex + (-side * radius, 0)
+    return_control1 = apex + (side * radius * .65, 0)
+    return_control2 = p2 + (0, -overshoot * .55)
+    points = [slow_end]
+    for start, first, second, end, count in (
+        (slow_end, control1, control2, apex, int(np.clip(np.ceil(distance / 12), 16, 60))),
+        (apex, return_control1, return_control2, p2, 10),
+    ):
+        for t in np.linspace(0, 1, count + 1)[1:]:
+            points.append((1-t)**3 * start + 3*(1-t)**2*t * first + 3*(1-t)*t*t * second + t**3 * end)
+
+    points = np.asarray(points)
+    progress = np.linspace(0, 1, len(points))
+    amplitude = float(np.random.uniform(.6, 1.3))
+    cycles = float(np.random.uniform(.8, 1.5))
+    phase = float(np.random.uniform(0, 2 * np.pi))
+    wobble = amplitude * np.sin(np.pi * progress) * np.sin(2 * np.pi * cycles * progress + phase)
+    points[:, 0] += wobble
+    points = np.clip(points, (0, 0), (1279, 719))
+    points[-1] = p2
+    distances = np.linalg.norm(np.diff(points, axis=0), axis=1)
+    weights = distances * np.random.uniform(.95, 1.05, len(distances))
+    total = float(weights.sum())
+    return lead_steps + [(np.rint(point).astype(int).tolist(), duration * weight / total)
+                         for point, weight in zip(points[1:], weights)]
+
+
 def _best_effort_release(release):
     try:
         release()
@@ -139,9 +224,9 @@ def _best_effort_release(release):
 
 
 def _press_and_drag_minitouch(device, p1, p2, hold_duration, point_random,
-                              swipe_duration, release_duration):
+                              swipe_duration, release_duration, curve=False):
     p1, p2 = _randomized_points(p1, p2, point_random)
-    steps = _motion_steps(p1, p2, swipe_duration)
+    steps = _motion_steps(p1, p2, swipe_duration, curve)
     builder = device.minitouch_builder
     builder.clear()
     try:
@@ -168,9 +253,9 @@ def _press_and_drag_minitouch(device, p1, p2, hold_duration, point_random,
 
 
 def _press_and_drag_uiautomator2(device, p1, p2, hold_duration, point_random,
-                                swipe_duration, release_duration):
+                                swipe_duration, release_duration, curve=False):
     p1, p2 = _randomized_points(p1, p2, point_random)
-    steps = _motion_steps(p1, p2, swipe_duration)
+    steps = _motion_steps(p1, p2, swipe_duration, curve)
     last = p1
     completed = False
     try:
@@ -191,11 +276,11 @@ def _press_and_drag_uiautomator2(device, p1, p2, hold_duration, point_random,
 
 
 def _press_and_drag_scrcpy(device, p1, p2, hold_duration, point_random,
-                          swipe_duration, release_duration):
+                          swipe_duration, release_duration, curve=False):
     device.scrcpy_ensure_running()
     with device._scrcpy_control_socket_lock:
         p1, p2 = _randomized_points(p1, p2, point_random)
-        steps = _motion_steps(p1, p2, swipe_duration)
+        steps = _motion_steps(p1, p2, swipe_duration, curve)
         last = p1
         completed = False
         try:
@@ -215,11 +300,32 @@ def _press_and_drag_scrcpy(device, p1, p2, hold_duration, point_random,
 
 
 def _press_and_drag_window_message(device, p1, p2, hold_duration, point_random,
-                                   swipe_duration, release_duration):
+                                   swipe_duration, release_duration, curve=False):
     p1, p2 = _randomized_points(p1, p2, point_random)
-    steps = _motion_steps(p1, p2, swipe_duration)
+    steps = _motion_steps(p1, p2, swipe_duration, curve)
     device.press_and_drag_window_message(
         p1, p2, steps,
         hold_duration=hold_duration,
         release_duration=release_duration,
     )
+
+
+def _press_and_drag_adb(device, p1, p2, hold_duration, point_random,
+                        swipe_duration, release_duration, curve=True):
+    p1, p2 = _randomized_points(p1, p2, point_random)
+    last = p1
+
+    def touch(event, point):
+        device.adb_shell(['input', 'motionevent', event, str(point[0]), str(point[1])])
+
+    try:
+        touch('DOWN', p1)
+        device.sleep(hold_duration)
+        for last, wait in _motion_steps(p1, p2, swipe_duration, curve=curve):
+            touch('MOVE', last)
+            device.sleep(wait)
+        device.sleep(release_duration)
+        touch('UP', p2)
+    except BaseException:
+        _best_effort_release(lambda: touch('UP', last))
+        raise

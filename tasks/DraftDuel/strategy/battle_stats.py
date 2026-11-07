@@ -46,6 +46,10 @@ def serialize_draft_rounds(rows):
             entry['pick_slot'] = offers.index(pick) + 1
         if isinstance(row.get('raw_offers'), (list, tuple)):
             entry['raw_offers'] = [str(name or '') for name in row['raw_offers']]
+        if isinstance(row.get('template_key'), str):
+            entry['template_key'] = row['template_key']
+        if isinstance(row.get('panels'), (list, tuple)) and len(row['panels']) == 3:
+            entry['panels'] = list(row['panels'])
         result.append(entry)
     return result
 

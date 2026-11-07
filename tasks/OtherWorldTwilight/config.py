@@ -32,6 +32,8 @@ class OtherWorldTwilightConfig(ConfigBase):
 
 
 class OWTBattleConfig(GeneralBattleConfig):
+    green_mark_type: GreenMarkEnum = GreenMarkEnum.NAME
+
     hide_fields = dynamic_hide('preset_enable', 'preset_group', 'preset_team', 'green_mark', 'green_mark_type',
                                'continuous_battle', 'max_continuous', 'quick_exit')
 

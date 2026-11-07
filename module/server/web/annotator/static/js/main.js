@@ -18,7 +18,7 @@
   }
 
   async function fetchWidget(name) {
-    const response = await fetch(`${STATIC_PREFIX}/widget/${name}.html`, { cache: "no-cache" });
+    const response = await fetch(`${STATIC_PREFIX}/widget/${name}.html?v=${encodeURIComponent(ASSET_VERSION)}`, { cache: "no-cache" });
     if (!response.ok) {
       throw new Error(`加载组件失败: ${name} (${response.status})`);
     }

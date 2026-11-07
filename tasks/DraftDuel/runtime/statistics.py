@@ -20,7 +20,8 @@ class DraftDuelStatisticsMixin:
         return own, peer
 
     def _can_record_stats(self):
-        return self.config.draft_duel.draft_duel_config.match_mode != DraftMatchMode.MEMBER
+        """仅保留流程需要的胜场读数，不持久化小局或大轮战斗结果。"""
+        return False
 
     def _initialize_round_statistics(self):
         self._stats_round_id = uuid.uuid4().hex

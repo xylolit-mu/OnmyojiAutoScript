@@ -37,7 +37,7 @@ class DetailsChecks(unittest.TestCase):
         self.owner.I_SHIKIGAMI_DETAILS = object()
         self.owner.appear_then_click = Mock(return_value=True)
 
-    def test_all_icons_open_before_one_capture_and_each_pick_is_distinct(self):
+    def test_all_icons_open_without_saving_screenshots(self):
         owner = self.owner
         for number in range(1, 6):
             owner.O_SELECT_NUMBER.ocr.return_value = f'请选择第{number}名式神'
@@ -46,12 +46,8 @@ class DetailsChecks(unittest.TestCase):
             self.assertEqual(owner.appear.call_count, 4)
             self.assertTrue(owner._capture_selection_details(number))
             self.assertEqual(owner.appear.call_count, 4)
-        self.assertEqual(owner.device.image_save.call_count, 5)
+        owner.device.image_save.assert_not_called()
         self.assertEqual(owner.appear_then_click.call_count, 15)
-        for number, call in enumerate(owner.device.image_save.call_args_list, 1):
-            path = Path(call.args[0])
-            self.assertEqual(path.parent, Path(self.folder.name))
-            self.assertTrue(path.name.endswith(f'_pick{number}_details.png'))
 
     def test_timeout_does_not_save_incomplete_details(self):
         self.owner.appear = Mock(return_value=True)
@@ -67,11 +63,11 @@ class DetailsChecks(unittest.TestCase):
         self.assertFalse(self.owner._capture_selection_details(1))
         self.owner.device.image_save.assert_not_called()
 
-    def test_save_failure_can_retry(self):
+    def test_detail_recognition_does_not_access_disk(self):
         self.owner.appear = Mock(return_value=False)
         self.owner.device.image_save.side_effect = [OSError('disk failure'), None]
-        self.assertFalse(self.owner._capture_selection_details(1))
         self.assertTrue(self.owner._capture_selection_details(1))
+        self.owner.device.image_save.assert_not_called()
 
 
 class MemberEntryChecks(unittest.TestCase):
